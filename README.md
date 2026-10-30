@@ -270,6 +270,8 @@ Designed & engineered with precision by **[AMIT KUMAR DEY](https://portfolio.akd
 
 ---
 
-## 📄 License
+## 📄 Copyright & License
 
-Distributed under the [MIT License](LICENSE). Built with craftsmanship for bibliophiles everywhere.
+Copyright &copy; 2026 **[AMIT KUMAR DEY](https://portfolio.akdey.vercel.app/)**. All rights reserved.
+
+Crafted with care for bibliophiles and personal book collectors.
