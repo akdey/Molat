@@ -143,6 +143,8 @@ export const BarcodeScannerModal: React.FC = () => {
           }
           if (item.cover?.large || item.cover?.medium) {
             setCoverUrl(item.cover.large || item.cover.medium);
+          } else {
+            setCoverUrl(`https://covers.openlibrary.org/b/isbn/${clean}-L.jpg`);
           }
           addToast(`Found details for "${item.title}"!`, 'success');
           setLookingUp(false);
@@ -165,14 +167,44 @@ export const BarcodeScannerModal: React.FC = () => {
           if (info.categories && info.categories.length > 0) {
             setGenre(info.categories[0]);
           }
-          if (info.imageLinks?.thumbnail || info.imageLinks?.smallThumbnail) {
-            setCoverUrl(info.imageLinks.thumbnail || info.imageLinks.smallThumbnail);
+          if (info.imageLinks?.extraLarge || info.imageLinks?.large || info.imageLinks?.medium || info.imageLinks?.thumbnail || info.imageLinks?.smallThumbnail) {
+            const rawImg = info.imageLinks.extraLarge || info.imageLinks.large || info.imageLinks.medium || info.imageLinks.thumbnail || info.imageLinks.smallThumbnail;
+            setCoverUrl(rawImg.replace(/^http:\/\//i, 'https://'));
+          } else {
+            setCoverUrl(`https://covers.openlibrary.org/b/isbn/${clean}-L.jpg`);
           }
           addToast(`Found details for "${info.title}"!`, 'success');
           setLookingUp(false);
           return;
         }
       }
+
+      // 3. Apple Books fallback (iTunes Search API)
+      try {
+        const appleRes = await fetch(
+          `https://itunes.apple.com/search?term=${encodeURIComponent(clean)}&country=IN&media=ebook&limit=1`
+        );
+        if (appleRes.ok) {
+          const appleData = await appleRes.json();
+          if (appleData.results && appleData.results.length > 0) {
+            const item = appleData.results[0];
+            if (item.trackName) setTitle(item.trackName);
+            if (item.artistName) setAuthors(item.artistName);
+            if (item.primaryGenreName) setGenre(item.primaryGenreName);
+            if (item.artworkUrl100) {
+              setCoverUrl(item.artworkUrl100.replace('100x100bb', '600x600bb'));
+            }
+            addToast(`Found details for "${item.trackName}"!`, 'success');
+            setLookingUp(false);
+            return;
+          }
+        }
+      } catch (appleErr) {
+        // Continue to unindexed notification
+      }
+
+      // 4. Default to direct Open Library jacket endpoint if ISBN was detected
+      setCoverUrl(`https://covers.openlibrary.org/b/isbn/${clean}-L.jpg`);
 
       addToast(`ISBN identified: ${clean}. Fill in title & author to save.`, 'info');
     } catch (err) {

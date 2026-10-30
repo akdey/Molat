@@ -117,7 +117,14 @@ async def enrich_covers(
 ):
     """
     Server-side background/batch task that scans for books with missing covers
-    and queries Google Books -> Apple Books India -> Open Library cover_i,
+    and resolves them through a multi-tier fallback pipeline:
+    1. Google Books (ISBN)
+    2. Google Books (Title + Author)
+    3. Apple Books India (country=IN, 600x600 artwork)
+    4. Apple Books Global (country=US)
+    5. Open Library (ISBN cover_i)
+    6. Open Library (Title + Author)
+    7. Open Library Direct ISBN jacket URL
     writing found URLs back to Google Sheets Column K.
     """
     all_books = await sheets_repo.list_books()
