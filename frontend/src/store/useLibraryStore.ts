@@ -8,6 +8,7 @@ import {
   acquireWishlistItem,
   updateBook,
   enrichCovers,
+  loginUser,
 } from '../api/client';
 
 interface LibraryState {
@@ -36,6 +37,8 @@ interface LibraryState {
   keyModalOpen: boolean;
   
   // Auth & Settings
+  authToken: string | null;
+  authUser: string | null;
   libraryKey: string;
   theme: 'light' | 'dark';
   
@@ -52,6 +55,8 @@ interface LibraryState {
   setScannerOpen: (open: boolean) => void;
   setKeyModalOpen: (open: boolean) => void;
   setLibraryKey: (key: string) => void;
+  loginOwner: (username: string, password: string) => Promise<void>;
+  logoutOwner: () => void;
   toggleTheme: () => void;
   
   // API Calls
@@ -87,6 +92,8 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
   scannerOpen: false,
   keyModalOpen: false,
   
+  authToken: localStorage.getItem('molat_auth_token') || null,
+  authUser: localStorage.getItem('molat_auth_user') || null,
   libraryKey: localStorage.getItem('molat_library_key') || (import.meta.env.VITE_LIBRARY_KEY || ''),
   theme: (localStorage.getItem('molat_theme') as 'light' | 'dark') || 'light',
 
@@ -109,6 +116,20 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
   setLibraryKey: (key: string) => {
     localStorage.setItem('molat_library_key', key);
     set({ libraryKey: key });
+  },
+
+  loginOwner: async (username, password) => {
+    const res = await loginUser(username, password);
+    localStorage.setItem('molat_auth_token', res.access_token);
+    localStorage.setItem('molat_auth_user', res.username);
+    set({ authToken: res.access_token, authUser: res.username });
+  },
+
+  logoutOwner: () => {
+    localStorage.removeItem('molat_auth_token');
+    localStorage.removeItem('molat_auth_user');
+    localStorage.removeItem('molat_library_key');
+    set({ authToken: null, authUser: null, libraryKey: '' });
   },
 
   toggleTheme: () => {
@@ -171,21 +192,20 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
   },
 
   submitReadingLog: async (payload) => {
-    const { libraryKey } = get();
-    await logReadingSession(payload, libraryKey);
-    // Refresh both books (status auto-transitioned) and streak summary
+    const token = get().authToken || get().libraryKey;
+    await logReadingSession(payload, token || undefined);
     await Promise.all([get().loadBooks(), get().loadStreak()]);
   },
 
   acquireItem: async (wishlistId, payload) => {
-    const { libraryKey } = get();
-    await acquireWishlistItem(wishlistId, payload, libraryKey);
+    const token = get().authToken || get().libraryKey;
+    await acquireWishlistItem(wishlistId, payload, token || undefined);
     await Promise.all([get().loadBooks(), get().loadWishlist()]);
   },
 
   updateBookDetails: async (bookId, updates) => {
-    const { libraryKey } = get();
-    const updated = await updateBook(bookId, updates, libraryKey);
+    const token = get().authToken || get().libraryKey;
+    const updated = await updateBook(bookId, updates, token || undefined);
     set((state) => ({
       books: state.books.map((b) => (b.book_id === bookId ? updated : b)),
       selectedBook: state.selectedBook?.book_id === bookId ? updated : state.selectedBook,
@@ -194,8 +214,8 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
   },
 
   triggerCoverEnrichment: async () => {
-    const { libraryKey } = get();
-    const res = await enrichCovers(libraryKey);
+    const token = get().authToken || get().libraryKey;
+    const res = await enrichCovers(token || undefined);
     await get().loadBooks();
     return res;
   },

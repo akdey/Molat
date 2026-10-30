@@ -56,6 +56,7 @@ export default function App() {
     setScannerOpen,
     setKeyModalOpen,
     loadAllData,
+    authToken,
     theme,
     toggleTheme,
   } = useLibraryStore();
@@ -185,11 +186,16 @@ export default function App() {
             </button>
             <button
               onClick={() => setKeyModalOpen(true)}
-              className="p-2.5 rounded-xl border border-rule dark:border-rule-dark hover:bg-surface dark:hover:bg-surface-dark text-ink-secondary hover:text-ink transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
-              title="X-Library-Key & Tools"
-              aria-label="API Settings and Keys"
+              className={`p-2.5 rounded-xl border border-rule dark:border-rule-dark hover:bg-surface dark:hover:bg-surface-dark transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center relative ${
+                authToken ? 'text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30' : 'text-ink-secondary hover:text-ink'
+              }`}
+              title={authToken ? "Signed in as Owner" : "Owner Sign In"}
+              aria-label="Owner Authentication"
             >
               <KeyRound size={18} />
+              {authToken && (
+                <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-emerald-600" />
+              )}
             </button>
             <button
               onClick={toggleTheme}

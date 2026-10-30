@@ -12,7 +12,10 @@ class Settings(BaseSettings):
     # CORS
     ALLOWED_ORIGINS: str = "http://localhost:5173,http://localhost:3000,https://molat.vercel.app"
 
-    # Security
+    # Security & Owner Authentication
+    ADMIN_USERNAME: str = "admin"
+    ADMIN_PASSWORD: Optional[str] = None
+    JWT_SECRET: str = "molat-jwt-secret-key-change-in-production"
     LIBRARY_KEY: Optional[str] = None
 
     # Google Sheets Bridge (Apps Script Web App)

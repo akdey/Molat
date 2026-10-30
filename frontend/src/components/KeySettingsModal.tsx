@@ -1,27 +1,44 @@
 import React, { useState } from 'react';
-import { KeyRound, X, Check, Sparkles, AlertCircle } from 'lucide-react';
+import { UserCheck, Lock, X, Check, Sparkles, AlertCircle, LogOut } from 'lucide-react';
 import { useLibraryStore } from '../store/useLibraryStore';
 
 export const KeySettingsModal: React.FC = () => {
   const {
     keyModalOpen,
     setKeyModalOpen,
-    libraryKey,
-    setLibraryKey,
+    authToken,
+    authUser,
+    loginOwner,
+    logoutOwner,
     triggerCoverEnrichment,
   } = useLibraryStore();
 
-  const [inputKey, setInputKey] = useState(libraryKey);
+  const [username, setUsername] = useState('admin');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
   const [enriching, setEnriching] = useState(false);
   const [enrichResult, setEnrichResult] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   if (!keyModalOpen) return null;
 
-  const handleSaveKey = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLibraryKey(inputKey.trim());
-    setKeyModalOpen(false);
+    if (!username.trim() || !password.trim()) {
+      setErrorMsg('Please enter both username and password.');
+      return;
+    }
+
+    setLoading(true);
+    setErrorMsg(null);
+    try {
+      await loginOwner(username.trim(), password.trim());
+      setPassword('');
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Invalid username or password.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleEnrich = async () => {
@@ -44,8 +61,8 @@ export const KeySettingsModal: React.FC = () => {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <KeyRound className="text-accent dark:text-accent-dark h-5 w-5" />
-            <h3 className="font-serif text-base font-medium">Library Settings & Key</h3>
+            <Lock className="text-accent dark:text-accent-dark h-5 w-5" />
+            <h3 className="font-serif text-base font-medium">Library Owner Authentication</h3>
           </div>
           <button
             onClick={() => setKeyModalOpen(false)}
@@ -56,8 +73,9 @@ export const KeySettingsModal: React.FC = () => {
         </div>
 
         {errorMsg && (
-          <div className="p-3 text-xs rounded-xl bg-red-100 dark:bg-red-950/40 text-red-800 dark:text-red-400 border border-red-200">
-            {errorMsg}
+          <div className="p-3 text-xs rounded-xl bg-red-100 dark:bg-red-950/40 text-red-800 dark:text-red-400 border border-red-200 flex items-center gap-2">
+            <AlertCircle size={15} className="shrink-0" />
+            <span>{errorMsg}</span>
           </div>
         )}
 
@@ -67,60 +85,103 @@ export const KeySettingsModal: React.FC = () => {
           </div>
         )}
 
-        {/* API Key Form */}
-        <form onSubmit={handleSaveKey} className="space-y-3">
-          <div className="space-y-1">
-            <label className="text-3xs uppercase tracking-wider font-medium text-ink-muted">
-              X-Library-Key (State Mutation Secret)
-            </label>
-            <input
-              type="password"
-              placeholder="development-secret-key-change-in-production"
-              value={inputKey}
-              onChange={(e) => setInputKey(e.target.value)}
-              className="w-full px-3 py-2 rounded-xl border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark text-xs font-mono focus:outline-none focus:border-accent"
-            />
-            <p className="text-3xs text-ink-muted pt-0.5">
-              Required for write actions (logging reading sessions, adding/editing books, acquiring wishlist items).
+        {/* Signed In State */}
+        {authToken ? (
+          <div className="space-y-4">
+            <div className="p-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900/40 flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <UserCheck className="text-emerald-700 dark:text-emerald-400 h-5 w-5" />
+                <div>
+                  <p className="text-xs font-medium text-emerald-900 dark:text-emerald-200">
+                    Signed in as <strong className="font-mono">{authUser || 'Owner'}</strong>
+                  </p>
+                  <p className="text-3xs text-emerald-700 dark:text-emerald-400">
+                    Full write access enabled for Google Sheets
+                  </p>
+                </div>
+              </div>
+
+              <button
+                onClick={() => logoutOwner()}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-emerald-300 dark:border-emerald-800/60 bg-white dark:bg-emerald-900/40 hover:bg-emerald-100 text-xs font-medium text-emerald-900 dark:text-emerald-100 transition-colors"
+              >
+                <LogOut size={13} />
+                <span>Sign Out</span>
+              </button>
+            </div>
+
+            {/* Cover Enrichment Tool */}
+            <div className="pt-2 border-t border-rule/60 dark:border-rule-dark/60 space-y-2">
+              <span className="text-3xs uppercase tracking-wider font-medium text-ink-muted block">
+                Automated Cover Enrichment
+              </span>
+              <p className="text-2xs text-ink-secondary dark:text-ink-dark-secondary">
+                Scans all books missing covers and searches Google Books → Apple Books India → Open Library to populate high-resolution jackets in Google Sheets.
+              </p>
+              <button
+                onClick={handleEnrich}
+                disabled={enriching}
+                className="w-full py-2.5 px-3 rounded-xl border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark hover:bg-rule/40 text-xs font-medium text-ink dark:text-ink-dark flex items-center justify-center gap-1.5 transition-colors"
+              >
+                <Sparkles size={14} className="text-accent" />
+                <span>{enriching ? 'Enriching missing covers...' : 'Run Cover Enrichment Waterfall'}</span>
+              </button>
+            </div>
+          </div>
+        ) : (
+          /* Sign In Form */
+          <form onSubmit={handleLogin} className="space-y-3">
+            <p className="text-xs text-ink-secondary dark:text-ink-dark-secondary">
+              Sign in with your library owner credentials (configured in your backend environment variables) to manage your collection.
             </p>
-          </div>
 
-          <div className="flex justify-end gap-2 pt-1">
-            <button
-              type="button"
-              onClick={() => setKeyModalOpen(false)}
-              className="px-3 py-1.5 rounded-lg border border-rule text-xs font-medium"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="px-4 py-1.5 rounded-lg bg-accent text-white text-xs font-medium"
-            >
-              Save Key
-            </button>
-          </div>
-        </form>
+            <div className="space-y-1">
+              <label className="text-3xs uppercase tracking-wider font-medium text-ink-muted">
+                Username
+              </label>
+              <input
+                type="text"
+                required
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder="admin"
+                className="w-full px-3 py-2 rounded-xl border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark text-xs focus:outline-none focus:border-accent"
+              />
+            </div>
 
-        {/* Cover Enrichment Tool */}
-        <div className="pt-3 border-t border-rule/60 dark:border-rule-dark/60 space-y-2">
-          <span className="text-3xs uppercase tracking-wider font-medium text-ink-muted block">
-            Automated Cover Enrichment
-          </span>
-          <p className="text-2xs text-ink-secondary dark:text-ink-dark-secondary">
-            Scans all books with missing covers and searches Google Books $\rightarrow$ Apple Books India $\rightarrow$ Open Library to update high-resolution covers in Google Sheets.
-          </p>
-          <button
-            onClick={handleEnrich}
-            disabled={enriching}
-            className="w-full py-2 px-3 rounded-xl border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark hover:bg-rule/40 text-xs font-medium text-ink dark:text-ink-dark flex items-center justify-center gap-1.5 transition-colors"
-          >
-            <Sparkles size={14} className="text-accent" />
-            <span>{enriching ? 'Enriching missing covers...' : 'Run Cover Enrichment Waterfall'}</span>
-          </button>
-        </div>
+            <div className="space-y-1">
+              <label className="text-3xs uppercase tracking-wider font-medium text-ink-muted">
+                Password
+              </label>
+              <input
+                type="password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••••••"
+                className="w-full px-3 py-2 rounded-xl border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark text-xs font-mono focus:outline-none focus:border-accent"
+              />
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setKeyModalOpen(false)}
+                className="px-3 py-1.5 rounded-lg border border-rule text-xs font-medium"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={loading}
+                className="px-4 py-1.5 rounded-lg bg-accent text-white text-xs font-medium"
+              >
+                {loading ? 'Authenticating...' : 'Sign In'}
+              </button>
+            </div>
+          </form>
+        )}
       </div>
     </div>
   );
 };
-
