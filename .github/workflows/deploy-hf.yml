@@ -32,11 +32,11 @@ jobs:
       - name: Set up Python 3.11 with uv
         run: uv python install 3.11
 
-      - name: Install dependencies & run test suite with uv
+      - name: Sync dependencies & run test suite with uv
         run: |
           cd backend
-          uv pip install --system -r requirements.txt
-          PYTHONPATH=. pytest -v
+          uv sync
+          uv run pytest -v
 
       - name: Push to Hugging Face Space
         env:

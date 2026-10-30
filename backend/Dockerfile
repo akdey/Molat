@@ -15,9 +15,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Install uv for ultra-fast dependency resolution and installation
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/uv
 
+# Copy dependency definition files
+COPY pyproject.toml uv.lock* ./
+
 # Install dependencies into system environment using uv
-COPY requirements.txt .
-RUN uv pip install --system --no-cache -r requirements.txt
+RUN uv pip install --system --no-cache -r pyproject.toml
 
 # Create non-root user with UID 1000 for Hugging Face Spaces Docker runtime
 RUN useradd -m -u 1000 user
