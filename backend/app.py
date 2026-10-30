@@ -1,6 +1,6 @@
 import os
 
-# Disable Gradio 5 Node.js SSR proxy so FastAPI directly handles all POST/GET requests without SvelteKit interference
+# Disable Gradio 5 Node.js SSR proxy so FastAPI directly handles all POST/GET requests
 os.environ["GRADIO_SSR_MODE"] = "False"
 
 # Graceful import of Hugging Face ZeroGPU SDK (MUST BE FIRST)
@@ -19,8 +19,39 @@ except ImportError:
 
 import gradio as gr
 from fastapi.middleware.cors import CORSMiddleware
+from gradio.routes import App
 from app.config import settings
 from app.routers import health, books, reading, wishlist, auth
+
+
+def attach_api_routes(target_app):
+    """Register Molat REST API v1 routes and CORS middleware onto target FastAPI app."""
+    target_app.add_middleware(
+        CORSMiddleware,
+        allow_origins=settings.cors_origins,
+        allow_credentials=True,
+        allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+        allow_headers=["*"],
+    )
+    target_app.include_router(health.router, prefix="/api/v1")
+    target_app.include_router(auth.router, prefix="/api/v1")
+    target_app.include_router(books.router, prefix="/api/v1")
+    target_app.include_router(reading.router, prefix="/api/v1")
+    target_app.include_router(wishlist.router, prefix="/api/v1")
+
+
+# Patch Gradio App.create_app so that whatever App Gradio instantiates in launch(),
+# all Molat REST API v1 routes are unconditionally attached.
+_orig_create_app = App.create_app
+
+
+def _patched_create_app(*args, **kwargs):
+    created_app = _orig_create_app(*args, **kwargs)
+    attach_api_routes(created_app)
+    return created_app
+
+
+App.create_app = staticmethod(_patched_create_app)
 
 
 @spaces.GPU(duration=120)
@@ -43,21 +74,8 @@ demo = gr.Interface(
     ),
 )
 
-# Attach CORS middleware to demo.app
-demo.app.add_middleware(
-    CORSMiddleware,
-    allow_origins=settings.cors_origins,
-    allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allow_headers=["*"],
-)
-
-# Include all Molat REST API v1 routers directly on demo.app
-demo.app.include_router(health.router, prefix="/api/v1")
-demo.app.include_router(auth.router, prefix="/api/v1")
-demo.app.include_router(books.router, prefix="/api/v1")
-demo.app.include_router(reading.router, prefix="/api/v1")
-demo.app.include_router(wishlist.router, prefix="/api/v1")
+# Also ensure initial demo.app has routes if inspected before launch
+attach_api_routes(demo.app)
 
 if __name__ == "__main__":
     demo.launch(
