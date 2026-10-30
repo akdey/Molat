@@ -145,7 +145,7 @@ export const KeySettingsModal: React.FC = () => {
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 placeholder="admin"
-                className="w-full px-3 py-2 rounded-xl border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark text-xs focus:outline-none focus:border-accent"
+                className="w-full px-2.5 py-1.5 rounded-lg border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark text-xs focus:outline-none focus:border-accent"
               />
             </div>
 
@@ -159,7 +159,7 @@ export const KeySettingsModal: React.FC = () => {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••••••"
-                className="w-full px-3 py-2 rounded-xl border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark text-xs font-mono focus:outline-none focus:border-accent"
+                className="w-full px-2.5 py-1.5 rounded-lg border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark text-xs font-mono focus:outline-none focus:border-accent"
               />
             </div>
 
@@ -167,14 +167,14 @@ export const KeySettingsModal: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setKeyModalOpen(false)}
-                className="px-3 py-1.5 rounded-lg border border-rule text-xs font-medium"
+                className="px-3 py-1.5 rounded-lg border border-rule dark:border-rule-dark text-xs font-medium text-ink-secondary hover:bg-surface"
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={loading}
-                className="px-4 py-1.5 rounded-lg bg-accent text-white text-xs font-medium"
+                className="px-4 py-1.5 rounded-lg bg-accent hover:bg-accent-hover text-white text-xs font-medium shadow-xs transition-colors"
               >
                 {loading ? 'Authenticating...' : 'Sign In'}
               </button>

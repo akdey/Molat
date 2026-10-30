@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Check, Bookmark, Calendar, MapPin, DollarSign, Tag, BookOpen, Clock, AlertCircle } from 'lucide-react';
+import { X, Check, Bookmark, Calendar, MapPin, DollarSign, Tag, BookOpen, Clock, AlertCircle, RefreshCw } from 'lucide-react';
 import type { Book, ReadingStatus, BookCondition, ReadingLog } from '../types/book';
 import { useLibraryStore } from '../store/useLibraryStore';
 import { BookCover } from './BookCover';
@@ -230,10 +230,19 @@ export const BookDetailDrawer: React.FC = () => {
             <button
               onClick={handleSave}
               disabled={saving}
-              className="w-full py-2 rounded-lg bg-surface-raised dark:bg-surface-dark-raised border border-rule dark:border-rule-dark hover:bg-rule/40 text-xs font-medium text-ink dark:text-ink-dark transition-colors flex items-center justify-center gap-1.5"
+              className="w-full py-2 rounded-lg bg-accent text-white hover:bg-accent-hover text-xs font-medium transition-colors flex items-center justify-center gap-1.5 shadow-xs"
             >
-              <Check size={14} />
-              <span>{saving ? 'Updating Sheets...' : 'Save Changes'}</span>
+              {saving ? (
+                <>
+                  <RefreshCw size={13} className="animate-spin text-white" />
+                  <span>Saving to Sheets...</span>
+                </>
+              ) : (
+                <>
+                  <Check size={14} />
+                  <span>Save Changes</span>
+                </>
+              )}
             </button>
           </div>
 

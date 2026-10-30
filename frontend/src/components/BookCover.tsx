@@ -62,9 +62,9 @@ export const BookCover: React.FC<BookCoverProps> = ({
         />
       ) : (
         /* Typographic Bookcloth Fallback with bound spine */
-        <div className="w-full h-full flex flex-col justify-between p-3 bg-gradient-to-b from-[#2B2724] to-[#1A1816] text-[#EDE8DF] border-l-4 border-[#C2410C] border-y border-r border-white/10 text-center shadow-inner">
+        <div className="w-full h-full flex flex-col justify-between p-3 bg-gradient-to-b from-[#2B2724] to-[#1A1816] text-[#EDE8DF] border-l-4 border-accent border-y border-r border-white/10 text-center shadow-inner">
           <div className="flex items-center justify-between text-3xs text-[#A89F91] tracking-widest uppercase border-b border-white/15 pb-1">
-            <span>Ondorpata</span>
+            <span>Molat</span>
             <span className="font-mono">Vol.</span>
           </div>
 

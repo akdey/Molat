@@ -43,8 +43,9 @@ export async function loginUser(
 
 // ==================== BOOKS ====================
 
-export async function fetchBooks(): Promise<BookListResponse> {
-  const res = await fetch(`${API_BASE}/books`);
+export async function fetchBooks(refresh = false): Promise<BookListResponse> {
+  const url = refresh ? `${API_BASE}/books?refresh=true` : `${API_BASE}/books`;
+  const res = await fetch(url);
   if (!res.ok) throw new Error(`Failed to fetch books: ${res.status}`);
   return res.json();
 }

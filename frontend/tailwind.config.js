@@ -30,12 +30,12 @@ export default {
           'dark-strong': '#3E444F',
         },
         accent: {
-          DEFAULT: '#C2410C', // Terracotta
-          hover: '#9A3412',
-          subtle: '#FFF7ED',
-          dark: '#EA580C',
-          'dark-hover': '#FB923C',
-          'dark-subtle': '#431407',
+          DEFAULT: '#1E3A8A', // Archival Oxford Blue
+          hover: '#172554',   // Deep Midnight Navy
+          subtle: '#EFF6FF',  // Pale Oxford tint
+          dark: '#3B82F6',    // Bright Royal Blue for dark mode contrast
+          'dark-hover': '#60A5FA',
+          'dark-subtle': '#1E293B',
         },
         shelf: {
           wood: '#5C3A21',
@@ -48,6 +48,10 @@ export default {
         sans: ['Inter', 'system-ui', 'sans-serif'],
         mono: ['JetBrains Mono', 'monospace'],
       },
+      fontSize: {
+        '3xs': '0.625rem', // 10px
+        '2xs': '0.6875rem', // 11px
+      },
       aspectRatio: {
         'book': '2 / 3',
       },
@@ -55,4 +59,3 @@ export default {
   },
   plugins: [],
 }
-

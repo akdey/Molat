@@ -1,11 +1,19 @@
 import React, { useState } from 'react';
-import { ShoppingBag, Plus, Check, Tag, DollarSign, X, AlertCircle } from 'lucide-react';
+import { ShoppingBag, Plus, Check, Tag, DollarSign, X, AlertCircle, RefreshCw } from 'lucide-react';
 import type { WishlistItem, BookCondition } from '../types/book';
 import { useLibraryStore } from '../store/useLibraryStore';
 import { createWishlistItem } from '../api/client';
 
 export const WishlistScreen: React.FC = () => {
-  const { wishlist, acquireItem, loadWishlist, libraryKey, setKeyModalOpen } = useLibraryStore();
+  const {
+    wishlist,
+    acquireItem,
+    loadWishlist,
+    libraryKey,
+    authToken,
+    addToast,
+    setKeyModalOpen,
+  } = useLibraryStore();
 
   const [acquireModalItem, setAcquireModalItem] = useState<WishlistItem | null>(null);
   const [purchasePrice, setPurchasePrice] = useState<number>(0);
@@ -63,8 +71,9 @@ export const WishlistScreen: React.FC = () => {
 
     setAdding(true);
     setErrorMsg(null);
+    const token = authToken || libraryKey;
     try {
-      await createWishlistItem(
+      const created = await createWishlistItem(
         {
           title: newTitle.trim(),
           authors: newAuthors.trim() || undefined,
@@ -72,8 +81,9 @@ export const WishlistScreen: React.FC = () => {
           target_price: newTargetPrice,
           priority: newPriority,
         },
-        libraryKey
+        token
       );
+      addToast(`Added "${created.title}" to wishlist!`, 'success');
       setNewTitle('');
       setNewAuthors('');
       setAddFormOpen(false);
@@ -136,7 +146,7 @@ export const WishlistScreen: React.FC = () => {
             </button>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
             <div className="space-y-1">
               <label className="text-3xs uppercase tracking-wider font-medium text-ink-muted">
                 Book Title *
@@ -147,7 +157,7 @@ export const WishlistScreen: React.FC = () => {
                 value={newTitle}
                 onChange={(e) => setNewTitle(e.target.value)}
                 placeholder="e.g. A Gentleman in Moscow"
-                className="w-full px-3 py-2 rounded-xl border border-rule dark:border-rule-dark bg-surface-raised dark:bg-surface-dark-raised text-xs focus:outline-none focus:border-accent"
+                className="w-full px-2.5 py-1.5 rounded-lg border border-rule dark:border-rule-dark bg-surface-raised dark:bg-surface-dark-raised text-xs focus:outline-none focus:border-accent"
               />
             </div>
             <div className="space-y-1">
@@ -159,7 +169,7 @@ export const WishlistScreen: React.FC = () => {
                 value={newAuthors}
                 onChange={(e) => setNewAuthors(e.target.value)}
                 placeholder="e.g. Amor Towles"
-                className="w-full px-3 py-2 rounded-xl border border-rule dark:border-rule-dark bg-surface-raised dark:bg-surface-dark-raised text-xs focus:outline-none focus:border-accent"
+                className="w-full px-2.5 py-1.5 rounded-lg border border-rule dark:border-rule-dark bg-surface-raised dark:bg-surface-dark-raised text-xs focus:outline-none focus:border-accent"
               />
             </div>
             <div className="space-y-1">
@@ -171,7 +181,7 @@ export const WishlistScreen: React.FC = () => {
                 min="0"
                 value={newExpectedRp}
                 onChange={(e) => setNewExpectedRp(parseFloat(e.target.value) || 0)}
-                className="w-full px-3 py-2 rounded-xl border border-rule dark:border-rule-dark bg-surface-raised dark:bg-surface-dark-raised text-xs font-mono focus:outline-none focus:border-accent"
+                className="w-full px-2.5 py-1.5 rounded-lg border border-rule dark:border-rule-dark bg-surface-raised dark:bg-surface-dark-raised text-xs font-mono focus:outline-none focus:border-accent"
               />
             </div>
             <div className="space-y-1">
@@ -183,7 +193,7 @@ export const WishlistScreen: React.FC = () => {
                 min="0"
                 value={newTargetPrice}
                 onChange={(e) => setNewTargetPrice(parseFloat(e.target.value) || 0)}
-                className="w-full px-3 py-2 rounded-xl border border-rule dark:border-rule-dark bg-surface-raised dark:bg-surface-dark-raised text-xs font-mono focus:outline-none focus:border-accent"
+                className="w-full px-2.5 py-1.5 rounded-lg border border-rule dark:border-rule-dark bg-surface-raised dark:bg-surface-dark-raised text-xs font-mono focus:outline-none focus:border-accent"
               />
             </div>
             <div className="space-y-1">
@@ -193,7 +203,7 @@ export const WishlistScreen: React.FC = () => {
               <select
                 value={newPriority}
                 onChange={(e) => setNewPriority(e.target.value)}
-                className="w-full px-3 py-2 rounded-xl border border-rule dark:border-rule-dark bg-surface-raised dark:bg-surface-dark-raised text-xs focus:outline-none focus:border-accent"
+                className="w-full px-2.5 py-1.5 rounded-lg border border-rule dark:border-rule-dark bg-surface-raised dark:bg-surface-dark-raised text-xs focus:outline-none focus:border-accent"
               >
                 <option value="High">High</option>
                 <option value="Normal">Normal</option>
@@ -213,9 +223,19 @@ export const WishlistScreen: React.FC = () => {
             <button
               type="submit"
               disabled={adding}
-              className="px-4 py-1.5 rounded-lg bg-accent text-white text-xs font-medium"
+              className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-accent hover:bg-accent-hover text-white text-xs font-medium shadow-xs"
             >
-              {adding ? 'Saving...' : 'Add to Wishlist'}
+              {adding ? (
+                <>
+                  <RefreshCw size={13} className="animate-spin text-white" />
+                  <span>Saving...</span>
+                </>
+              ) : (
+                <>
+                  <Check size={14} />
+                  <span>Add to Wishlist</span>
+                </>
+              )}
             </button>
           </div>
         </form>
@@ -306,7 +326,7 @@ export const WishlistScreen: React.FC = () => {
                   required
                   value={purchasePrice}
                   onChange={(e) => setPurchasePrice(parseFloat(e.target.value) || 0)}
-                  className="w-full px-3 py-2 rounded-xl border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark text-sm font-mono focus:outline-none focus:border-accent"
+                  className="w-full px-2.5 py-1.5 rounded-lg border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark text-xs font-mono focus:outline-none focus:border-accent"
                 />
               </div>
 
@@ -317,7 +337,7 @@ export const WishlistScreen: React.FC = () => {
                 <select
                   value={condition}
                   onChange={(e) => setCondition(e.target.value as BookCondition)}
-                  className="w-full px-3 py-2 rounded-xl border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark text-xs focus:outline-none focus:border-accent"
+                  className="w-full px-2.5 py-1.5 rounded-lg border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark text-xs focus:outline-none focus:border-accent"
                 >
                   <option value="New">New</option>
                   <option value="Good">Good</option>
@@ -334,7 +354,7 @@ export const WishlistScreen: React.FC = () => {
                   type="text"
                   value={location}
                   onChange={(e) => setLocation(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark text-xs focus:outline-none focus:border-accent"
+                  className="w-full px-2.5 py-1.5 rounded-lg border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark text-xs focus:outline-none focus:border-accent"
                 />
               </div>
 
@@ -349,9 +369,19 @@ export const WishlistScreen: React.FC = () => {
                 <button
                   type="submit"
                   disabled={acquiring}
-                  className="px-4 py-1.5 rounded-lg bg-accent text-white text-xs font-medium"
+                  className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-accent hover:bg-accent-hover text-white text-xs font-medium shadow-xs"
                 >
-                  {acquiring ? 'Adding to Books...' : 'Confirm Acquisition'}
+                  {acquiring ? (
+                    <>
+                      <RefreshCw size={13} className="animate-spin text-white" />
+                      <span>Adding to Books...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Check size={14} />
+                      <span>Confirm Acquisition</span>
+                    </>
+                  )}
                 </button>
               </div>
             </form>

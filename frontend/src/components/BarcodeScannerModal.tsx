@@ -1,12 +1,21 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Html5QrcodeScanner } from 'html5-qrcode';
-import { X, Camera, Check, AlertTriangle, BookOpen } from 'lucide-react';
+import { X, Camera, Check, AlertTriangle, BookOpen, RefreshCw } from 'lucide-react';
 import { useLibraryStore } from '../store/useLibraryStore';
 import { createBook } from '../api/client';
 import type { BookCondition, ReadingStatus } from '../types/book';
 
 export const BarcodeScannerModal: React.FC = () => {
-  const { scannerOpen, setScannerOpen, books, loadBooks, libraryKey, setKeyModalOpen } = useLibraryStore();
+  const {
+    scannerOpen,
+    setScannerOpen,
+    books,
+    loadBooks,
+    libraryKey,
+    authToken,
+    addToast,
+    setKeyModalOpen,
+  } = useLibraryStore();
 
   const [scannedIsbn, setScannedIsbn] = useState<string>('');
   const [duplicateBook, setDuplicateBook] = useState<any>(null);
@@ -93,8 +102,9 @@ export const BarcodeScannerModal: React.FC = () => {
 
     setSaving(true);
     setErrorMsg(null);
+    const token = authToken || libraryKey;
     try {
-      await createBook(
+      const created = await createBook(
         {
           title: title.trim(),
           authors: authors.trim() || undefined,
@@ -107,9 +117,10 @@ export const BarcodeScannerModal: React.FC = () => {
           reading_status: readingStatus,
           location,
         },
-        libraryKey
+        token
       );
-      await loadBooks();
+      addToast(`Added "${created.title}" to collection!`, 'success');
+      await loadBooks(true);
       setScannerOpen(false);
     } catch (err: any) {
       if (err.message && err.message.includes('401')) {
@@ -218,7 +229,7 @@ export const BarcodeScannerModal: React.FC = () => {
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="Book title"
-                className="w-full px-3 py-2 rounded-xl border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark text-xs focus:outline-none focus:border-accent"
+                className="w-full px-2.5 py-1.5 rounded-lg border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark text-xs focus:outline-none focus:border-accent"
               />
             </div>
 
@@ -232,7 +243,7 @@ export const BarcodeScannerModal: React.FC = () => {
                   value={authors}
                   onChange={(e) => setAuthors(e.target.value)}
                   placeholder="Author"
-                  className="w-full px-3 py-2 rounded-xl border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark text-xs focus:outline-none focus:border-accent"
+                  className="w-full px-2.5 py-1.5 rounded-lg border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark text-xs focus:outline-none focus:border-accent"
                 />
               </div>
               <div className="space-y-1">
@@ -244,7 +255,7 @@ export const BarcodeScannerModal: React.FC = () => {
                   value={genre}
                   onChange={(e) => setGenre(e.target.value)}
                   placeholder="e.g. Espionage Thriller"
-                  className="w-full px-3 py-2 rounded-xl border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark text-xs focus:outline-none focus:border-accent"
+                  className="w-full px-2.5 py-1.5 rounded-lg border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark text-xs focus:outline-none focus:border-accent"
                 />
               </div>
             </div>
@@ -259,7 +270,7 @@ export const BarcodeScannerModal: React.FC = () => {
                   min="0"
                   value={purchasePrice}
                   onChange={(e) => setPurchasePrice(parseFloat(e.target.value) || 0)}
-                  className="w-full px-3 py-2 rounded-xl border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark text-xs focus:outline-none focus:border-accent"
+                  className="w-full px-2.5 py-1.5 rounded-lg border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark text-xs focus:outline-none focus:border-accent"
                 />
               </div>
               <div className="space-y-1">
@@ -271,7 +282,7 @@ export const BarcodeScannerModal: React.FC = () => {
                   min="0"
                   value={rp}
                   onChange={(e) => setRp(parseFloat(e.target.value) || 0)}
-                  className="w-full px-3 py-2 rounded-xl border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark text-xs focus:outline-none focus:border-accent"
+                  className="w-full px-2.5 py-1.5 rounded-lg border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark text-xs focus:outline-none focus:border-accent"
                 />
               </div>
             </div>
@@ -284,7 +295,7 @@ export const BarcodeScannerModal: React.FC = () => {
                 <select
                   value={condition}
                   onChange={(e) => setCondition(e.target.value as BookCondition)}
-                  className="w-full px-3 py-2 rounded-xl border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark text-xs focus:outline-none focus:border-accent"
+                  className="w-full px-2.5 py-1.5 rounded-lg border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark text-xs focus:outline-none focus:border-accent"
                 >
                   <option value="New">New</option>
                   <option value="Good">Good</option>
@@ -299,7 +310,7 @@ export const BarcodeScannerModal: React.FC = () => {
                 <select
                   value={readingStatus}
                   onChange={(e) => setReadingStatus(e.target.value as ReadingStatus)}
-                  className="w-full px-3 py-2 rounded-xl border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark text-xs focus:outline-none focus:border-accent"
+                  className="w-full px-2.5 py-1.5 rounded-lg border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark text-xs focus:outline-none focus:border-accent"
                 >
                   <option value="UNREAD">UNREAD</option>
                   <option value="READING">READING</option>
@@ -317,7 +328,7 @@ export const BarcodeScannerModal: React.FC = () => {
                 value={location}
                 onChange={(e) => setLocation(e.target.value)}
                 placeholder="e.g. Home Shelf, Desk Rack"
-                className="w-full px-3 py-2 rounded-xl border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark text-xs focus:outline-none focus:border-accent"
+                className="w-full px-2.5 py-1.5 rounded-lg border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark text-xs focus:outline-none focus:border-accent"
               />
             </div>
 
@@ -325,16 +336,26 @@ export const BarcodeScannerModal: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setScannerOpen(false)}
-                className="px-4 py-2 rounded-xl border border-rule text-xs font-medium text-ink-secondary"
+                className="px-3.5 py-1.5 rounded-lg border border-rule dark:border-rule-dark text-xs font-medium text-ink-secondary hover:bg-surface"
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={saving}
-                className="px-5 py-2 rounded-xl bg-accent hover:bg-accent-hover text-white text-xs font-medium transition-all"
+                className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-accent hover:bg-accent-hover text-white text-xs font-medium transition-all shadow-xs"
               >
-                {saving ? 'Adding to Sheets...' : 'Save to Library'}
+                {saving ? (
+                  <>
+                    <RefreshCw size={13} className="animate-spin text-white" />
+                    <span>Adding to Sheets...</span>
+                  </>
+                ) : (
+                  <>
+                    <Check size={14} />
+                    <span>Save to Library</span>
+                  </>
+                )}
               </button>
             </div>
           </form>

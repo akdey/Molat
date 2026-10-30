@@ -32,12 +32,14 @@ import { HeatmapScreen } from './components/HeatmapScreen';
 import { WishlistScreen } from './components/WishlistScreen';
 import { BarcodeScannerModal } from './components/BarcodeScannerModal';
 import { KeySettingsModal } from './components/KeySettingsModal';
+import { ToastContainer } from './components/ToastContainer';
 
 export default function App() {
   const {
     books,
     portfolio,
     loading,
+    refreshing,
     error,
     activeTab,
     setActiveTab,
@@ -106,9 +108,9 @@ export default function App() {
             className="flex items-center gap-2.5 cursor-pointer select-none"
             onClick={() => setActiveTab('home')}
           >
-            <BookOpen className="text-accent dark:text-accent-dark h-6 w-6 shrink-0" />
+            <BookOpen className="text-accent dark:text-accent-dark h-5 w-5 sm:h-6 sm:w-6 shrink-0" />
             <div>
-              <h1 className="font-serif text-xl font-medium tracking-tight">Ondorpata / Molat</h1>
+              <h1 className="font-serif text-lg sm:text-xl font-medium tracking-tight">Molat</h1>
               <p className="text-3xs text-ink-muted dark:text-ink-dark-muted hidden sm:block">
                 Personal Physical Book Library • Google Sheets Persistence
               </p>
@@ -206,13 +208,13 @@ export default function App() {
               {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
             </button>
             <button
-              onClick={() => loadAllData()}
-              disabled={loading}
-              className="p-2.5 rounded-xl border border-rule dark:border-rule-dark hover:bg-surface dark:hover:bg-surface-dark text-ink-secondary hover:text-ink transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
-              title="Refresh from Google Sheets"
+              onClick={() => loadAllData(true)}
+              disabled={loading || refreshing}
+              className="p-2 sm:p-2.5 rounded-xl border border-rule dark:border-rule-dark hover:bg-surface dark:hover:bg-surface-dark text-ink-secondary hover:text-ink transition-colors min-w-[38px] min-h-[38px] sm:min-w-[44px] sm:min-h-[44px] flex items-center justify-center relative"
+              title="Force Refresh from Google Sheets"
               aria-label="Refresh Data"
             >
-              <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
+              <RefreshCw size={17} className={loading || refreshing ? 'animate-spin text-accent dark:text-accent-dark' : ''} />
             </button>
           </div>
         </div>
@@ -384,72 +386,94 @@ export default function App() {
               </div>
 
               {/* Facet Filters */}
-              <div className="flex flex-wrap items-center gap-2 text-2xs">
-                {/* Reading Status Filter */}
-                <select
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
-                  className="px-3 py-2 rounded-lg border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark text-ink dark:text-ink-dark focus:outline-none focus:border-accent min-h-[44px]"
-                >
-                  <option value="ALL">All Statuses</option>
-                  <option value="UNREAD">Unread</option>
-                  <option value="READING">Reading</option>
-                  <option value="COMPLETED">Completed</option>
-                  <option value="PAUSED">Paused</option>
-                  <option value="ABANDONED">Abandoned</option>
-                </select>
-
-                {/* Genre Filter */}
-                <select
-                  value={genreFilter}
-                  onChange={(e) => setGenreFilter(e.target.value)}
-                  className="px-3 py-2 rounded-lg border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark text-ink dark:text-ink-dark focus:outline-none focus:border-accent min-h-[44px]"
-                >
-                  <option value="ALL">All Genres</option>
-                  {allGenres.map((g) => (
-                    <option key={g} value={g}>
-                      {g}
-                    </option>
-                  ))}
-                </select>
-
-                {/* Condition Filter */}
-                <select
-                  value={conditionFilter}
-                  onChange={(e) => setConditionFilter(e.target.value)}
-                  className="px-3 py-2 rounded-lg border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark text-ink dark:text-ink-dark focus:outline-none focus:border-accent min-h-[44px]"
-                >
-                  <option value="ALL">All Conditions</option>
-                  <option value="New">New</option>
-                  <option value="Good">Good</option>
-                  <option value="Fair">Fair</option>
-                  <option value="Damaged">Damaged</option>
-                </select>
-
-                {(search || statusFilter !== 'ALL' || genreFilter !== 'ALL' || conditionFilter !== 'ALL') && (
-                  <button
-                    onClick={() => {
-                      setSearch('');
-                      setStatusFilter('ALL');
-                      setGenreFilter('ALL');
-                      setConditionFilter('ALL');
-                    }}
-                    className="px-2 py-2 rounded text-ink-muted hover:text-accent underline transition-colors min-h-[44px] flex items-center"
+              <div className="space-y-1.5">
+                <div className="grid grid-cols-3 gap-1.5 sm:flex sm:flex-wrap sm:items-center sm:gap-2">
+                  {/* Reading Status Filter */}
+                  <select
+                    value={statusFilter}
+                    onChange={(e) => setStatusFilter(e.target.value)}
+                    className="w-full sm:w-auto text-xs py-1.5 px-1.5 sm:px-2.5 rounded-lg border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark text-ink dark:text-ink-dark focus:outline-none focus:border-accent truncate cursor-pointer"
+                    title="Filter by Reading Status"
                   >
-                    Reset filters
-                  </button>
-                )}
+                    <option value="ALL">All Status</option>
+                    <option value="UNREAD">Unread</option>
+                    <option value="READING">Reading</option>
+                    <option value="COMPLETED">Completed</option>
+                    <option value="PAUSED">Paused</option>
+                    <option value="ABANDONED">Abandoned</option>
+                  </select>
 
-                <span className="ml-auto text-ink-muted py-2">
-                  Showing {filteredBooks.length} of {books.length} volumes
-                </span>
+                  {/* Genre Filter */}
+                  <select
+                    value={genreFilter}
+                    onChange={(e) => setGenreFilter(e.target.value)}
+                    className="w-full sm:w-auto text-xs py-1.5 px-1.5 sm:px-2.5 rounded-lg border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark text-ink dark:text-ink-dark focus:outline-none focus:border-accent truncate cursor-pointer"
+                    title="Filter by Genre"
+                  >
+                    <option value="ALL">All Genres</option>
+                    {allGenres.map((g) => (
+                      <option key={g} value={g}>
+                        {g}
+                      </option>
+                    ))}
+                  </select>
+
+                  {/* Condition Filter */}
+                  <select
+                    value={conditionFilter}
+                    onChange={(e) => setConditionFilter(e.target.value)}
+                    className="w-full sm:w-auto text-xs py-1.5 px-1.5 sm:px-2.5 rounded-lg border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark text-ink dark:text-ink-dark focus:outline-none focus:border-accent truncate cursor-pointer"
+                    title="Filter by Condition"
+                  >
+                    <option value="ALL">All Cond.</option>
+                    <option value="New">New</option>
+                    <option value="Good">Good</option>
+                    <option value="Fair">Fair</option>
+                    <option value="Damaged">Damaged</option>
+                  </select>
+
+                  {(search || statusFilter !== 'ALL' || genreFilter !== 'ALL' || conditionFilter !== 'ALL') && (
+                    <button
+                      onClick={() => {
+                        setSearch('');
+                        setStatusFilter('ALL');
+                        setGenreFilter('ALL');
+                        setConditionFilter('ALL');
+                      }}
+                      className="col-span-3 sm:col-auto px-2 py-1 text-2xs text-ink-muted hover:text-accent underline transition-colors self-center"
+                    >
+                      Reset filters
+                    </button>
+                  )}
+                </div>
+
+                <div className="flex items-center justify-between text-2xs text-ink-muted px-0.5">
+                  <span>Showing {filteredBooks.length} of {books.length} volumes</span>
+                  {(loading || refreshing) && (
+                    <span className="inline-flex items-center gap-1 text-accent dark:text-accent-dark animate-pulse font-medium">
+                      <RefreshCw size={11} className="animate-spin" />
+                      Syncing with Sheets...
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
 
             {/* Collection View Renderers */}
             {loading && books.length === 0 ? (
-              <div className="py-20 text-center text-ink-muted animate-pulse">
-                Loading library catalogue from Google Sheets...
+              <div className="space-y-4 py-8">
+                <div className="flex items-center justify-center gap-2 text-xs text-ink-muted animate-pulse">
+                  <RefreshCw size={14} className="animate-spin text-accent" />
+                  <span>Loading library catalogue from Google Sheets...</span>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
+                  {[...Array(6)].map((_, i) => (
+                    <div
+                      key={i}
+                      className="aspect-[2/3] rounded-xl bg-rule/30 dark:bg-rule-dark/30 animate-pulse border border-rule/50 dark:border-rule-dark/50"
+                    />
+                  ))}
+                </div>
               </div>
             ) : filteredBooks.length === 0 ? (
               <div className="py-16 text-center text-ink-muted space-y-2">
@@ -624,6 +648,7 @@ export default function App() {
       <QuickLogModal />
       <BarcodeScannerModal />
       <KeySettingsModal />
+      <ToastContainer />
     </div>
   );
 }

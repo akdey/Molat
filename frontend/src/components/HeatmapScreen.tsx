@@ -30,13 +30,13 @@ export const HeatmapScreen: React.FC = () => {
   const getIntensityClass = (intensity: number) => {
     switch (intensity) {
       case 1:
-        return 'bg-amber-300 dark:bg-amber-900/60';
+        return 'bg-emerald-300 dark:bg-emerald-900/60';
       case 2:
-        return 'bg-amber-500 dark:bg-amber-700';
+        return 'bg-emerald-500 dark:bg-emerald-700';
       case 3:
-        return 'bg-orange-600 dark:bg-orange-600';
+        return 'bg-emerald-600 dark:bg-emerald-500';
       case 4:
-        return 'bg-amber-700 dark:bg-amber-500';
+        return 'bg-emerald-800 dark:bg-emerald-400';
       default:
         return 'bg-rule/40 dark:bg-rule-dark/50';
     }

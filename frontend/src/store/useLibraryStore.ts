@@ -11,13 +11,21 @@ import {
   loginUser,
 } from '../api/client';
 
+export interface Toast {
+  id: string;
+  message: string;
+  type: 'success' | 'error' | 'info';
+}
+
 interface LibraryState {
   books: Book[];
   portfolio: PortfolioSummary | null;
   streakSummary: StreakSummary | null;
   wishlist: WishlistItem[];
   loading: boolean;
+  refreshing: boolean;
   error: string | null;
+  toasts: Toast[];
   
   // Navigation & View Mode
   activeTab: 'home' | 'shelf' | 'tracker' | 'wishlist' | 'maintenance';
@@ -58,10 +66,12 @@ interface LibraryState {
   loginOwner: (username: string, password: string) => Promise<void>;
   logoutOwner: () => void;
   toggleTheme: () => void;
+  addToast: (message: string, type?: 'success' | 'error' | 'info') => void;
+  removeToast: (id: string) => void;
   
   // API Calls
-  loadAllData: () => Promise<void>;
-  loadBooks: () => Promise<void>;
+  loadAllData: (forceRefresh?: boolean) => Promise<void>;
+  loadBooks: (forceRefresh?: boolean) => Promise<void>;
   loadStreak: () => Promise<void>;
   loadWishlist: () => Promise<void>;
   submitReadingLog: (payload: import('../types/book').ReadingLogCreate) => Promise<void>;
@@ -76,7 +86,9 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
   streakSummary: null,
   wishlist: [],
   loading: false,
+  refreshing: false,
   error: null,
+  toasts: [],
   
   activeTab: 'home',
   viewMode: 'grid',
@@ -116,6 +128,23 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
   setLibraryKey: (key: string) => {
     localStorage.setItem('molat_library_key', key);
     set({ libraryKey: key });
+    get().addToast('API Key saved locally', 'info');
+  },
+
+  addToast: (message: string, type: 'success' | 'error' | 'info' = 'info') => {
+    const id = `${Date.now()}-${Math.random().toString(36).substr(2, 5)}`;
+    set((state) => ({
+      toasts: [...state.toasts.slice(-4), { id, message, type }],
+    }));
+    setTimeout(() => {
+      get().removeToast(id);
+    }, 4000);
+  },
+
+  removeToast: (id: string) => {
+    set((state) => ({
+      toasts: state.toasts.filter((t) => t.id !== id),
+    }));
   },
 
   loginOwner: async (username, password) => {
@@ -123,6 +152,7 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
     localStorage.setItem('molat_auth_token', res.access_token);
     localStorage.setItem('molat_auth_user', res.username);
     set({ authToken: res.access_token, authUser: res.username });
+    get().addToast(`Welcome back, ${res.username}! Signed in as owner.`, 'success');
   },
 
   logoutOwner: () => {
@@ -130,6 +160,7 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
     localStorage.removeItem('molat_auth_user');
     localStorage.removeItem('molat_library_key');
     set({ authToken: null, authUser: null, libraryKey: '' });
+    get().addToast('Signed out of owner session.', 'info');
   },
 
   toggleTheme: () => {
@@ -143,11 +174,15 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
     set({ theme: next });
   },
 
-  loadAllData: async () => {
-    set({ loading: true, error: null });
+  loadAllData: async (forceRefresh = false) => {
+    if (forceRefresh) {
+      set({ refreshing: true });
+    } else {
+      set({ loading: true, error: null });
+    }
     try {
       const [bookRes, streakRes, wishRes] = await Promise.allSettled([
-        fetchBooks(),
+        fetchBooks(forceRefresh),
         fetchStreakSummary(),
         fetchWishlist(),
       ]);
@@ -158,18 +193,25 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
         streakSummary: streakRes.status === 'fulfilled' ? streakRes.value : state.streakSummary,
         wishlist: wishRes.status === 'fulfilled' ? wishRes.value : state.wishlist,
         loading: false,
+        refreshing: false,
       }));
+
+      if (forceRefresh) {
+        get().addToast('Catalogue refreshed from Google Sheets', 'success');
+      }
     } catch (err: any) {
-      set({ error: err.message || 'Error loading library data', loading: false });
+      set({ error: err.message || 'Error loading library data', loading: false, refreshing: false });
+      get().addToast(err.message || 'Failed to sync with Google Sheets', 'error');
     }
   },
 
-  loadBooks: async () => {
+  loadBooks: async (forceRefresh = false) => {
     try {
-      const data = await fetchBooks();
+      const data = await fetchBooks(forceRefresh);
       set({ books: data.books, portfolio: data.portfolio });
     } catch (err: any) {
       set({ error: err.message });
+      get().addToast(`Error loading books: ${err.message}`, 'error');
     }
   },
 
@@ -194,13 +236,15 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
   submitReadingLog: async (payload) => {
     const token = get().authToken || get().libraryKey;
     await logReadingSession(payload, token || undefined);
-    await Promise.all([get().loadBooks(), get().loadStreak()]);
+    get().addToast(`Recorded reading session (+${payload.pages_read} pages)!`, 'success');
+    await Promise.all([get().loadBooks(true), get().loadStreak()]);
   },
 
   acquireItem: async (wishlistId, payload) => {
     const token = get().authToken || get().libraryKey;
-    await acquireWishlistItem(wishlistId, payload, token || undefined);
-    await Promise.all([get().loadBooks(), get().loadWishlist()]);
+    const book = await acquireWishlistItem(wishlistId, payload, token || undefined);
+    get().addToast(`Acquired "${book.title}" and added to collection!`, 'success');
+    await Promise.all([get().loadBooks(true), get().loadWishlist()]);
   },
 
   updateBookDetails: async (bookId, updates) => {
@@ -210,13 +254,16 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
       books: state.books.map((b) => (b.book_id === bookId ? updated : b)),
       selectedBook: state.selectedBook?.book_id === bookId ? updated : state.selectedBook,
     }));
-    await get().loadBooks();
+    get().addToast(`Updated details for "${updated.title}"`, 'success');
+    await get().loadBooks(true);
   },
 
   triggerCoverEnrichment: async () => {
     const token = get().authToken || get().libraryKey;
+    get().addToast('Scanning catalogue for cover enrichment...', 'info');
     const res = await enrichCovers(token || undefined);
-    await get().loadBooks();
+    get().addToast(res.message || 'Cover enrichment completed!', 'success');
+    await get().loadBooks(true);
     return res;
   },
 }));

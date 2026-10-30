@@ -9,7 +9,7 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg'],
       manifest: {
-        name: 'Ondorpata / Molat Library',
+        name: 'Molat Library',
         short_name: 'Molat',
         description: 'Personal physical book library catalog and reading streak tracker',
         theme_color: '#FBF9F5',
