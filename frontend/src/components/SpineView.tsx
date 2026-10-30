@@ -72,3 +72,4 @@ export const SpineView: React.FC<SpineViewProps> = ({ books }) => {
     </div>
   );
 };
+

@@ -100,3 +100,4 @@ export const BookCover: React.FC<BookCoverProps> = ({
     </div>
   );
 };
+

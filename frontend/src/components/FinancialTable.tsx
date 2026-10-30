@@ -96,3 +96,4 @@ export const FinancialTable: React.FC<FinancialTableProps> = ({ books, portfolio
     </div>
   );
 };
+

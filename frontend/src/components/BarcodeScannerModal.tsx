@@ -343,3 +343,4 @@ export const BarcodeScannerModal: React.FC = () => {
     </div>
   );
 };
+

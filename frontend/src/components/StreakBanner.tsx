@@ -87,3 +87,4 @@ export const StreakBanner: React.FC = () => {
     </section>
   );
 };
+

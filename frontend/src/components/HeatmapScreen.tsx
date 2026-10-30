@@ -164,3 +164,4 @@ export const HeatmapScreen: React.FC = () => {
     </div>
   );
 };
+

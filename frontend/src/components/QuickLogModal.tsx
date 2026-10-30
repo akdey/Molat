@@ -272,3 +272,4 @@ export const QuickLogModal: React.FC = () => {
     </div>
   );
 };
+
