@@ -1,3 +1,8 @@
+import os
+
+# Disable Gradio 5 Node.js SSR proxy so FastAPI directly handles all POST/GET requests without SvelteKit interference
+os.environ["GRADIO_SSR_MODE"] = "False"
+
 # Graceful import of Hugging Face ZeroGPU SDK (MUST BE FIRST)
 try:
     import spaces
@@ -55,4 +60,8 @@ demo.app.include_router(reading.router, prefix="/api/v1")
 demo.app.include_router(wishlist.router, prefix="/api/v1")
 
 if __name__ == "__main__":
-    demo.launch(server_name="0.0.0.0", server_port=7860)
+    demo.launch(
+        server_name="0.0.0.0",
+        server_port=7860,
+        ssr_mode=False,
+    )
