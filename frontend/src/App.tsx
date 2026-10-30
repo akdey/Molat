@@ -19,6 +19,7 @@ import {
   Plus,
   ChevronRight,
   ArrowRight,
+  MoreVertical,
 } from 'lucide-react';
 
 import { StreakBanner } from './components/StreakBanner';
@@ -59,11 +60,13 @@ export default function App() {
     setKeyModalOpen,
     loadAllData,
     authToken,
+    authUser,
     theme,
     toggleTheme,
   } = useLibraryStore();
 
   const [centerMenuOpen, setCenterMenuOpen] = useState(false);
+  const [headerMenuOpen, setHeaderMenuOpen] = useState(false);
 
   useEffect(() => {
     loadAllData();
@@ -176,46 +179,128 @@ export default function App() {
             </button>
           </nav>
 
-          {/* Action Tools */}
-          <div className="flex items-center gap-1.5">
-            <button
-              onClick={() => setScannerOpen(true)}
-              className="p-2.5 rounded-xl border border-rule dark:border-rule-dark hover:bg-surface dark:hover:bg-surface-dark text-ink-secondary hover:text-ink transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
-              title="Scan ISBN Barcode / Add Volume"
-              aria-label="Scan ISBN Barcode"
-            >
-              <Camera size={18} />
-            </button>
-            <button
-              onClick={() => setKeyModalOpen(true)}
-              className={`p-2.5 rounded-xl border border-rule dark:border-rule-dark hover:bg-surface dark:hover:bg-surface-dark transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center relative ${
-                authToken ? 'text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30' : 'text-ink-secondary hover:text-ink'
-              }`}
-              title={authToken ? "Signed in as Owner" : "Owner Sign In"}
-              aria-label="Owner Authentication"
-            >
-              <KeyRound size={18} />
-              {authToken && (
-                <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-emerald-600" />
-              )}
-            </button>
-            <button
-              onClick={toggleTheme}
-              className="p-2.5 rounded-xl border border-rule dark:border-rule-dark hover:bg-surface dark:hover:bg-surface-dark text-ink-secondary hover:text-ink transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
-              title="Toggle Dark/Light Mode"
-              aria-label="Toggle Theme"
-            >
-              {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
-            </button>
+          {/* Action Tools — Clean & Decluttered */}
+          <div className="flex items-center gap-1 sm:gap-2">
+            {/* Sync button with Sheets (accessible with 1 tap, spins when refreshing) */}
             <button
               onClick={() => loadAllData(true)}
               disabled={loading || refreshing}
-              className="p-2 sm:p-2.5 rounded-xl border border-rule dark:border-rule-dark hover:bg-surface dark:hover:bg-surface-dark text-ink-secondary hover:text-ink transition-colors min-w-[38px] min-h-[38px] sm:min-w-[44px] sm:min-h-[44px] flex items-center justify-center relative"
+              className="p-2 rounded-xl text-ink-secondary hover:text-ink hover:bg-surface dark:hover:bg-surface-dark transition-colors relative"
               title="Force Refresh from Google Sheets"
               aria-label="Refresh Data"
             >
-              <RefreshCw size={17} className={loading || refreshing ? 'animate-spin text-accent dark:text-accent-dark' : ''} />
+              <RefreshCw
+                size={16}
+                className={loading || refreshing ? 'animate-spin text-accent dark:text-accent-dark' : ''}
+              />
             </button>
+
+            {/* Desktop Only: Theme Toggle */}
+            <button
+              onClick={toggleTheme}
+              className="hidden md:flex p-2 rounded-xl text-ink-secondary hover:text-ink hover:bg-surface dark:hover:bg-surface-dark transition-colors"
+              title="Toggle Dark/Light Mode"
+              aria-label="Toggle Theme"
+            >
+              {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
+            </button>
+
+            {/* Desktop Only: Owner Authentication Pill */}
+            <button
+              onClick={() => setKeyModalOpen(true)}
+              className={`hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-medium transition-colors ${
+                authToken
+                  ? 'border-emerald-300 dark:border-emerald-800/50 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-800 dark:text-emerald-300'
+                  : 'border-rule dark:border-rule-dark hover:bg-surface dark:hover:bg-surface-dark text-ink-secondary hover:text-ink'
+              }`}
+              title={authToken ? `Signed in as ${authUser || 'Owner'}` : 'Owner Sign In'}
+              aria-label="Owner Authentication"
+            >
+              <KeyRound size={13} />
+              <span>{authToken ? authUser || 'Owner' : 'Sign In'}</span>
+            </button>
+
+            {/* Mobile Overflow Menu (replaces the 4 cluttered buttons on mobile) */}
+            <div className="md:hidden relative">
+              <button
+                onClick={() => setHeaderMenuOpen(!headerMenuOpen)}
+                className={`p-2 rounded-xl border transition-colors relative ${
+                  authToken
+                    ? 'border-emerald-300 dark:border-emerald-800/60 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-800 dark:text-emerald-300'
+                    : 'border-rule dark:border-rule-dark text-ink-secondary hover:text-ink hover:bg-surface dark:hover:bg-surface-dark'
+                }`}
+                title="Settings & Tools"
+                aria-label="Open Settings Menu"
+              >
+                <MoreVertical size={16} />
+                {authToken && (
+                  <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-emerald-600" />
+                )}
+              </button>
+
+              {/* Mobile Popover Menu */}
+              {headerMenuOpen && (
+                <>
+                  <div
+                    className="fixed inset-0 z-40 bg-black/20 backdrop-blur-2xs"
+                    onClick={() => setHeaderMenuOpen(false)}
+                  />
+                  <div className="absolute right-0 top-11 z-50 w-52 p-1.5 rounded-2xl bg-canvas dark:bg-canvas-dark border border-rule dark:border-rule-dark shadow-xl space-y-0.5 animate-in fade-in zoom-in-95 duration-150">
+                    <button
+                      onClick={() => {
+                        setHeaderMenuOpen(false);
+                        setKeyModalOpen(true);
+                      }}
+                      className="w-full flex items-center justify-between px-3 py-2 rounded-xl hover:bg-surface dark:hover:bg-surface-dark text-xs font-medium transition-colors text-left"
+                    >
+                      <span className="flex items-center gap-2.5">
+                        <KeyRound size={14} className={authToken ? 'text-emerald-600' : 'text-ink-muted'} />
+                        <span>{authToken ? 'Owner Account' : 'Sign In as Owner'}</span>
+                      </span>
+                      {authToken && (
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-600" />
+                      )}
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        setHeaderMenuOpen(false);
+                        setScannerOpen(true);
+                      }}
+                      className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-surface dark:hover:bg-surface-dark text-xs font-medium transition-colors text-left"
+                    >
+                      <Camera size={14} className="text-accent dark:text-accent-dark" />
+                      <span>Scan ISBN Barcode</span>
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        toggleTheme();
+                        setHeaderMenuOpen(false);
+                      }}
+                      className="w-full flex items-center justify-between px-3 py-2 rounded-xl hover:bg-surface dark:hover:bg-surface-dark text-xs font-medium transition-colors text-left"
+                    >
+                      <span className="flex items-center gap-2.5">
+                        {theme === 'dark' ? <Sun size={14} /> : <Moon size={14} />}
+                        <span>Appearance</span>
+                      </span>
+                      <span className="text-3xs text-ink-muted capitalize font-normal">{theme}</span>
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        setHeaderMenuOpen(false);
+                        loadAllData(true);
+                      }}
+                      className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-surface dark:hover:bg-surface-dark text-xs font-medium transition-colors text-left text-accent dark:text-accent-dark border-t border-rule/50 dark:border-rule-dark/50 pt-2 mt-1"
+                    >
+                      <RefreshCw size={13} className={loading || refreshing ? 'animate-spin' : ''} />
+                      <span>Sync with Google Sheets</span>
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
           </div>
         </div>
       </header>
