@@ -81,3 +81,4 @@ def test_auth_tampered_bearer_token(monkeypatch):
         headers={"Authorization": f"Bearer {fake_token}"},
     )
     assert res.status_code == 401
+

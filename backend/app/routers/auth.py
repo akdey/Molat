@@ -61,3 +61,4 @@ async def login(req: LoginRequest):
 async def get_current_user(_: bool = Depends(verify_library_key)):
     """Verifies that the caller's session token is valid."""
     return {"authenticated": True, "username": settings.ADMIN_USERNAME}
+

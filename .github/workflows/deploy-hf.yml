@@ -1,0 +1,62 @@
+name: Deploy Backend to Hugging Face Spaces
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'backend/**'
+      - '.github/workflows/deploy-hf.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: hf-spaces-deploy
+  cancel-in-progress: true
+
+jobs:
+  test-and-deploy:
+    name: Test & Sync to Hugging Face
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          lfs: true
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: 'backend/requirements.txt'
+
+      - name: Install backend dependencies & test
+        run: |
+          cd backend
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          PYTHONPATH=. pytest -v
+
+      - name: Push to Hugging Face Space
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          HF_SPACE: ${{ secrets.HF_SPACE || 'akdey/molat-api' }}
+        run: |
+          if [ -z "$HF_TOKEN" ]; then
+            echo "::error::HF_TOKEN secret is not set in GitHub repository secrets! Go to Settings -> Secrets and variables -> Actions to add it."
+            exit 1
+          fi
+
+          echo "🚀 Deploying backend to Hugging Face Space: $HF_SPACE"
+
+          git config --global user.email "actions@github.com"
+          git config --global user.name "GitHub Actions"
+
+          # Extract backend/ directory as a standalone root branch
+          git branch -D hf-deploy 2>/dev/null || true
+          git subtree split --prefix backend -b hf-deploy
+
+          # Force push the backend subtree to the Space's main branch
+          git push -f "https://user:${HF_TOKEN}@huggingface.co/spaces/${HF_SPACE}" hf-deploy:main
+
+          echo "✅ Successfully pushed to https://huggingface.co/spaces/${HF_SPACE}"
