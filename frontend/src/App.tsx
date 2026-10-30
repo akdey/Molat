@@ -413,7 +413,7 @@ export default function App() {
                 <div>
                   <h3 className="font-serif text-sm sm:text-base font-medium">Acquisitions Wishlist</h3>
                   <p className="text-xs text-ink-secondary dark:text-ink-dark-secondary">
-                    Plan book hunting, set target second-hand prices, and acquire with 1-tap.
+                    Plan book purchases, set target prices, and acquire into your library with 1-tap.
                   </p>
                 </div>
               </div>

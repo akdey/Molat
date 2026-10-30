@@ -17,7 +17,7 @@ export const WishlistScreen: React.FC = () => {
 
   const [acquireModalItem, setAcquireModalItem] = useState<WishlistItem | null>(null);
   const [purchasePrice, setPurchasePrice] = useState<number>(0);
-  const [condition, setCondition] = useState<BookCondition>('Good');
+  const [condition, setCondition] = useState<BookCondition>('New');
   const [location, setLocation] = useState<string>('Home Shelf');
   const [acquiring, setAcquiring] = useState<boolean>(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -34,7 +34,7 @@ export const WishlistScreen: React.FC = () => {
   const openAcquireModal = (item: WishlistItem) => {
     setAcquireModalItem(item);
     setPurchasePrice(item.target_price || 0);
-    setCondition('Good');
+    setCondition('New');
     setLocation('Home Shelf');
     setErrorMsg(null);
   };
@@ -109,7 +109,7 @@ export const WishlistScreen: React.FC = () => {
             Acquisitions Wishlist ({wishlist.length})
           </h2>
           <p className="text-xs text-ink-secondary dark:text-ink-dark-secondary">
-            Planned physical book purchases with target second-hand prices and 1-click shelf acquisition.
+            Planned book purchases with target prices and 1-click shelf acquisition.
           </p>
         </div>
 
@@ -186,7 +186,7 @@ export const WishlistScreen: React.FC = () => {
             </div>
             <div className="space-y-1">
               <label className="text-3xs uppercase tracking-wider font-medium text-ink-muted">
-                Target Second-Hand Price (₹)
+                Target / Budget Price (₹)
               </label>
               <input
                 type="number"

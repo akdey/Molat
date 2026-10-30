@@ -30,7 +30,7 @@ class WishlistItemCreate(BaseModel):
 
 class WishlistAcquireRequest(BaseModel):
     purchase_price: Optional[float] = Field(None, ge=0.0)
-    condition: Optional[BookCondition] = BookCondition.GOOD
+    condition: Optional[BookCondition] = BookCondition.NEW
     location: Optional[str] = "Home Shelf"
 
 

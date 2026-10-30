@@ -63,7 +63,7 @@ async def test_acquire_wishlist_item_lifecycle(monkeypatch):
         expected_rp=450.0,
         target_price=220.0,
         priority="High",
-        notes="Pre-ordered from second hand stall",
+        notes="Pre-ordered from bookshop",
     )
     created_wish = await sheets_repo.create_wishlist_item(item_in)
     wish_id = created_wish.wishlist_id
