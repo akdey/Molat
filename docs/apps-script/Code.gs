@@ -26,8 +26,20 @@ const SCHEMAS = {
   ]
 };
 
+function getSpreadsheet() {
+  const propId = PropertiesService.getScriptProperties().getProperty('SPREADSHEET_ID');
+  if (propId && propId.trim()) {
+    return SpreadsheetApp.openById(propId.trim());
+  }
+  const active = SpreadsheetApp.getActiveSpreadsheet();
+  if (!active) {
+    throw new Error('No active spreadsheet found. If this is a standalone Apps Script project, add SPREADSHEET_ID under Project Settings > Script Properties. Otherwise, open this script from Extensions > Apps Script inside your Google Sheet.');
+  }
+  return active;
+}
+
 function ensureSheetsExist() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ss = getSpreadsheet();
   Object.keys(SCHEMAS).forEach(sheetName => {
     let sheet = ss.getSheetByName(sheetName);
     if (!sheet) {
@@ -44,24 +56,28 @@ function verifyToken(token) {
 }
 
 function doGet(e) {
-  const token = e?.parameter?.token || '';
-  if (!verifyToken(token)) {
-    return jsonResponse({ success: false, error: 'Unauthorized' });
+  try {
+    const token = e?.parameter?.token || '';
+    if (!verifyToken(token)) {
+      return jsonResponse({ success: false, error: 'Unauthorized: Invalid or missing token' });
+    }
+    ensureSheetsExist();
+    const table = e?.parameter?.table || SHEETS.BOOKS;
+    return jsonResponse({
+      success: true,
+      table: table,
+      rows: readTableAsObjects(table)
+    });
+  } catch (err) {
+    return jsonResponse({ success: false, error: String(err.message || err) });
   }
-  ensureSheetsExist();
-  const table = e?.parameter?.table || SHEETS.BOOKS;
-  return jsonResponse({
-    success: true,
-    table: table,
-    rows: readTableAsObjects(table)
-  });
 }
 
 function doPost(e) {
   try {
     const body = JSON.parse(e.postData.contents || '{}');
     if (!verifyToken(body.token)) {
-      return jsonResponse({ success: false, error: 'Unauthorized' });
+      return jsonResponse({ success: false, error: 'Unauthorized: Invalid or missing token' });
     }
     ensureSheetsExist();
     const { action, table, keyField, keyValue, record, records } = body;
@@ -80,14 +96,14 @@ function doPost(e) {
       const deleted = deleteRowByKey(table, keyField, keyValue);
       return jsonResponse({ success: deleted });
     }
-    return jsonResponse({ success: false, error: 'Unknown action' });
+    return jsonResponse({ success: false, error: 'Unknown action: ' + action });
   } catch (err) {
     return jsonResponse({ success: false, error: String(err.message || err) });
   }
 }
 
 function readTableAsObjects(sheetName) {
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(sheetName);
+  const sheet = getSpreadsheet().getSheetByName(sheetName);
   const lastRow = sheet.getLastRow();
   const headers = SCHEMAS[sheetName];
   if (lastRow < 2) return [];
@@ -100,7 +116,7 @@ function readTableAsObjects(sheetName) {
 }
 
 function appendRowObject(sheetName, record) {
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(sheetName);
+  const sheet = getSpreadsheet().getSheetByName(sheetName);
   const headers = SCHEMAS[sheetName];
   const row = headers.map(h => formatCellForWrite(h, record[h]));
   sheet.appendRow(row);
@@ -108,7 +124,7 @@ function appendRowObject(sheetName, record) {
 }
 
 function updateRowByKey(sheetName, keyField, keyValue, patch) {
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(sheetName);
+  const sheet = getSpreadsheet().getSheetByName(sheetName);
   const headers = SCHEMAS[sheetName];
   const keyIndex = headers.indexOf(keyField);
   const lastRow = sheet.getLastRow();
@@ -130,7 +146,7 @@ function updateRowByKey(sheetName, keyField, keyValue, patch) {
 }
 
 function batchUpdateCovers(items) {
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEETS.BOOKS);
+  const sheet = getSpreadsheet().getSheetByName(SHEETS.BOOKS);
   const lastRow = sheet.getLastRow();
   if (lastRow < 2) return 0;
   const ids = sheet.getRange(2, 1, lastRow - 1, 1).getDisplayValues().map(r => r[0]);
@@ -148,7 +164,7 @@ function batchUpdateCovers(items) {
 }
 
 function deleteRowByKey(sheetName, keyField, keyValue) {
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(sheetName);
+  const sheet = getSpreadsheet().getSheetByName(sheetName);
   const headers = SCHEMAS[sheetName];
   const keyIndex = headers.indexOf(keyField);
   const lastRow = sheet.getLastRow();

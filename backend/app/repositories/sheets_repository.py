@@ -262,7 +262,12 @@ class GoogleSheetsRepository:
             async with self._client(timeout=15.0) as client:
                 resp = await client.get(settings.GOOGLE_SHEETS_BRIDGE_URL, params=params)
                 resp.raise_for_status()
-                data = resp.json()
+                try:
+                    data = resp.json()
+                except Exception as json_err:
+                    logger.error(f"Bridge response for Books was not JSON: {json_err}. Status: {resp.status_code}, Body: {resp.text[:300]}")
+                    return self._memory_books
+
                 if not data.get("success"):
                     logger.error(f"Apps Script error reading Books: {data.get('error')}")
                     return self._memory_books
@@ -435,8 +440,14 @@ class GoogleSheetsRepository:
             async with self._client(timeout=15.0) as client:
                 resp = await client.get(settings.GOOGLE_SHEETS_BRIDGE_URL, params=params)
                 resp.raise_for_status()
-                data = resp.json()
+                try:
+                    data = resp.json()
+                except Exception as json_err:
+                    logger.error(f"Bridge response for Reading Logs was not JSON: {json_err}. Status: {resp.status_code}, Body: {resp.text[:300]}")
+                    return self._memory_logs
+
                 if not data.get("success"):
+                    logger.error(f"Apps Script error reading Reading Logs: {data.get('error')}")
                     return self._memory_logs
                 raw_rows = data.get("rows", [])
                 logs = [ReadingLog.from_sheet_row(r) for r in raw_rows if r.get("log_id")]
@@ -557,8 +568,14 @@ class GoogleSheetsRepository:
             async with self._client(timeout=15.0) as client:
                 resp = await client.get(settings.GOOGLE_SHEETS_BRIDGE_URL, params=params)
                 resp.raise_for_status()
-                data = resp.json()
+                try:
+                    data = resp.json()
+                except Exception as json_err:
+                    logger.error(f"Bridge response for Wishlist was not JSON: {json_err}. Status: {resp.status_code}, Body: {resp.text[:300]}")
+                    return self._memory_wishlist
+
                 if not data.get("success"):
+                    logger.error(f"Apps Script error reading Wishlist: {data.get('error')}")
                     return self._memory_wishlist
                 raw_rows = data.get("rows", [])
                 items = [WishlistItem.from_sheet_row(r) for r in raw_rows if r.get("wishlist_id")]
