@@ -41,7 +41,7 @@ jobs:
       - name: Push to Hugging Face Space
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
-          HF_SPACE: ${{ secrets.HF_SPACE || 'akdey/molat-api' }}
+          HF_SPACE: ${{ secrets.HF_SPACE || 'a-k-dey/Molat' }}
         run: |
           if [ -z "$HF_TOKEN" ]; then
             echo "::error::HF_TOKEN secret is not set in GitHub repository secrets! Go to Settings -> Secrets and variables -> Actions to add it."
