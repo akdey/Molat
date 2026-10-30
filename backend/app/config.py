@@ -10,7 +10,7 @@ class Settings(BaseSettings):
     HOST: str = "0.0.0.0"
 
     # CORS
-    ALLOWED_ORIGINS: str = "http://localhost:5173,http://localhost:3000,https://molat.vercel.app"
+    ALLOWED_ORIGINS: str = "http://localhost:5173,http://localhost:3000,https://molat.vercel.app,https://molat-akdey.vercel.app"
 
     # Security & Owner Authentication
     ADMIN_USERNAME: str = "admin"
