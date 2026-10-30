@@ -23,18 +23,19 @@ jobs:
           fetch-depth: 0
           lfs: true
 
-      - name: Set up Python 3.11
-        uses: actions/setup-python@v5
+      - name: Install uv (Astral)
+        uses: astral-sh/setup-uv@v5
         with:
-          python-version: '3.11'
-          cache: 'pip'
-          cache-dependency-path: 'backend/requirements.txt'
+          enable-cache: true
+          version: "latest"
 
-      - name: Install backend dependencies & test
+      - name: Set up Python 3.11 with uv
+        run: uv python install 3.11
+
+      - name: Install dependencies & run test suite with uv
         run: |
           cd backend
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          uv pip install --system -r requirements.txt
           PYTHONPATH=. pytest -v
 
       - name: Push to Hugging Face Space
@@ -60,4 +61,3 @@ jobs:
           git push -f "https://user:${HF_TOKEN}@huggingface.co/spaces/${HF_SPACE}" hf-deploy:main
 
           echo "✅ Successfully pushed to https://huggingface.co/spaces/${HF_SPACE}"
-

@@ -12,9 +12,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Install dependencies
+# Install uv for ultra-fast dependency resolution and installation
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/uv
+
+# Install dependencies into system environment using uv
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN uv pip install --system --no-cache -r requirements.txt
 
 # Create non-root user with UID 1000 for Hugging Face Spaces Docker runtime
 RUN useradd -m -u 1000 user
@@ -29,4 +32,3 @@ USER user
 EXPOSE 7860
 
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "7860"]
-
