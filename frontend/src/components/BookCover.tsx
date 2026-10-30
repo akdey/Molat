@@ -61,28 +61,29 @@ export const BookCover: React.FC<BookCoverProps> = ({
           className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-102"
         />
       ) : (
-        /* Typographic Bookcloth Fallback */
-        <div className="w-full h-full flex flex-col justify-between p-3.5 bg-gradient-to-b from-[#2D2A26] to-[#1C1A17] text-[#EDE8DF] border border-white/10 text-center">
+        /* Typographic Bookcloth Fallback with bound spine */
+        <div className="w-full h-full flex flex-col justify-between p-3 bg-gradient-to-b from-[#2B2724] to-[#1A1816] text-[#EDE8DF] border-l-4 border-[#C2410C] border-y border-r border-white/10 text-center shadow-inner">
           <div className="flex items-center justify-between text-3xs text-[#A89F91] tracking-widest uppercase border-b border-white/15 pb-1">
             <span>Ondorpata</span>
-            <span>Ed.</span>
+            <span className="font-mono">Vol.</span>
           </div>
 
           <div className="my-auto space-y-1.5 py-1">
-            <span className="font-serif text-3xl font-normal text-amber-200/90 block">
+            <span className="font-serif text-3xl font-light text-amber-200/90 block">
               {title.charAt(0).toUpperCase()}
             </span>
             <p className="font-serif text-xs font-medium leading-tight line-clamp-3 text-[#FAF7F2]">
               {title}
             </p>
+            <div className="w-8 border-t border-amber-500/40 mx-auto my-1" />
             {authors && (
-              <p className="text-3xs text-[#B8AFA2] truncate pt-0.5">
+              <p className="text-3xs text-[#B8AFA2] uppercase tracking-wider truncate">
                 {authors}
               </p>
             )}
           </div>
 
-          <div className="border-t border-white/15 pt-1 text-3xs text-[#8A8175] tracking-wider uppercase">
+          <div className="border-t border-white/15 pt-1 text-3xs text-[#8A8175] tracking-widest uppercase font-mono">
             Personal Library
           </div>
         </div>

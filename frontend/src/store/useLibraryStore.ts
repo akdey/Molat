@@ -19,7 +19,7 @@ interface LibraryState {
   error: string | null;
   
   // Navigation & View Mode
-  activeTab: 'shelf' | 'tracker' | 'wishlist' | 'maintenance';
+  activeTab: 'home' | 'shelf' | 'tracker' | 'wishlist' | 'maintenance';
   viewMode: 'grid' | 'spine' | 'table';
   
   // Filters & Search
@@ -40,7 +40,7 @@ interface LibraryState {
   theme: 'light' | 'dark';
   
   // Setters & Actions
-  setActiveTab: (tab: 'shelf' | 'tracker' | 'wishlist' | 'maintenance') => void;
+  setActiveTab: (tab: 'home' | 'shelf' | 'tracker' | 'wishlist' | 'maintenance') => void;
   setViewMode: (mode: 'grid' | 'spine' | 'table') => void;
   setSearch: (search: string) => void;
   setStatusFilter: (status: string) => void;
@@ -73,7 +73,7 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
   loading: false,
   error: null,
   
-  activeTab: 'shelf',
+  activeTab: 'home',
   viewMode: 'grid',
   
   search: '',
