@@ -87,7 +87,7 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
   scannerOpen: false,
   keyModalOpen: false,
   
-  libraryKey: localStorage.getItem('molat_library_key') || '',
+  libraryKey: localStorage.getItem('molat_library_key') || (import.meta.env.VITE_LIBRARY_KEY || ''),
   theme: (localStorage.getItem('molat_theme') as 'light' | 'dark') || 'light',
 
   setActiveTab: (tab) => set({ activeTab: tab }),

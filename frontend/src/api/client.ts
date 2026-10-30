@@ -1,6 +1,9 @@
 import type { Book, BookListResponse } from '../types/book';
 
-const API_BASE = '/api/v1';
+// If VITE_API_URL is configured (e.g. https://user-molat-api.hf.space on Vercel), use it.
+// Otherwise, fallback to relative path '/api/v1' which is proxied by Vite dev server.
+const RAW_BASE = (import.meta.env.VITE_API_URL || '').replace(/\/+$/, '');
+const API_BASE = `${RAW_BASE}/api/v1`;
 
 export async function fetchBooks(): Promise<BookListResponse> {
   const res = await fetch(`${API_BASE}/books`);
