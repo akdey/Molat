@@ -13,32 +13,46 @@ except ImportError:
     spaces = _MockSpaces()
 
 import gradio as gr
-from app.main import app as fastapi_app
+from fastapi.middleware.cors import CORSMiddleware
+from app.config import settings
+from app.routers import health, books, reading, wishlist, auth
 
 
 @spaces.GPU(duration=120)
-def cluster_health_check(query: str = "health_ping") -> str:
-    """ZeroGPU health check handler required by Hugging Face ZeroGPU Spaces runtime."""
-    return f"✅ ZeroGPU cluster operational & Molat FastAPI backend online. Query: {query}"
+def predict(query: str = "health_ping") -> str:
+    """ZeroGPU function required for ZeroGPU startup verification."""
+    return f"ZeroGPU cluster active & Molat API ready. Echo: {query}"
 
 
-# Gradio Interface directly binds cluster_health_check for ZeroGPU startup scanner
+# Gradio Interface explicitly wired with @spaces.GPU for HF ZeroGPU scanner
 demo = gr.Interface(
-    fn=cluster_health_check,
-    inputs=gr.Textbox(label="System Status Query", value="ping"),
-    outputs=gr.Textbox(label="Cluster Response"),
+    fn=predict,
+    inputs=gr.Textbox(label="Query", value="ping"),
+    outputs=gr.Textbox(label="Status"),
     title="📚 Ondorpata / Molat Library API",
     description=(
-        "FastAPI backend mounted on Gradio, serving REST endpoints under `/api/v1` for the Molat Library PWA.\n\n"
+        "FastAPI backend running with Gradio on Hugging Face Spaces, serving REST endpoints under `/api/v1` for the Molat Library PWA.\n\n"
         "- [Interactive API Docs](/docs)\n"
         "- [Health Check](/api/v1/health)\n"
         "- [Streak Summary](/api/v1/reading/streak-summary)"
     ),
 )
 
-# Mount FastAPI app onto Gradio so all /api/v1 endpoints are served directly
-app = gr.mount_gradio_app(fastapi_app, demo, path="/")
+# Attach CORS middleware to demo.app
+demo.app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.cors_origins,
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["*"],
+)
+
+# Include all Molat REST API v1 routers directly on demo.app
+demo.app.include_router(health.router, prefix="/api/v1")
+demo.app.include_router(auth.router, prefix="/api/v1")
+demo.app.include_router(books.router, prefix="/api/v1")
+demo.app.include_router(reading.router, prefix="/api/v1")
+demo.app.include_router(wishlist.router, prefix="/api/v1")
 
 if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=7860)
+    demo.launch(server_name="0.0.0.0", server_port=7860)
