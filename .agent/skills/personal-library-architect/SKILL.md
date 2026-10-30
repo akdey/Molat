@@ -22,3 +22,4 @@ The application is a private single-owner digital library designed to manage phy
 - Never compute row index as permanent ID. Always use stable IDs (`BOOK-XXX`, `LOG-XXX`, `WISH-XXX`).
 - Backend implements 300s `TTLCache` with `asyncio.Lock()` to prevent race conditions during write mutations.
 - Date calculations for streaks are normalized to `Asia/Kolkata` (IST).
+

@@ -46,3 +46,4 @@ async def test_batch_update_covers():
     updated = await sheets_repo.get_book(first_book.book_id)
     assert updated is not None
     assert updated.cover_url == new_cover
+

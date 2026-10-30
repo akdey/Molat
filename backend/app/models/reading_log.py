@@ -17,12 +17,14 @@ READING_LOGS_COLUMNS = [
 
 class ReadingLogCreate(BaseModel):
     book_id: str
-    session_date: Optional[str] = None  # YYYY-MM-DD
+    session_date: Optional[str] = None  # YYYY-MM-DD (defaults to today in Asia/Kolkata)
     start_page: int = Field(..., ge=0)
     end_page: int = Field(..., ge=0)
+    pages_read: Optional[int] = Field(None, ge=0)  # Defaults to end_page - start_page
     duration_minutes: Optional[int] = Field(0, ge=0)
     session_note: Optional[str] = None
-    is_finished: Optional[bool] = False  # If True, prompts transition to COMPLETED
+    finished_book: Optional[bool] = False  # If True, transitions book reading_status to COMPLETED
+    rating: Optional[int] = Field(None, ge=1, le=5)  # Optional rating if finished
 
 
 class ReadingLog(BaseModel):
@@ -40,7 +42,9 @@ class ReadingLog(BaseModel):
     def from_sheet_row(cls, row_dict: Dict[str, Any]) -> "ReadingLog":
         start = int(float(str(row_dict.get("start_page", 0) or 0)))
         end = int(float(str(row_dict.get("end_page", 0) or 0)))
-        pages = int(float(str(row_dict.get("pages_read", end - start) or (end - start))))
+        calc_pages = max(0, end - start)
+        raw_pages = row_dict.get("pages_read")
+        pages = int(float(str(raw_pages))) if raw_pages is not None and str(raw_pages).strip() != "" else calc_pages
         duration = int(float(str(row_dict.get("duration_minutes", 0) or 0)))
 
         return cls(

@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.config import settings
-from app.routers import health, books
+from app.routers import health, books, reading, wishlist
 
 logging.basicConfig(
     level=logging.INFO if not settings.DEBUG else logging.DEBUG,
@@ -52,6 +52,8 @@ async def global_exception_handler(request: Request, exc: Exception):
 # Include API v1 routers
 app.include_router(health.router, prefix="/api/v1")
 app.include_router(books.router, prefix="/api/v1")
+app.include_router(reading.router, prefix="/api/v1")
+app.include_router(wishlist.router, prefix="/api/v1")
 
 
 @app.get("/")
@@ -63,3 +65,4 @@ async def root():
         "docs": "/docs" if settings.DEBUG else "disabled in production",
         "port": settings.PORT,
     }
+

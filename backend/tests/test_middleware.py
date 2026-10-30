@@ -32,3 +32,4 @@ def test_library_key_middleware_enforcement(monkeypatch):
         f"/api/v1/books/{created_id}", headers={"X-Library-Key": "secret-test-key"}
     )
     assert del_res.status_code == 204
+

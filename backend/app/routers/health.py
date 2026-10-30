@@ -22,3 +22,4 @@ async def get_health():
         cache_cached_entries=len(sheets_repo.cache),
         timestamp=datetime.utcnow().isoformat(),
     )
+

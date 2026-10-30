@@ -23,3 +23,4 @@ description: Visual craft and responsive design standards for Ondorpata / Molat 
 4. **Tablet Landscape**: 1024 x 768
 5. **Laptop**: 1366 x 768
 6. **Wide Desktop**: 1600 x 900
+

@@ -97,3 +97,4 @@ def test_book_crud_lifecycle():
     # 5. Confirm deletion returns 404
     get_after = client.get(f"/api/v1/books/{book_id}")
     assert get_after.status_code == 404
+

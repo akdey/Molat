@@ -29,3 +29,4 @@ async def test_enrich_missing_covers_flow():
     # If all books have covers, returns empty list
     updates = await cover_enricher.enrich_missing_covers([book_with_cover])
     assert updates == []
+

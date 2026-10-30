@@ -62,3 +62,4 @@ export async function enrichCovers(libraryKey?: string): Promise<{ scanned: numb
   if (!res.ok) throw new Error(`Enrichment failed: ${res.status}`);
   return res.json();
 }
+

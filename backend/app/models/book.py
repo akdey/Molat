@@ -204,3 +204,4 @@ class Book(BookBase):
             self.created_at,
             self.updated_at,
         ]
+

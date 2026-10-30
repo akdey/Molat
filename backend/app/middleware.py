@@ -26,3 +26,4 @@ def verify_library_key(x_library_key: Optional[str] = Header(None, alias="X-Libr
         )
 
     return True
+

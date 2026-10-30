@@ -11,3 +11,4 @@ description: Security, concurrency, and reliability rules for Google Sheets as d
 3. **Cache Invalidation**: On write (`append`, `update`, `delete`, `batch_update_covers`), immediately clear or invalidate the 300s TTL cache.
 4. **Zero Client Secret Exposure**: `BRIDGE_TOKEN`, Google Service Account keys, and `LIBRARY_KEY` must never be exposed to the frontend bundle.
 5. **ISBN Preservation**: Force leading zeros preservation in ISBN-10 / ISBN-13 cells by writing them as text or single-quoted strings.
+

@@ -143,3 +143,4 @@ class CoverEnrichmentService:
 
 
 cover_enricher = CoverEnrichmentService()
+

@@ -62,3 +62,4 @@ export interface WishlistItem {
   notes?: string;
   created_at: string;
 }
+

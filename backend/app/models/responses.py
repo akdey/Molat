@@ -23,6 +23,17 @@ class EnrichCoversResponse(BaseModel):
     message: str
 
 
+class StreakSummaryResponse(BaseModel):
+    current_streak_days: int
+    longest_streak_days: int
+    streak_at_risk: bool
+    today_pages: int
+    daily_goal_pages: int = 20
+    grace_freeze_used: bool
+    reading_velocity_pages_per_day: float
+    heatmap_365: Dict[str, int]
+
+
 class HealthResponse(BaseModel):
     status: str
     port: int

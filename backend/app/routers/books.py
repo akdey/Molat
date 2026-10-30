@@ -132,3 +132,4 @@ async def enrich_covers(
         updated_books=updates,
         message=f"Scanned {missing_count} books with missing covers. Enriched and updated {updated_count} covers.",
     )
+

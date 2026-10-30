@@ -1,6 +1,7 @@
 from typing import Optional, List, Dict, Any
 from datetime import datetime
 from pydantic import BaseModel, Field
+from app.models.book import BookCondition
 
 WISHLIST_COLUMNS = [
     "wishlist_id",
@@ -25,6 +26,12 @@ class WishlistItemCreate(BaseModel):
     target_price: Optional[float] = Field(None, ge=0.0)
     priority: Optional[str] = "Normal"  # High, Normal, Low
     notes: Optional[str] = None
+
+
+class WishlistAcquireRequest(BaseModel):
+    purchase_price: Optional[float] = Field(None, ge=0.0)
+    condition: Optional[BookCondition] = BookCondition.GOOD
+    location: Optional[str] = "Home Shelf"
 
 
 class WishlistItem(BaseModel):
