@@ -60,3 +60,4 @@ jobs:
           git push -f "https://user:${HF_TOKEN}@huggingface.co/spaces/${HF_SPACE}" hf-deploy:main
 
           echo "✅ Successfully pushed to https://huggingface.co/spaces/${HF_SPACE}"
+
