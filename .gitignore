@@ -1,28 +1,34 @@
-# Dependencies
-node_modules/
-.venv/
-venv/
-ENV/
+# OS
+.DS_Store
+Thumbs.db
 
-# Production & Build outputs
-dist/
-build/
-*.egg-info/
-
-# Python cache & testing
-__pycache__/
-*.py[cod]
-*$py.class
-.pytest_cache/
-.coverage
-htmlcov/
-
-# Local Environment & Secrets
+# Environment & Secrets
 .env
 .env.local
 *.pem
 *.key
 service-account*.json
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+ENV/
+.pytest_cache/
+.coverage
+htmlcov/
+*.egg-info/
+dist/
+build/
+
+# Node / Frontend
+node_modules/
+.vite/
+frontend/dist/
+frontend/node_modules/
+frontend/.vite/
 
 # Logs
 *.log
@@ -30,8 +36,6 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# OS / Editor
-.DS_Store
-Thumbs.db
+# IDE / Editor
 .idea/
 .vscode/
