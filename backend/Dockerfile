@@ -12,21 +12,23 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Install uv for ultra-fast dependency resolution and installation
+# Install uv from official Astral image
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/uv
-
-# Copy dependency definition files
-COPY pyproject.toml uv.lock* ./
-
-# Install dependencies into system environment using uv
-RUN uv pip install --system --no-cache -r pyproject.toml
 
 # Create non-root user with UID 1000 for Hugging Face Spaces Docker runtime
 RUN useradd -m -u 1000 user
 ENV HOME=/home/user
-ENV PATH=/home/user/.local/bin:$PATH
 
-# Copy application source
+# Copy dependency files
+COPY pyproject.toml uv.lock ./
+
+# Install dependencies into /app/.venv without dev dependencies
+RUN uv sync --frozen --no-dev
+
+# Set PATH to prioritize the uv virtual environment
+ENV PATH="/app/.venv/bin:$PATH"
+
+# Copy application source and chown to user
 COPY --chown=user:user . /app
 
 USER user
