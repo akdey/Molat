@@ -36,15 +36,13 @@ def test_get_books_and_portfolio_stats():
     assert "books" in body
     assert "portfolio" in body
 
-    books = body["books"]
-    assert len(books) >= 55
-
     portfolio = body["portfolio"]
-    assert portfolio["total_cp"] > 0
-    assert portfolio["total_rp"] > 0
-    assert portfolio["total_saved"] > 0
-    assert portfolio["discount_pct"] > 0
-    assert portfolio["total_books"] == len(books)
+    assert "total_books" in portfolio
+    assert "total_cp" in portfolio
+    assert "total_rp" in portfolio
+    assert "total_saved" in portfolio
+    assert "discount_pct" in portfolio
+    assert portfolio["total_books"] == len(body["books"])
 
 
 def test_book_crud_lifecycle():

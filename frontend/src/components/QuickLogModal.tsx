@@ -16,8 +16,8 @@ export const QuickLogModal: React.FC = () => {
 
   const [selectedBookId, setSelectedBookId] = useState<string>('');
   const [startPage, setStartPage] = useState<number>(0);
-  const [endPage, setEndPage] = useState<number>(20);
-  const [durationMinutes, setDurationMinutes] = useState<number>(25);
+  const [endPage, setEndPage] = useState<number>(0);
+  const [durationMinutes, setDurationMinutes] = useState<number>(0);
   const [sessionNote, setSessionNote] = useState<string>('');
   const [finishedBook, setFinishedBook] = useState<boolean>(false);
   const [rating, setRating] = useState<number>(5);

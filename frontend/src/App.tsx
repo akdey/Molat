@@ -471,7 +471,7 @@ export default function App() {
                     type="search"
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
-                    placeholder="Search 55+ volumes by title, author, genre, shelf location..."
+                    placeholder={books.length > 0 ? `Search ${books.length} volumes by title, author, genre, shelf location...` : "Search collection by title, author, genre, shelf location..."}
                     className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-rule dark:border-rule-dark bg-surface-raised dark:bg-surface-dark-raised text-xs focus:outline-none focus:border-accent min-h-[44px]"
                   />
                 </div>

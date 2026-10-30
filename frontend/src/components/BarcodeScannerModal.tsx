@@ -28,11 +28,11 @@ export const BarcodeScannerModal: React.FC = () => {
   const [authors, setAuthors] = useState('');
   const [genre, setGenre] = useState('');
   const [coverUrl, setCoverUrl] = useState('');
-  const [purchasePrice, setPurchasePrice] = useState<number>(150);
-  const [rp, setRp] = useState<number>(399);
+  const [purchasePrice, setPurchasePrice] = useState<number>(0);
+  const [rp, setRp] = useState<number>(0);
   const [condition, setCondition] = useState<BookCondition>('Good');
   const [readingStatus, setReadingStatus] = useState<ReadingStatus>('UNREAD');
-  const [location, setLocation] = useState('Home Shelf');
+  const [location, setLocation] = useState('');
   const [saving, setSaving] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 

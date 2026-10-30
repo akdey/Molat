@@ -25,8 +25,8 @@ export const WishlistScreen: React.FC = () => {
   // New wishlist item form state
   const [newTitle, setNewTitle] = useState('');
   const [newAuthors, setNewAuthors] = useState('');
-  const [newExpectedRp, setNewExpectedRp] = useState<number>(399);
-  const [newTargetPrice, setNewTargetPrice] = useState<number>(150);
+  const [newExpectedRp, setNewExpectedRp] = useState<number>(0);
+  const [newTargetPrice, setNewTargetPrice] = useState<number>(0);
   const [newPriority, setNewPriority] = useState<string>('Normal');
   const [adding, setAdding] = useState(false);
   const [addFormOpen, setAddFormOpen] = useState(false);

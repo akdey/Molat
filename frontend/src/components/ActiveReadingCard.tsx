@@ -10,13 +10,7 @@ export const ActiveReadingCard: React.FC = () => {
   if (activeBooks.length === 0) return null;
 
   const primaryBook = activeBooks[0];
-  const velocity = streakSummary?.reading_velocity_pages_per_day || 20;
-
-  // Placeholder estimated pages remaining (assume standard novel 350 pages if not paginated)
-  const estimatedTotalPages = 380;
-  const estimatedCurrentPage = 114;
-  const pagesRemaining = Math.max(0, estimatedTotalPages - estimatedCurrentPage);
-  const daysToFinish = velocity > 0 ? Math.ceil(pagesRemaining / velocity) : 0;
+  const velocity = streakSummary?.reading_velocity_pages_per_day || 0;
 
   return (
     <section aria-label="Currently Reading" className="space-y-2.5">
@@ -66,12 +60,15 @@ export const ActiveReadingCard: React.FC = () => {
               </div>
             </div>
 
-            {/* Velocity ETA Strip */}
+            {/* Velocity Strip */}
             <div className="pt-2 border-t border-rule/50 dark:border-rule-dark/50 flex flex-wrap items-center justify-between gap-2">
               <div className="flex items-center gap-1.5 text-2xs text-ink-secondary dark:text-ink-dark-secondary">
                 <Clock size={12} className="text-accent" />
                 <span>
-                  ETA: ~<strong className="text-ink dark:text-ink-dark">{daysToFinish} days</strong> at current velocity
+                  Velocity:{' '}
+                  <strong className="text-ink dark:text-ink-dark">
+                    {velocity > 0 ? `${velocity} pgs/day` : '0 pgs/day'}
+                  </strong>
                 </span>
               </div>
 
