@@ -275,6 +275,28 @@ export default function App() {
 
                     <button
                       onClick={() => {
+                        setHeaderMenuOpen(false);
+                        setActiveTab('wishlist');
+                      }}
+                      className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-surface dark:hover:bg-surface-dark text-xs font-medium transition-colors text-left"
+                    >
+                      <ShoppingBag size={14} className="text-accent dark:text-accent-dark" />
+                      <span>Acquisitions Wishlist</span>
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        setHeaderMenuOpen(false);
+                        setActiveTab('maintenance');
+                      }}
+                      className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-surface dark:hover:bg-surface-dark text-xs font-medium transition-colors text-left"
+                    >
+                      <Wrench size={14} className="text-ink-muted" />
+                      <span>Catalogue Health Audit</span>
+                    </button>
+
+                    <button
+                      onClick={() => {
                         toggleTheme();
                         setHeaderMenuOpen(false);
                       }}
@@ -379,6 +401,28 @@ export default function App() {
               >
                 <span>Open Bookshelf</span>
                 <ArrowRight size={15} />
+              </button>
+            </div>
+
+            {/* Acquisitions Wishlist Quick Card */}
+            <div className="p-4 sm:p-5 rounded-2xl border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-accent-subtle dark:bg-accent-dark-subtle border border-accent/20 flex items-center justify-center text-accent dark:text-accent-dark shrink-0">
+                  <ShoppingBag size={20} />
+                </div>
+                <div>
+                  <h3 className="font-serif text-sm sm:text-base font-medium">Acquisitions Wishlist</h3>
+                  <p className="text-xs text-ink-secondary dark:text-ink-dark-secondary">
+                    Plan book hunting, set target second-hand prices, and acquire with 1-tap.
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setActiveTab('wishlist')}
+                className="flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-surface-raised dark:bg-surface-dark-raised border border-rule dark:border-rule-dark hover:bg-rule/40 text-xs font-medium text-ink dark:text-ink-dark transition-colors self-start sm:self-auto min-h-[40px]"
+              >
+                <span>Open Wishlist</span>
+                <ArrowRight size={13} />
               </button>
             </div>
           </div>
@@ -714,17 +758,17 @@ export default function App() {
           <span className="text-3xs mt-1">Streak</span>
         </button>
 
-        {/* 5. Maintenance / Audit */}
+        {/* 5. Wishlist */}
         <button
-          onClick={() => setActiveTab('maintenance')}
+          onClick={() => setActiveTab('wishlist')}
           className={`flex flex-col items-center justify-center min-w-[56px] min-h-[48px] rounded-xl transition-colors ${
-            activeTab === 'maintenance'
+            activeTab === 'wishlist'
               ? 'text-accent dark:text-accent-dark font-semibold'
               : 'text-ink-secondary hover:text-ink'
           }`}
         >
-          <Wrench size={19} />
-          <span className="text-3xs mt-1">Audit</span>
+          <ShoppingBag size={19} />
+          <span className="text-3xs mt-1">Wishlist</span>
         </button>
       </nav>
 
