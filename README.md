@@ -7,27 +7,71 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.5+-3178C6?style=flat&logo=typescript)](https://www.typescriptlang.org)
 [![PWA Ready](https://img.shields.io/badge/PWA-Installable-5A0FC8?style=flat&logo=pwa)](https://developer.mozilla.org/en-US/docs/Web/Progressive_web_apps)
 [![Database](https://img.shields.io/badge/Database-Google%20Sheets-34A853?style=flat&logo=googlesheets)](https://www.google.com/sheets/about/)
-[![Zero Billing](https://img.shields.io/badge/Cloud%20Cost-%240.00%2Fmo-brightgreen?style=flat)](#zero-billing-architecture)
-
-> **Molat (মলাট)** is a Bengali literary term meaning **the protective outer jacket or cover of a book**.
->
-> Molat is an artisanal, mobile-first Progressive Web App (PWA) designed for physical book collectors and avid readers. It offers complete physical library cataloguing, interactive visual bookshelf browsing, reading streak tracking, and acquisition wishlist management — operating on a strict **zero-billing infrastructure** using **Google Sheets as the database**.
+[![Zero Billing](https://img.shields.io/badge/Cloud%20Cost-%240.00%2Fmo-brightgreen?style=flat)](#-zero-billing-philosophy)
 
 ---
 
-## 🌟 Highlights
+## 📖 About Molat
 
-- **Zero Cloud Costs**: Entirely powered by free-tier infrastructure (Google Sheets + Hugging Face Spaces + Vercel). No credit card required.
-- **Mobile-First PWA**: Installable to iOS Home Screen & Android with offline-first asset caching, touch gestures, and haptic feedback.
-- **Instant Camera ISBN Scanner**: Point your smartphone camera at any book's barcode; Molat scans the ISBN and queries Open Library, Google Books, and Apple Books for instant metadata auto-fill.
-- **3 Visual Browsing Modes**:
-  - **Cover Grid**: High-resolution dust jackets with subtle spine depth and interactive volume drawers.
-  - **Spine View**: Virtual physical bookshelf rendering spine widths, heights, and bindings scaled to actual page counts.
-  - **Financial Ledger**: Financial portfolio table calculating total purchase cost (`CP`), retail market value (`MRP`), net savings, and discount percentages.
-- **Duolingo-Style Reading Streak Engine**: Timezone-aware streak tracking (`Asia/Kolkata`) with daily page goals, 14-day grace freeze bridging, streak-at-risk alerts, and a 365-day GitHub-style interactive heatmap.
-- **Acquisitions Wishlist**: Plan book acquisitions, compare budget target prices against retail MRP, and acquire volumes directly into your collection with 1 tap.
-- **Multi-Tier Cover Enrichment**: 7-tier waterfall resolution with strict 1x1 tracking pixel and blank placeholder guards.
-- **Anti-Vibe Editorial Craftsmanship**: Oxford Navy (`#1E3A8A`), warm ivory backgrounds, and typography engineered for biblio-enthusiasts across light and dark modes.
+**Molat (মলাট)** is a Bengali literary word meaning **the protective outer jacket or cover of a book**.
+
+Most book tracking tools today are either bloated social networks, proprietary walled gardens with paid subscriptions, or clunky spreadsheet setups. Molat was created for readers and physical book collectors who want:
+
+1. **A beautiful, tactile digital twin of their physical bookshelf** that feels like browsing a private library.
+2. **Habit-forming reading accountability** inspired by Duolingo-style streaks and GitHub-style contribution heatmaps.
+3. **Total ownership of their data** with **zero ongoing cloud costs**, using **Google Sheets as the database**.
+
+Whether cataloguing a multi-hundred volume collection, scanning new arrivals at a bookshop with your phone's camera, or celebrating a 30-day continuous reading streak, Molat gives you a private, lightning-fast, and distraction-free home for your library.
+
+---
+
+## ✨ Features
+
+### 📱 Progressive Web App (PWA) with Offline Capabilities
+- **Installable Native App Experience**: Install Molat directly to your iOS or Android home screen or desktop with a single tap.
+- **Offline Caching**: Built with Workbox service workers to precache core assets and jacket images (`CacheFirst` for book jackets, `StaleWhileRevalidate` for library APIs).
+- **Mobile Ergonomics**: Thumb-zone bottom navigation bar, haptic vibration feedback, pull-to-refresh, and smooth gesture transitions.
+
+### 📷 Instant Camera ISBN Barcode Scanner
+- **Live Optical Barcode Detection**: Point your device's camera at any standard book barcode (EAN-13 / ISBN-13 / UPC-A).
+- **Multi-Source Metadata Auto-Fill**: Automatically queries Open Library, Google Books, and Apple Books to populate title, subtitle, author(s), genre, and high-resolution cover artwork.
+- **Laser Viewfinder**: Real-time camera viewfinder targeting the rear environment autofocus lens with haptic feedback when a barcode is locked.
+
+### 📚 Three Visual Shelf Browsing Modes
+- **Cover Grid**: High-resolution dust jackets with subtle 3D spine depth, tactile tilt angles, and quick-access volume inspection drawers.
+- **Physical Spine View**: An interactive virtual bookshelf rendering proportional book heights, spine widths, and embossed titles scaled dynamically according to page counts.
+- **Financial Portfolio Ledger**: A detailed financial table calculating your total investment (`Cost Price`), retail market value (`MRP`), net savings in INR (₹), and volume discount percentages with multi-column sorting.
+
+### 🔥 Duolingo-Style Reading Streak Tracker
+- **Timezone-Aware Calculations**: Daily streak engine running in `Asia/Kolkata` time.
+- **Active Reading Progress Card**: Displays current reading session progress, daily goal completion, and automated reading velocity (pages/day).
+- **Grace Freeze Bridging**: Qualified reading bridging that prevents an accidental streak loss if a user read heavily earlier in the week (up to 1 freeze every 14 days).
+- **Streak-At-Risk Alerts**: Visual ambient warnings when today's reading goal hasn't been logged yet.
+- **365-Day Contribution Heatmap**: Interactive GitHub-style reading heatmap mapping page count intensity across every day of the calendar year.
+
+### 🎯 Acquisitions Wishlist
+- **Budget & Purchase Planning**: Track books you want to purchase, setting budget target prices alongside retail MRP.
+- **1-Click Shelf Acquisition**: When you purchase a book from your wishlist, a single click moves it into your active library (`Books` tab), records the actual purchase price and condition, and archives the wishlist item.
+
+### 🖼️ Multi-Tier Automated Cover Enrichment
+- **7-Tier Fallback Waterfall**:
+  1. Google Books (ISBN-13 / ISBN-10)
+  2. Google Books (Title + Author)
+  3. Apple Books India (`country=IN`, high-res 600x600 artwork)
+  4. Apple Books Global (`country=US` fallback)
+  5. Open Library (ISBN `cover_i`)
+  6. Open Library (Title + Author)
+  7. Direct Open Library Jacket Endpoint
+- **Quality Guard**: Automatically detects and rejects 1x1 transparent tracking pixels, blank placeholders, or broken URLs.
+
+### 🎨 Anti-Vibe Editorial Design
+- **Literary Palette**: Oxford Navy (`#1E3A8A`), warm ivory surfaces (`#FBF9F5`), muted borders, and quiet typography avoiding generic AI aesthetics.
+- **Dark Mode Support**: Seamless toggle between warm paper daylight and low-contrast midnight obsidian themes.
+
+### 🔒 Privacy & Passkey Protection
+- **Passkey-Guarded Admin Actions**: Public visitors can browse your library and stats in read-only mode; book creation, edits, log submissions, and wishlist mutations require your secret `X-Library-Key`.
+- **Sanitized Formula Injections**: All cell writes neutralize formula injection attacks (leading `=`, `+`, `-`, `@`).
+- **Zero Telemetry**: No third-party trackers, analytics, or cookies.
 
 ---
 
@@ -202,15 +246,6 @@ Molat is packaged with a custom web manifest and Workbox service worker:
 - **On iOS (Safari)**: Tap the Share button $\to$ tap **Add to Home Screen**.
 - **On Android (Chrome)**: Tap the three-dot menu $\to$ tap **Install Molat**.
 - **On Desktop (Chrome/Edge)**: Click the Install icon in the browser address bar.
-
----
-
-## 🔒 Security & Reliability
-
-- **Sanitized Formula Injections**: All cell writes are checked to prevent formula injection attacks (leading `=`, `+`, `-`, `@` characters are neutralized).
-- **Passkey Protection**: Public visitors can read your catalog and portfolio stats; write and mutation endpoints (`POST /books`, `PATCH /books`, `POST /reading/logs`, `POST /wishlist`) are locked behind `X-Library-Key` authentication.
-- **Cache Invalidation**: Changes to books or logs instantly bust the in-memory cache, keeping the app fast while ensuring Google Sheets is updated in real time.
-- **Zero Tracking**: Zero analytics trackers, third-party advertising scripts, or invasive cookies.
 
 ---
 
