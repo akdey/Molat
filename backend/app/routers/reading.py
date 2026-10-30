@@ -46,3 +46,4 @@ async def list_reading_logs(
     if book_id:
         logs = [l for l in logs if l.book_id == book_id]
     return logs[:limit]
+

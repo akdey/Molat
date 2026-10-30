@@ -50,6 +50,29 @@ export interface ReadingLog {
   created_at: string;
 }
 
+export interface ReadingLogCreate {
+  book_id: string;
+  session_date?: string;
+  start_page: number;
+  end_page: number;
+  pages_read?: number;
+  duration_minutes?: number;
+  session_note?: string;
+  finished_book?: boolean;
+  rating?: number;
+}
+
+export interface StreakSummary {
+  current_streak_days: number;
+  longest_streak_days: number;
+  streak_at_risk: boolean;
+  today_pages: number;
+  daily_goal_pages: number;
+  grace_freeze_used: boolean;
+  reading_velocity_pages_per_day: number;
+  heatmap_365: Record<string, number>;
+}
+
 export interface WishlistItem {
   wishlist_id: string;
   title: string;
@@ -61,5 +84,11 @@ export interface WishlistItem {
   priority: string;
   notes?: string;
   created_at: string;
+}
+
+export interface WishlistAcquirePayload {
+  purchase_price?: number;
+  condition?: BookCondition;
+  location?: string;
 }
 

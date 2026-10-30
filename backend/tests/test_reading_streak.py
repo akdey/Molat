@@ -207,3 +207,4 @@ async def test_api_log_reading_auto_transition_to_completed_with_rating():
     assert updated_book is not None
     assert updated_book.reading_status == ReadingStatus.COMPLETED
     assert updated_book.rating == 5
+
