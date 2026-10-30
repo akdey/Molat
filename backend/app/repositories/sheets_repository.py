@@ -272,7 +272,7 @@ class GoogleSheetsRepository:
                     logger.error(f"Apps Script error reading Books: {data.get('error')}")
                     return self._memory_books
 
-                raw_rows = data.get("rows", [])
+                raw_rows = data.get("books") or data.get("rows") or []
                 books = []
                 for idx, row in enumerate(raw_rows, start=1):
                     if not row.get("book_id"):
@@ -457,7 +457,7 @@ class GoogleSheetsRepository:
                 if not data.get("success"):
                     logger.error(f"Apps Script error reading Reading Logs: {data.get('error')}")
                     return self._memory_logs
-                raw_rows = data.get("rows", [])
+                raw_rows = data.get("logs") or data.get("reading_logs") or data.get("rows") or []
                 logs = [ReadingLog.from_sheet_row(r) for r in raw_rows if r.get("log_id")]
                 self.cache[cache_key] = logs
                 return logs
@@ -585,7 +585,7 @@ class GoogleSheetsRepository:
                 if not data.get("success"):
                     logger.error(f"Apps Script error reading Wishlist: {data.get('error')}")
                     return self._memory_wishlist
-                raw_rows = data.get("rows", [])
+                raw_rows = data.get("wishlist") or data.get("items") or data.get("rows") or []
                 items = [WishlistItem.from_sheet_row(r) for r in raw_rows if r.get("wishlist_id")]
                 self.cache[cache_key] = items
                 return items
