@@ -273,7 +273,15 @@ class GoogleSheetsRepository:
                     return self._memory_books
 
                 raw_rows = data.get("rows", [])
-                books = [Book.from_sheet_row(row) for row in raw_rows if row.get("book_id")]
+                books = []
+                for idx, row in enumerate(raw_rows, start=1):
+                    if not row.get("book_id"):
+                        row["book_id"] = f"BOOK-{idx:03d}"
+                    if row.get("title") or row.get("book_id"):
+                        try:
+                            books.append(Book.from_sheet_row(row))
+                        except Exception as parse_err:
+                            logger.warning(f"Skipping malformed book row {row}: {parse_err}")
                 self.cache[cache_key] = books
                 return books
         except Exception as e:

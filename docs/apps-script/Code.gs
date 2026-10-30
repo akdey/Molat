@@ -38,10 +38,40 @@ function getSpreadsheet() {
   return active;
 }
 
+function findSheet(sheetName) {
+  const ss = getSpreadsheet();
+  // 1. Direct case match
+  let sheet = ss.getSheetByName(sheetName);
+  if (sheet && sheet.getLastRow() > 1) return sheet;
+
+  // 2. Case-insensitive match
+  const sheets = ss.getSheets();
+  for (let i = 0; i < sheets.length; i++) {
+    if (sheets[i].getName().toLowerCase() === sheetName.toLowerCase()) {
+      return sheets[i];
+    }
+  }
+
+  // 3. Fallback for Books: if Sheet1 has data, or the first sheet with data
+  if (sheetName === SHEETS.BOOKS) {
+    const sheet1 = ss.getSheetByName('Sheet1') || ss.getSheetByName('Sheet 1');
+    if (sheet1 && sheet1.getLastRow() > 1) return sheet1;
+
+    for (let i = 0; i < sheets.length; i++) {
+      const name = sheets[i].getName().toLowerCase();
+      if (name !== 'reading_logs' && name !== 'wishlist' && sheets[i].getLastRow() > 1) {
+        return sheets[i];
+      }
+    }
+  }
+
+  return sheet || ss.getSheetByName(sheetName);
+}
+
 function ensureSheetsExist() {
   const ss = getSpreadsheet();
   Object.keys(SCHEMAS).forEach(sheetName => {
-    let sheet = ss.getSheetByName(sheetName);
+    let sheet = findSheet(sheetName);
     if (!sheet) {
       sheet = ss.insertSheet(sheetName);
       sheet.getRange(1, 1, 1, SCHEMAS[sheetName].length).setValues([SCHEMAS[sheetName]]);
@@ -53,6 +83,51 @@ function ensureSheetsExist() {
 function verifyToken(token) {
   const expected = PropertiesService.getScriptProperties().getProperty('BRIDGE_TOKEN');
   return expected && token === expected;
+}
+
+function normalizeHeader(h) {
+  const raw = String(h || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '_');
+  const aliasMap = {
+    'id': 'book_id',
+    'bookid': 'book_id',
+    'book_id': 'book_id',
+    'title': 'title',
+    'book_title': 'title',
+    'author': 'authors',
+    'authors': 'authors',
+    'writer': 'authors',
+    'subtitle': 'subtitle',
+    'isbn': 'isbn_13',
+    'isbn_13': 'isbn_13',
+    'isbn13': 'isbn_13',
+    'isbn_10': 'isbn_10',
+    'isbn10': 'isbn_10',
+    'publisher': 'publisher',
+    'year': 'publication_year',
+    'publication_year': 'publication_year',
+    'language': 'language',
+    'genre': 'genre',
+    'cover': 'cover_url',
+    'cover_url': 'cover_url',
+    'image': 'cover_url',
+    'status': 'reading_status',
+    'reading_status': 'reading_status',
+    'condition': 'condition',
+    'location': 'location',
+    'shelf': 'location',
+    'price': 'purchase_price',
+    'purchase_price': 'purchase_price',
+    'cost': 'purchase_price',
+    'rp': 'rp',
+    'mrp': 'rp',
+    'retail_price': 'rp',
+    'purchase_date': 'purchase_date',
+    'date_purchased': 'purchase_date',
+    'rating': 'rating',
+    'notes': 'notes',
+    'note': 'notes',
+  };
+  return aliasMap[raw] || raw;
 }
 
 function doGet(e) {
@@ -103,20 +178,41 @@ function doPost(e) {
 }
 
 function readTableAsObjects(sheetName) {
-  const sheet = getSpreadsheet().getSheetByName(sheetName);
+  const sheet = findSheet(sheetName);
+  if (!sheet) return [];
   const lastRow = sheet.getLastRow();
-  const headers = SCHEMAS[sheetName];
-  if (lastRow < 2) return [];
-  const data = sheet.getRange(2, 1, lastRow - 1, headers.length).getDisplayValues();
-  return data.map(row => {
+  const lastCol = sheet.getLastColumn();
+  if (lastRow < 2 || lastCol < 1) return [];
+
+  // Read actual headers from row 1
+  const rawHeaders = sheet.getRange(1, 1, 1, lastCol).getDisplayValues()[0];
+  const normalizedHeaders = rawHeaders.map(normalizeHeader);
+
+  const data = sheet.getRange(2, 1, lastRow - 1, lastCol).getDisplayValues();
+  return data.map((row, rowIdx) => {
     const obj = {};
-    headers.forEach((h, i) => { obj[h] = row[i]; });
+    normalizedHeaders.forEach((h, colIdx) => {
+      if (h) {
+        obj[h] = row[colIdx] !== undefined ? String(row[colIdx]).trim() : '';
+      }
+    });
+
+    // Auto-generate book_id if missing but row has title or content
+    if (sheetName === SHEETS.BOOKS) {
+      if (!obj['book_id'] && (obj['title'] || row[0])) {
+        obj['book_id'] = 'BOOK-' + String(rowIdx + 1).padStart(3, '0');
+      }
+      if (!obj['title'] && row[0]) {
+        obj['title'] = row[0];
+      }
+    }
+
     return obj;
   });
 }
 
 function appendRowObject(sheetName, record) {
-  const sheet = getSpreadsheet().getSheetByName(sheetName);
+  const sheet = findSheet(sheetName) || getSpreadsheet().getSheetByName(sheetName);
   const headers = SCHEMAS[sheetName];
   const row = headers.map(h => formatCellForWrite(h, record[h]));
   sheet.appendRow(row);
@@ -124,7 +220,7 @@ function appendRowObject(sheetName, record) {
 }
 
 function updateRowByKey(sheetName, keyField, keyValue, patch) {
-  const sheet = getSpreadsheet().getSheetByName(sheetName);
+  const sheet = findSheet(sheetName) || getSpreadsheet().getSheetByName(sheetName);
   const headers = SCHEMAS[sheetName];
   const keyIndex = headers.indexOf(keyField);
   const lastRow = sheet.getLastRow();
@@ -146,7 +242,7 @@ function updateRowByKey(sheetName, keyField, keyValue, patch) {
 }
 
 function batchUpdateCovers(items) {
-  const sheet = getSpreadsheet().getSheetByName(SHEETS.BOOKS);
+  const sheet = findSheet(SHEETS.BOOKS) || getSpreadsheet().getSheetByName(SHEETS.BOOKS);
   const lastRow = sheet.getLastRow();
   if (lastRow < 2) return 0;
   const ids = sheet.getRange(2, 1, lastRow - 1, 1).getDisplayValues().map(r => r[0]);
@@ -164,7 +260,7 @@ function batchUpdateCovers(items) {
 }
 
 function deleteRowByKey(sheetName, keyField, keyValue) {
-  const sheet = getSpreadsheet().getSheetByName(sheetName);
+  const sheet = findSheet(sheetName) || getSpreadsheet().getSheetByName(sheetName);
   const headers = SCHEMAS[sheetName];
   const keyIndex = headers.indexOf(keyField);
   const lastRow = sheet.getLastRow();
