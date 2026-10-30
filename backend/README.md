@@ -10,6 +10,6 @@ app_file: app.py
 pinned: false
 ---
 
-# Ondorpata / Molat Personal Book Library API
+# Molat Personal Book Library API
 
 FastAPI backend mounted on Gradio, serving REST endpoints under `/api/v1` for the Molat Library PWA.
