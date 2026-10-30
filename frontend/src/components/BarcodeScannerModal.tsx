@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Html5QrcodeScanner } from 'html5-qrcode';
-import { X, Camera, Check, AlertTriangle, BookOpen, RefreshCw } from 'lucide-react';
+import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode';
+import { X, Camera, Check, AlertTriangle, BookOpen, RefreshCw, Search, Sparkles } from 'lucide-react';
 import { useLibraryStore } from '../store/useLibraryStore';
 import { createBook } from '../api/client';
 import type { BookCondition, ReadingStatus } from '../types/book';
@@ -20,11 +20,14 @@ export const BarcodeScannerModal: React.FC = () => {
   const [scannedIsbn, setScannedIsbn] = useState<string>('');
   const [duplicateBook, setDuplicateBook] = useState<any>(null);
   const [cameraActive, setCameraActive] = useState<boolean>(false);
+  const [cameraError, setCameraError] = useState<string | null>(null);
+  const [lookingUp, setLookingUp] = useState<boolean>(false);
   
   // Review before save form fields
   const [title, setTitle] = useState('');
   const [authors, setAuthors] = useState('');
   const [genre, setGenre] = useState('');
+  const [coverUrl, setCoverUrl] = useState('');
   const [purchasePrice, setPurchasePrice] = useState<number>(150);
   const [rp, setRp] = useState<number>(399);
   const [condition, setCondition] = useState<BookCondition>('Good');
@@ -33,54 +36,157 @@ export const BarcodeScannerModal: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  const scannerRef = useRef<Html5QrcodeScanner | null>(null);
+  const qrCodeScannerRef = useRef<Html5Qrcode | null>(null);
 
+  // Stop camera when modal is closed
   useEffect(() => {
     if (!scannerOpen) {
-      if (scannerRef.current) {
-        scannerRef.current.clear().catch(console.error);
-        scannerRef.current = null;
-      }
+      stopCamera();
       setCameraActive(false);
-      return;
+      setCameraError(null);
     }
+  }, [scannerOpen]);
 
-    if (cameraActive) {
-      const scanner = new Html5QrcodeScanner(
-        'barcode-reader-container',
-        {
-          fps: 10,
-          qrbox: { width: 250, height: 150 },
-        },
-        /* verbose= */ false
-      );
-
-      scanner.render(
-        (decodedText) => {
-          handleIsbnIdentified(decodedText);
-          scanner.clear().catch(console.error);
-          setCameraActive(false);
-        },
-        (error) => {
-          // Scanning noise, ignore
+  const stopCamera = async () => {
+    if (qrCodeScannerRef.current) {
+      try {
+        if (qrCodeScannerRef.current.isScanning) {
+          await qrCodeScannerRef.current.stop();
         }
-      );
-
-      scannerRef.current = scanner;
-    }
-
-    return () => {
-      if (scannerRef.current) {
-        scannerRef.current.clear().catch(console.error);
+        await qrCodeScannerRef.current.clear();
+      } catch (err) {
+        console.warn('Error stopping camera:', err);
+      } finally {
+        qrCodeScannerRef.current = null;
       }
-    };
-  }, [scannerOpen, cameraActive]);
+    }
+  };
+
+  const startCamera = async () => {
+    setCameraError(null);
+    setCameraActive(true);
+
+    // Wait for DOM element to mount
+    setTimeout(async () => {
+      try {
+        await stopCamera();
+
+        const html5QrCode = new Html5Qrcode('barcode-scanner-video', {
+          formatsToSupport: [
+            Html5QrcodeSupportedFormats.EAN_13,
+            Html5QrcodeSupportedFormats.EAN_8,
+            Html5QrcodeSupportedFormats.CODE_128,
+            Html5QrcodeSupportedFormats.UPC_A,
+            Html5QrcodeSupportedFormats.UPC_E,
+          ],
+          verbose: false,
+        });
+
+        qrCodeScannerRef.current = html5QrCode;
+
+        await html5QrCode.start(
+          { facingMode: 'environment' },
+          {
+            fps: 15,
+            qrbox: (viewfinderWidth, viewfinderHeight) => {
+              const width = Math.min(viewfinderWidth * 0.85, 300);
+              const height = Math.min(width * 0.55, 160);
+              return { width: Math.floor(width), height: Math.floor(height) };
+            },
+            aspectRatio: 1.5,
+          },
+          (decodedText) => {
+            // Haptic feedback on phone
+            if (typeof navigator !== 'undefined' && navigator.vibrate) {
+              navigator.vibrate([80, 40, 80]);
+            }
+            stopCamera();
+            setCameraActive(false);
+            handleIsbnIdentified(decodedText);
+          },
+          () => {
+            // Background scanning noise
+          }
+        );
+      } catch (err: any) {
+        console.error('Failed to start camera:', err);
+        setCameraError(
+          err.message ||
+            'Camera permission denied or camera unavailable. You can enter the ISBN manually below.'
+        );
+        setCameraActive(false);
+      }
+    }, 150);
+  };
+
+  // Lookup metadata from Open Library & Google Books
+  const lookupMetadata = async (isbn: string) => {
+    const clean = isbn.replace(/[^0-9X]/gi, '').trim();
+    if (clean.length < 9) return;
+
+    setLookingUp(true);
+    try {
+      // 1. Open Library API
+      const olRes = await fetch(
+        `https://openlibrary.org/api/books?bibkeys=ISBN:${clean}&format=json&jscmd=data`
+      );
+      if (olRes.ok) {
+        const data = await olRes.json();
+        const item = data[`ISBN:${clean}`];
+        if (item) {
+          if (item.title) setTitle(item.title);
+          if (item.authors && item.authors.length > 0) {
+            setAuthors(item.authors.map((a: any) => a.name).join(', '));
+          }
+          if (item.subjects && item.subjects.length > 0) {
+            setGenre(item.subjects[0].name);
+          }
+          if (item.cover?.large || item.cover?.medium) {
+            setCoverUrl(item.cover.large || item.cover.medium);
+          }
+          addToast(`Found details for "${item.title}"!`, 'success');
+          setLookingUp(false);
+          return;
+        }
+      }
+
+      // 2. Google Books fallback
+      const gbRes = await fetch(
+        `https://www.googleapis.com/books/v1/volumes?q=isbn:${clean}`
+      );
+      if (gbRes.ok) {
+        const data = await gbRes.json();
+        if (data.items && data.items.length > 0) {
+          const info = data.items[0].volumeInfo || {};
+          if (info.title) setTitle(info.title);
+          if (info.authors && info.authors.length > 0) {
+            setAuthors(info.authors.join(', '));
+          }
+          if (info.categories && info.categories.length > 0) {
+            setGenre(info.categories[0]);
+          }
+          if (info.imageLinks?.thumbnail || info.imageLinks?.smallThumbnail) {
+            setCoverUrl(info.imageLinks.thumbnail || info.imageLinks.smallThumbnail);
+          }
+          addToast(`Found details for "${info.title}"!`, 'success');
+          setLookingUp(false);
+          return;
+        }
+      }
+
+      addToast(`ISBN identified: ${clean}. Fill in title & author to save.`, 'info');
+    } catch (err) {
+      console.warn('Metadata lookup error:', err);
+    } finally {
+      setLookingUp(false);
+    }
+  };
 
   const handleIsbnIdentified = (isbn: string) => {
     const cleanIsbn = isbn.replace(/[^0-9X]/gi, '').trim();
     setScannedIsbn(cleanIsbn);
 
-    // Duplicate check
+    // Duplicate check in existing catalogue
     const match = books.find(
       (b) =>
         (b.isbn_13 && b.isbn_13.replace(/[^0-9X]/gi, '') === cleanIsbn) ||
@@ -88,9 +194,13 @@ export const BarcodeScannerModal: React.FC = () => {
     );
     if (match) {
       setDuplicateBook(match);
+      addToast(`Notice: Volume already in collection (${match.book_id})`, 'info');
     } else {
       setDuplicateBook(null);
     }
+
+    // Auto-fetch metadata
+    lookupMetadata(cleanIsbn);
   };
 
   const handleSaveBook = async (e: React.FormEvent) => {
@@ -109,6 +219,7 @@ export const BarcodeScannerModal: React.FC = () => {
           title: title.trim(),
           authors: authors.trim() || undefined,
           genre: genre.trim() || undefined,
+          cover_url: coverUrl.trim() || undefined,
           isbn_13: scannedIsbn.length === 13 ? scannedIsbn : undefined,
           isbn_10: scannedIsbn.length === 10 ? scannedIsbn : undefined,
           purchase_price: purchasePrice,
@@ -119,7 +230,7 @@ export const BarcodeScannerModal: React.FC = () => {
         },
         token
       );
-      addToast(`Added "${created.title}" to collection!`, 'success');
+      addToast(`Added "${created.title}" to catalogue!`, 'success');
       await loadBooks(true);
       setScannerOpen(false);
     } catch (err: any) {
@@ -137,76 +248,114 @@ export const BarcodeScannerModal: React.FC = () => {
   if (!scannerOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in">
-      <div className="w-full max-w-lg bg-canvas dark:bg-canvas-dark border border-rule dark:border-rule-dark rounded-2xl shadow-xl overflow-hidden max-h-[90vh] flex flex-col">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-3 sm:p-4 animate-in fade-in">
+      <div className="w-full max-w-lg bg-canvas dark:bg-canvas-dark border border-rule dark:border-rule-dark rounded-2xl shadow-2xl overflow-hidden max-h-[92vh] flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-rule dark:border-rule-dark">
+        <div className="flex items-center justify-between px-4 sm:px-5 py-3.5 border-b border-rule dark:border-rule-dark bg-surface/50 dark:bg-surface-dark/50">
           <div className="flex items-center gap-2">
-            <Camera className="text-accent dark:text-accent-dark h-5 w-5" />
-            <h2 className="font-serif text-lg font-medium text-ink dark:text-ink-dark">
-              Scan Barcode / Add Volume
-            </h2>
+            <Camera className="text-accent dark:text-accent-dark h-5 w-5 shrink-0" />
+            <div>
+              <h2 className="font-serif text-base sm:text-lg font-medium text-ink dark:text-ink-dark leading-tight">
+                Scan ISBN Barcode / Add Volume
+              </h2>
+              <p className="text-3xs text-ink-muted">PWA Rear Camera Scanner & Auto-Lookup</p>
+            </div>
           </div>
           <button
             onClick={() => setScannerOpen(false)}
-            className="p-1 rounded-lg text-ink-muted hover:text-ink hover:bg-surface"
+            className="p-1 rounded-lg text-ink-muted hover:text-ink hover:bg-surface transition-colors"
           >
-            <X size={20} />
+            <X size={18} />
           </button>
         </div>
 
-        <div className="p-5 space-y-4 overflow-y-auto">
+        <div className="p-4 sm:p-5 space-y-3.5 overflow-y-auto">
           {errorMsg && (
-            <div className="p-3 text-xs rounded-xl bg-red-100 dark:bg-red-950/40 text-red-800 dark:text-red-400 border border-red-200">
+            <div className="p-2.5 text-xs rounded-xl bg-red-100 dark:bg-red-950/40 text-red-800 dark:text-red-400 border border-red-200">
               {errorMsg}
             </div>
           )}
 
-          {/* Camera Scanner Container */}
+          {cameraError && (
+            <div className="p-2.5 text-xs rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/40 text-amber-800 dark:text-amber-300">
+              {cameraError}
+            </div>
+          )}
+
+          {/* Active Camera Viewfinder */}
           {cameraActive ? (
             <div className="space-y-2">
-              <div
-                id="barcode-reader-container"
-                className="w-full rounded-xl overflow-hidden border border-rule dark:border-rule-dark bg-black min-h-[220px]"
-              />
+              <div className="relative w-full rounded-2xl overflow-hidden border-2 border-accent/40 bg-black aspect-video flex items-center justify-center shadow-inner">
+                <div id="barcode-scanner-video" className="w-full h-full" />
+                {/* Aiming Reticle */}
+                <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+                  <div className="w-64 h-28 border-2 border-dashed border-white/80 rounded-xl relative shadow-lg">
+                    {/* Animated scanning laser line */}
+                    <div className="w-full h-0.5 bg-red-500/80 shadow-[0_0_8px_rgba(239,68,68,0.8)] absolute top-1/2 -translate-y-1/2 animate-pulse" />
+                    <span className="absolute -bottom-5 left-1/2 -translate-x-1/2 text-3xs font-medium text-white/90 bg-black/60 px-2 py-0.5 rounded-full whitespace-nowrap">
+                      Align ISBN Barcode inside box
+                    </span>
+                  </div>
+                </div>
+              </div>
               <button
                 type="button"
-                onClick={() => setCameraActive(false)}
-                className="w-full py-2 rounded-lg border border-rule text-xs font-medium text-ink-secondary"
+                onClick={() => {
+                  stopCamera();
+                  setCameraActive(false);
+                }}
+                className="w-full py-1.5 rounded-lg border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark hover:bg-rule/40 text-xs font-medium text-ink-secondary"
               >
                 Close Camera
               </button>
             </div>
           ) : (
+            /* Open Camera Button */
             <button
               type="button"
-              onClick={() => setCameraActive(true)}
-              className="w-full py-3 rounded-xl border border-dashed border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark hover:border-accent flex items-center justify-center gap-2 text-xs font-medium text-ink dark:text-ink-dark transition-colors"
+              onClick={startCamera}
+              className="w-full py-3 px-4 rounded-xl border border-dashed border-accent/50 dark:border-accent-dark/40 bg-accent-subtle dark:bg-accent-dark-subtle hover:bg-accent/10 flex items-center justify-center gap-2 text-xs font-medium text-accent dark:text-accent-dark transition-all"
             >
-              <Camera size={16} className="text-accent" />
-              <span>Open Mobile Camera to Scan ISBN Barcode</span>
+              <Camera size={16} />
+              <span>Tap to Open Phone Camera for Barcode Scanning</span>
             </button>
           )}
 
-          {/* Manual ISBN Input */}
+          {/* Manual ISBN Input & Auto-Lookup */}
           <div className="space-y-1">
-            <label className="text-3xs uppercase tracking-wider font-medium text-ink-muted">
-              ISBN-10 or ISBN-13
+            <label className="text-3xs uppercase tracking-wider font-medium text-ink-muted flex items-center justify-between">
+              <span>ISBN-10 or ISBN-13</span>
+              {lookingUp && (
+                <span className="inline-flex items-center gap-1 text-accent animate-pulse font-normal lowercase">
+                  <RefreshCw size={10} className="animate-spin" />
+                  fetching book details...
+                </span>
+              )}
             </label>
             <div className="flex gap-2">
               <input
                 type="text"
-                placeholder="e.g. 9780099434856"
+                placeholder="e.g. 9780007119356"
                 value={scannedIsbn}
-                onChange={(e) => handleIsbnIdentified(e.target.value)}
-                className="flex-1 px-3 py-2 rounded-xl border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark text-xs font-mono focus:outline-none focus:border-accent"
+                onChange={(e) => setScannedIsbn(e.target.value)}
+                className="flex-1 px-2.5 py-1.5 rounded-lg border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark text-xs font-mono focus:outline-none focus:border-accent"
               />
+              <button
+                type="button"
+                onClick={() => lookupMetadata(scannedIsbn)}
+                disabled={lookingUp || !scannedIsbn.trim()}
+                className="px-3 py-1.5 rounded-lg bg-surface dark:bg-surface-dark border border-rule dark:border-rule-dark hover:border-accent text-xs font-medium flex items-center gap-1 transition-colors"
+                title="Lookup details via Open Library & Google Books"
+              >
+                <Search size={13} />
+                <span>Lookup</span>
+              </button>
             </div>
           </div>
 
           {/* Duplicate ISBN Warning */}
           {duplicateBook && (
-            <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/40 text-amber-800 dark:text-amber-300 text-xs flex items-start gap-2">
+            <div className="p-2.5 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/40 text-amber-800 dark:text-amber-300 text-xs flex items-start gap-2">
               <AlertTriangle size={15} className="shrink-0 mt-0.5" />
               <div>
                 <p className="font-medium">Potential Duplicate Detected!</p>
@@ -218,7 +367,7 @@ export const BarcodeScannerModal: React.FC = () => {
           )}
 
           {/* Review-Before-Save Form */}
-          <form onSubmit={handleSaveBook} className="space-y-3 pt-2 border-t border-rule/60">
+          <form onSubmit={handleSaveBook} className="space-y-2.5 pt-2 border-t border-rule/60">
             <div className="space-y-1">
               <label className="text-3xs uppercase tracking-wider font-medium text-ink-muted">
                 Title *
@@ -254,7 +403,7 @@ export const BarcodeScannerModal: React.FC = () => {
                   type="text"
                   value={genre}
                   onChange={(e) => setGenre(e.target.value)}
-                  placeholder="e.g. Espionage Thriller"
+                  placeholder="e.g. Mystery / Thriller"
                   className="w-full px-2.5 py-1.5 rounded-lg border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark text-xs focus:outline-none focus:border-accent"
                 />
               </div>
@@ -364,4 +513,3 @@ export const BarcodeScannerModal: React.FC = () => {
     </div>
   );
 };
-
