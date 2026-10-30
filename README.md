@@ -9,6 +9,8 @@
 [![Database](https://img.shields.io/badge/Database-Google%20Sheets-34A853?style=flat&logo=googlesheets)](https://www.google.com/sheets/about/)
 [![Zero Billing](https://img.shields.io/badge/Cloud%20Cost-%240.00%2Fmo-brightgreen?style=flat)](#-zero-billing-philosophy)
 
+> **Engineered by [AMIT KUMAR DEY](https://portfolio.akdey.vercel.app/)**
+
 ---
 
 ## 📖 About Molat
@@ -259,6 +261,12 @@ Molat is packaged with a custom web manifest and Workbox service worker:
 | **Database** | Google Sheets via Google Apps Script (Serverless JSON Web App) |
 | **Hosting** | Vercel (Frontend SPA/PWA), Hugging Face Spaces (Docker runtime) |
 | **Testing** | Pytest, Pytest-Asyncio, HTTPX TestClient |
+
+---
+
+## 👨‍💻 Author & Engineering
+
+Designed & engineered with precision by **[AMIT KUMAR DEY](https://portfolio.akdey.vercel.app/)**.
 
 ---
 

@@ -670,6 +670,21 @@ export default function App() {
             )}
           </div>
         )}
+
+        {/* Subtle Brand & Creator Footer */}
+        <footer className="pt-10 pb-4 text-center border-t border-rule/50 dark:border-rule-dark/50">
+          <p className="text-3xs text-ink-muted">
+            Molat Personal Library &bull; Engineered by{' '}
+            <a
+              href="https://portfolio.akdey.vercel.app/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-ink dark:text-ink-dark font-medium underline decoration-accent/60 underline-offset-2 hover:text-accent transition-colors"
+            >
+              AMIT KUMAR DEY
+            </a>
+          </p>
+        </footer>
       </main>
 
       {/* Center Action Popup on Mobile */}
