@@ -55,7 +55,7 @@ class CoverEnrichmentService:
     async def _query_google_books_isbn(self, isbn: str) -> Optional[str]:
         url = f"https://www.googleapis.com/books/v1/volumes?q=isbn:{isbn}&maxResults=1"
         try:
-            async with httpx.AsyncClient(timeout=self.timeout) as client:
+            async with httpx.AsyncClient(timeout=self.timeout, follow_redirects=True) as client:
                 res = await client.get(url)
                 if res.status_code != 200:
                     return None
@@ -84,7 +84,7 @@ class CoverEnrichmentService:
             "limit": 1,
         }
         try:
-            async with httpx.AsyncClient(timeout=self.timeout) as client:
+            async with httpx.AsyncClient(timeout=self.timeout, follow_redirects=True) as client:
                 res = await client.get(url, params=params)
                 if res.status_code != 200:
                     return None
@@ -106,7 +106,7 @@ class CoverEnrichmentService:
         """Resolves Open Library cover_i attribute."""
         url = f"https://openlibrary.org/search.json?isbn={isbn}&fields=cover_i&limit=1"
         try:
-            async with httpx.AsyncClient(timeout=self.timeout) as client:
+            async with httpx.AsyncClient(timeout=self.timeout, follow_redirects=True) as client:
                 res = await client.get(url)
                 if res.status_code != 200:
                     return None

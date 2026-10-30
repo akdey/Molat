@@ -67,7 +67,8 @@ def test_book_crud_lifecycle():
         "purchase_date": "2024-01-15",
         "notes": "Acquired in sale",
     }
-    create_res = client.post("/api/v1/books", json=new_book)
+    auth_headers = {"X-Library-Key": "development-secret-key-change-in-production"}
+    create_res = client.post("/api/v1/books", json=new_book, headers=auth_headers)
     assert create_res.status_code == 201
     created = create_res.json()
     book_id = created["book_id"]
@@ -83,6 +84,7 @@ def test_book_crud_lifecycle():
     patch_res = client.patch(
         f"/api/v1/books/{book_id}",
         json={"reading_status": "READING", "rating": 5, "notes": "Reading chapter 3"},
+        headers=auth_headers,
     )
     assert patch_res.status_code == 200
     updated = patch_res.json()
@@ -91,7 +93,7 @@ def test_book_crud_lifecycle():
     assert updated["notes"] == "Reading chapter 3"
 
     # 4. Delete book
-    del_res = client.delete(f"/api/v1/books/{book_id}")
+    del_res = client.delete(f"/api/v1/books/{book_id}", headers=auth_headers)
     assert del_res.status_code == 204
 
     # 5. Confirm deletion returns 404

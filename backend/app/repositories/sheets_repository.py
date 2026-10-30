@@ -226,6 +226,9 @@ class GoogleSheetsRepository:
     def is_bridge_configured(self) -> bool:
         return bool(settings.GOOGLE_SHEETS_BRIDGE_URL)
 
+    def _client(self, timeout: float = 15.0) -> httpx.AsyncClient:
+        return httpx.AsyncClient(timeout=timeout, follow_redirects=True)
+
     def _get_portfolio_summary(self, books: List[Book]) -> PortfolioSummary:
         total_cp = sum(b.purchase_price or 0.0 for b in books)
         total_rp = sum(b.rp or 0.0 for b in books)
@@ -256,7 +259,7 @@ class GoogleSheetsRepository:
             params["token"] = settings.BRIDGE_TOKEN
 
         try:
-            async with httpx.AsyncClient(timeout=15.0) as client:
+            async with self._client(timeout=15.0) as client:
                 resp = await client.get(settings.GOOGLE_SHEETS_BRIDGE_URL, params=params)
                 resp.raise_for_status()
                 data = resp.json()
@@ -311,7 +314,7 @@ class GoogleSheetsRepository:
                     "table": "Books",
                     "record": dict(zip(BOOKS_SCHEMA_COLUMNS, [sanitize_cell_value(v) for v in book.to_sheet_row()])),
                 }
-                async with httpx.AsyncClient(timeout=15.0) as client:
+                async with self._client(timeout=15.0) as client:
                     resp = await client.post(settings.GOOGLE_SHEETS_BRIDGE_URL, json=payload)
                     resp.raise_for_status()
 
@@ -350,7 +353,7 @@ class GoogleSheetsRepository:
                     "keyValue": book_id,
                     "record": dict(zip(BOOKS_SCHEMA_COLUMNS, [sanitize_cell_value(v) for v in updated_book.to_sheet_row()])),
                 }
-                async with httpx.AsyncClient(timeout=15.0) as client:
+                async with self._client(timeout=15.0) as client:
                     resp = await client.post(settings.GOOGLE_SHEETS_BRIDGE_URL, json=payload)
                     resp.raise_for_status()
 
@@ -376,7 +379,7 @@ class GoogleSheetsRepository:
                     "keyField": "book_id",
                     "keyValue": book_id,
                 }
-                async with httpx.AsyncClient(timeout=15.0) as client:
+                async with self._client(timeout=15.0) as client:
                     resp = await client.post(settings.GOOGLE_SHEETS_BRIDGE_URL, json=payload)
                     resp.raise_for_status()
 
@@ -397,7 +400,7 @@ class GoogleSheetsRepository:
                     "records": items,
                 }
                 try:
-                    async with httpx.AsyncClient(timeout=30.0) as client:
+                    async with self._client(timeout=30.0) as client:
                         resp = await client.post(settings.GOOGLE_SHEETS_BRIDGE_URL, json=payload)
                         resp.raise_for_status()
                 except Exception as e:
@@ -429,7 +432,7 @@ class GoogleSheetsRepository:
             params["token"] = settings.BRIDGE_TOKEN
 
         try:
-            async with httpx.AsyncClient(timeout=15.0) as client:
+            async with self._client(timeout=15.0) as client:
                 resp = await client.get(settings.GOOGLE_SHEETS_BRIDGE_URL, params=params)
                 resp.raise_for_status()
                 data = resp.json()
@@ -493,7 +496,7 @@ class GoogleSheetsRepository:
                     "table": "Reading_Logs",
                     "record": dict(zip(READING_LOGS_COLUMNS, [sanitize_cell_value(v) for v in new_log.to_sheet_row()])),
                 }
-                async with httpx.AsyncClient(timeout=15.0) as client:
+                async with self._client(timeout=15.0) as client:
                     resp = await client.post(settings.GOOGLE_SHEETS_BRIDGE_URL, json=payload)
                     resp.raise_for_status()
 
@@ -526,7 +529,7 @@ class GoogleSheetsRepository:
                         "record": dict(zip(BOOKS_SCHEMA_COLUMNS, [sanitize_cell_value(v) for v in target_book.to_sheet_row()])),
                     }
                     try:
-                        async with httpx.AsyncClient(timeout=15.0) as client:
+                        async with self._client(timeout=15.0) as client:
                             await client.post(settings.GOOGLE_SHEETS_BRIDGE_URL, json=book_payload)
                     except Exception as e:
                         logger.error(f"Error auto-transitioning book {data.book_id}: {e}")
@@ -551,7 +554,7 @@ class GoogleSheetsRepository:
             params["token"] = settings.BRIDGE_TOKEN
 
         try:
-            async with httpx.AsyncClient(timeout=15.0) as client:
+            async with self._client(timeout=15.0) as client:
                 resp = await client.get(settings.GOOGLE_SHEETS_BRIDGE_URL, params=params)
                 resp.raise_for_status()
                 data = resp.json()
@@ -596,7 +599,7 @@ class GoogleSheetsRepository:
                     "table": "Wishlist",
                     "record": dict(zip(WISHLIST_COLUMNS, [sanitize_cell_value(v) for v in item.to_sheet_row()])),
                 }
-                async with httpx.AsyncClient(timeout=15.0) as client:
+                async with self._client(timeout=15.0) as client:
                     resp = await client.post(settings.GOOGLE_SHEETS_BRIDGE_URL, json=payload)
                     resp.raise_for_status()
 
@@ -660,7 +663,7 @@ class GoogleSheetsRepository:
                     "keyField": "wishlist_id",
                     "keyValue": wishlist_id,
                 }
-                async with httpx.AsyncClient(timeout=15.0) as client:
+                async with self._client(timeout=15.0) as client:
                     await client.post(settings.GOOGLE_SHEETS_BRIDGE_URL, json=book_payload)
                     await client.post(settings.GOOGLE_SHEETS_BRIDGE_URL, json=wish_payload)
 
