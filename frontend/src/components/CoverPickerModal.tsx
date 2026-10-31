@@ -319,3 +319,4 @@ export const CoverPickerModal: React.FC<CoverPickerModalProps> = ({
     </AnimatePresence>
   );
 };
+
