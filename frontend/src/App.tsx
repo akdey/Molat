@@ -130,7 +130,7 @@ export default function App() {
   const readingBooks = books.filter((b) => b.reading_status === 'READING');
 
   return (
-    <div className="min-h-screen bg-canvas dark:bg-canvas-dark text-ink dark:text-ink-dark transition-colors duration-200 pb-24 md:pb-12">
+    <div className="min-h-screen w-full max-w-full overflow-x-hidden bg-canvas dark:bg-canvas-dark text-ink dark:text-ink-dark transition-colors duration-200 pb-24 md:pb-12">
       {/* Sticky Header */}
       <header className="sticky top-0 z-30 border-b border-rule dark:border-rule-dark bg-canvas/90 dark:bg-canvas-dark/90 backdrop-blur-md">
         <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between gap-4">
@@ -394,46 +394,44 @@ export default function App() {
             {/* Currently Reading Active Card */}
             <ActiveReadingCard />
 
-            {/* Portfolio Savings KPI Strip */}
-            {portfolio && (
-              <section
-                aria-label="Portfolio Summary"
-                className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3"
-              >
-                <div className="p-3.5 sm:p-4 rounded-xl border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark">
-                  <span className="text-3xs uppercase tracking-wider text-ink-muted dark:text-ink-dark-muted font-medium">
-                    Total Volumes
-                  </span>
-                  <p className="text-2xl font-serif font-medium mt-1 tabular-nums">
-                    {portfolio.total_books}
-                  </p>
-                </div>
-                <div className="p-3.5 sm:p-4 rounded-xl border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark">
-                  <span className="text-3xs uppercase tracking-wider text-ink-muted dark:text-ink-dark-muted font-medium">
-                    Total Cost (CP)
-                  </span>
-                  <p className="text-2xl font-serif font-medium mt-1 tabular-nums">
-                    ₹{portfolio.total_cp.toLocaleString('en-IN')}
-                  </p>
-                </div>
-                <div className="p-3.5 sm:p-4 rounded-xl border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark">
-                  <span className="text-3xs uppercase tracking-wider text-ink-muted dark:text-ink-dark-muted font-medium">
-                    Retail MRP (RP)
-                  </span>
-                  <p className="text-2xl font-serif font-medium mt-1 tabular-nums">
-                    ₹{portfolio.total_rp.toLocaleString('en-IN')}
-                  </p>
-                </div>
-                <div className="p-3.5 sm:p-4 rounded-xl border border-rule dark:border-rule-dark bg-accent-subtle dark:bg-accent-dark-subtle border-accent/20 dark:border-accent-dark/30">
-                  <span className="text-3xs uppercase tracking-wider text-accent dark:text-accent-dark font-medium">
-                    Saved ({portfolio.discount_pct}%)
-                  </span>
-                  <p className="text-2xl font-serif font-medium mt-1 text-accent dark:text-accent-dark tabular-nums">
-                    ₹{portfolio.total_saved.toLocaleString('en-IN')}
-                  </p>
-                </div>
-              </section>
-            )}
+            {/* Collection & Reading Highlights Strip */}
+            <section
+              aria-label="Collection Highlights"
+              className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3"
+            >
+              <div className="p-3.5 sm:p-4 rounded-xl border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark">
+                <span className="text-3xs uppercase tracking-wider text-ink-muted dark:text-ink-dark-muted font-medium">
+                  Total Volumes
+                </span>
+                <p className="text-2xl font-serif font-medium mt-1 tabular-nums">
+                  {books.length}
+                </p>
+              </div>
+              <div className="p-3.5 sm:p-4 rounded-xl border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark">
+                <span className="text-3xs uppercase tracking-wider text-ink-muted dark:text-ink-dark-muted font-medium">
+                  Currently Reading
+                </span>
+                <p className="text-2xl font-serif font-medium mt-1 text-accent dark:text-accent-dark tabular-nums">
+                  {books.filter((b) => b.reading_status === 'READING').length}
+                </p>
+              </div>
+              <div className="p-3.5 sm:p-4 rounded-xl border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark">
+                <span className="text-3xs uppercase tracking-wider text-ink-muted dark:text-ink-dark-muted font-medium">
+                  Volumes Read
+                </span>
+                <p className="text-2xl font-serif font-medium mt-1 tabular-nums">
+                  {books.filter((b) => b.reading_status === 'COMPLETED').length}
+                </p>
+              </div>
+              <div className="p-3.5 sm:p-4 rounded-xl border border-rule dark:border-rule-dark bg-accent-subtle dark:bg-accent-dark-subtle border-accent/20 dark:border-accent-dark/30">
+                <span className="text-3xs uppercase tracking-wider text-accent dark:text-accent-dark font-medium">
+                  To Be Read (TBR)
+                </span>
+                <p className="text-2xl font-serif font-medium mt-1 text-accent dark:text-accent-dark tabular-nums">
+                  {books.filter((b) => b.reading_status === 'UNREAD').length}
+                </p>
+              </div>
+            </section>
 
             {/* Quick Link to Visual Bookshelf */}
             <div className="p-5 rounded-2xl border border-rule dark:border-rule-dark bg-surface-raised dark:bg-surface-dark-raised flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm">
@@ -442,7 +440,7 @@ export default function App() {
                   Explore Your Physical Collection
                 </h3>
                 <p className="text-xs text-ink-secondary dark:text-ink-dark-secondary">
-                  Browse {books.length} physical volumes across Cover Grid, Tactile Wooden Spine Shelf, or Compact Financial Table.
+                  Browse {books.length} physical volumes across Cover Grid, Tactile Wooden Spine Shelf, or Catalog List View.
                 </p>
               </div>
               <button
@@ -591,7 +589,7 @@ export default function App() {
                         ? 'bg-canvas dark:bg-canvas-dark text-accent shadow-xs'
                         : 'text-ink-secondary hover:text-ink'
                     }`}
-                    title="Financial Table View"
+                    title="Catalog List View"
                   >
                     <Table size={15} />
                   </button>
@@ -600,12 +598,12 @@ export default function App() {
 
               {/* Facet Filters */}
               <div className="space-y-1.5">
-                <div className="grid grid-cols-3 gap-1.5 sm:flex sm:flex-wrap sm:items-center sm:gap-2">
+                <div className="grid grid-cols-2 gap-1.5 sm:flex sm:flex-wrap sm:items-center sm:gap-2">
                   {/* Reading Status Filter */}
                   <select
                     value={statusFilter}
                     onChange={(e) => setStatusFilter(e.target.value)}
-                    className="w-full sm:w-auto text-xs py-1.5 px-1.5 sm:px-2.5 rounded-lg border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark text-ink dark:text-ink-dark focus:outline-none focus:border-accent truncate cursor-pointer"
+                    className="w-full sm:w-auto text-xs py-1.5 px-2.5 rounded-lg border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark text-ink dark:text-ink-dark focus:outline-none focus:border-accent truncate cursor-pointer min-h-[36px]"
                     title="Filter by Reading Status"
                   >
                     <option value="ALL">All Status</option>
@@ -619,20 +617,6 @@ export default function App() {
                   {/* Genre Filter Popover with Multi-Select Checkboxes */}
                   <GenreFilterPopover allGenres={allGenres} books={books} />
 
-                  {/* Condition Filter */}
-                  <select
-                    value={conditionFilter}
-                    onChange={(e) => setConditionFilter(e.target.value)}
-                    className="w-full sm:w-auto text-xs py-1.5 px-1.5 sm:px-2.5 rounded-lg border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark text-ink dark:text-ink-dark focus:outline-none focus:border-accent truncate cursor-pointer min-h-[34px]"
-                    title="Filter by Condition"
-                  >
-                    <option value="ALL">All Cond.</option>
-                    <option value="New">New</option>
-                    <option value="Good">Good</option>
-                    <option value="Fair">Fair</option>
-                    <option value="Damaged">Damaged</option>
-                  </select>
-
                   {(search || statusFilter !== 'ALL' || genreFilter !== 'ALL' || selectedGenres.length > 0 || conditionFilter !== 'ALL') && (
                     <button
                       onClick={() => {
@@ -642,7 +626,7 @@ export default function App() {
                         clearSelectedGenres();
                         setConditionFilter('ALL');
                       }}
-                      className="col-span-3 sm:col-auto px-2 py-1 text-2xs text-ink-muted hover:text-accent underline transition-colors self-center cursor-pointer"
+                      className="col-span-2 sm:col-auto px-2 py-1 text-2xs text-ink-muted hover:text-accent underline transition-colors self-center cursor-pointer"
                     >
                       Reset filters
                     </button>
@@ -781,11 +765,15 @@ export default function App() {
                               </span>
                             )}
                         </div>
-                        {book.purchase_price !== undefined && (
-                          <span className="font-mono font-medium text-ink dark:text-ink-dark tabular-nums shrink-0 ml-1">
-                            ₹{book.purchase_price}
+                        {book.publication_year ? (
+                          <span className="font-mono text-3xs text-ink-muted tabular-nums shrink-0 ml-1">
+                            {book.publication_year}
                           </span>
-                        )}
+                        ) : book.location ? (
+                          <span className="text-3xs text-ink-muted truncate shrink-0 ml-1 max-w-[65px]" title={book.location}>
+                            {book.location}
+                          </span>
+                        ) : null}
                       </div>
                     </div>
                   </article>

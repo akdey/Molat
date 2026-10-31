@@ -87,109 +87,117 @@ export const GenreFilterPopover: React.FC<GenreFilterPopoverProps> = ({
 
       {/* Popover Menu */}
       {open && (
-        <div className="absolute top-full left-0 mt-1.5 w-64 sm:w-72 bg-canvas dark:bg-canvas-dark border border-rule dark:border-rule-dark rounded-2xl shadow-xl z-50 p-3 space-y-2.5 animate-in fade-in zoom-in-95 duration-100">
-          {/* Popover Header */}
-          <div className="flex items-center justify-between border-b border-rule/50 dark:border-rule-dark/50 pb-2">
-            <div className="flex items-center gap-1.5">
-              <span className="font-serif text-xs font-medium text-ink dark:text-ink-dark">
-                Categories
-              </span>
-              {countSelected > 0 && (
-                <span className="px-1.5 py-0.2 rounded-full text-3xs font-mono font-medium bg-accent text-white">
-                  {countSelected}
+        <>
+          {/* Mobile backdrop */}
+          <div
+            className="fixed inset-0 z-40 bg-black/40 backdrop-blur-2xs sm:hidden"
+            onClick={() => setOpen(false)}
+          />
+
+          <div className="fixed inset-x-4 top-1/2 -translate-y-1/2 sm:translate-y-0 sm:inset-x-auto sm:top-full sm:left-0 sm:absolute sm:mt-1.5 w-auto sm:w-72 max-w-sm mx-auto sm:mx-0 bg-canvas dark:bg-canvas-dark border border-rule dark:border-rule-dark rounded-2xl shadow-2xl z-50 p-3 space-y-2.5 animate-in fade-in zoom-in-95 duration-100">
+            {/* Popover Header */}
+            <div className="flex items-center justify-between border-b border-rule/50 dark:border-rule-dark/50 pb-2">
+              <div className="flex items-center gap-1.5">
+                <span className="font-serif text-xs font-medium text-ink dark:text-ink-dark">
+                  Categories
                 </span>
+                {countSelected > 0 && (
+                  <span className="px-1.5 py-0.2 rounded-full text-3xs font-mono font-medium bg-accent text-white">
+                    {countSelected}
+                  </span>
+                )}
+              </div>
+
+              {countSelected > 0 && (
+                <button
+                  type="button"
+                  onClick={clearSelectedGenres}
+                  className="text-3xs text-ink-muted hover:text-accent dark:hover:text-accent-dark transition-colors font-medium flex items-center gap-0.5"
+                >
+                  <X size={10} />
+                  <span>Clear</span>
+                </button>
               )}
             </div>
 
-            {countSelected > 0 && (
+            {/* Quick Search Input */}
+            <div className="relative">
+              <Search
+                size={12}
+                className="absolute left-2.5 top-1/2 -translate-y-1/2 text-ink-muted pointer-events-none"
+              />
+              <input
+                type="text"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search genres..."
+                className="w-full pl-7 pr-2.5 py-1 text-2xs rounded-lg border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark text-ink dark:text-ink-dark focus:outline-none focus:border-accent"
+                autoFocus
+              />
+            </div>
+
+            {/* Checkbox List */}
+            <div className="max-h-56 overflow-y-auto space-y-0.5 pr-1 text-xs">
+              {filteredGenres.length === 0 ? (
+                <p className="text-2xs text-ink-muted italic py-3 text-center">
+                  No genres matching "{query}"
+                </p>
+              ) : (
+                filteredGenres.map((genre) => {
+                  const checked = selectedGenres.includes(genre);
+                  const count = genreCounts[genre] || 0;
+
+                  return (
+                    <label
+                      key={genre}
+                      onClick={() => toggleGenre(genre)}
+                      className={`flex items-center justify-between p-1.5 rounded-lg cursor-pointer transition-colors text-xs select-none ${
+                        checked
+                          ? 'bg-accent/10 dark:bg-accent/20 text-accent dark:text-accent-dark font-medium'
+                          : 'hover:bg-surface dark:hover:bg-surface-dark text-ink dark:text-ink-dark'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2 min-w-0 pr-1">
+                        <div
+                          className={`w-3.5 h-3.5 rounded flex items-center justify-center border transition-colors ${
+                            checked
+                              ? 'bg-accent border-accent text-white'
+                              : 'border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark'
+                          }`}
+                        >
+                          {checked && <Check size={10} strokeWidth={3} />}
+                        </div>
+                        <span className="truncate">{genre}</span>
+                      </div>
+
+                      <span className="text-3xs font-mono text-ink-muted tabular-nums shrink-0 ml-1">
+                        {count}
+                      </span>
+                    </label>
+                  );
+                })
+              )}
+            </div>
+
+            {/* Footer Controls */}
+            <div className="pt-2 border-t border-rule/50 dark:border-rule-dark/50 flex items-center justify-between gap-2">
               <button
                 type="button"
-                onClick={clearSelectedGenres}
-                className="text-3xs text-ink-muted hover:text-accent dark:hover:text-accent-dark transition-colors font-medium flex items-center gap-0.5"
+                onClick={() => setSelectedGenres(allGenres)}
+                className="text-3xs text-ink-muted hover:text-ink transition-colors"
               >
-                <X size={10} />
-                <span>Clear</span>
+                Select All
               </button>
-            )}
+              <button
+                type="button"
+                onClick={() => setOpen(false)}
+                className="px-3 py-1 rounded-lg bg-accent hover:bg-accent-hover text-white text-3xs font-medium transition-colors"
+              >
+                Apply ({countSelected})
+              </button>
+            </div>
           </div>
-
-          {/* Quick Search Input */}
-          <div className="relative">
-            <Search
-              size={12}
-              className="absolute left-2.5 top-1/2 -translate-y-1/2 text-ink-muted pointer-events-none"
-            />
-            <input
-              type="text"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search genres..."
-              className="w-full pl-7 pr-2.5 py-1 text-2xs rounded-lg border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark text-ink dark:text-ink-dark focus:outline-none focus:border-accent"
-              autoFocus
-            />
-          </div>
-
-          {/* Checkbox List */}
-          <div className="max-h-56 overflow-y-auto space-y-0.5 pr-1 text-xs">
-            {filteredGenres.length === 0 ? (
-              <p className="text-2xs text-ink-muted italic py-3 text-center">
-                No genres matching "{query}"
-              </p>
-            ) : (
-              filteredGenres.map((genre) => {
-                const checked = selectedGenres.includes(genre);
-                const count = genreCounts[genre] || 0;
-
-                return (
-                  <label
-                    key={genre}
-                    onClick={() => toggleGenre(genre)}
-                    className={`flex items-center justify-between p-1.5 rounded-lg cursor-pointer transition-colors text-xs select-none ${
-                      checked
-                        ? 'bg-accent/10 dark:bg-accent/20 text-accent dark:text-accent-dark font-medium'
-                        : 'hover:bg-surface dark:hover:bg-surface-dark text-ink dark:text-ink-dark'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2 min-w-0 pr-1">
-                      <div
-                        className={`w-3.5 h-3.5 rounded flex items-center justify-center border transition-colors ${
-                          checked
-                            ? 'bg-accent border-accent text-white'
-                            : 'border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark'
-                        }`}
-                      >
-                        {checked && <Check size={10} strokeWidth={3} />}
-                      </div>
-                      <span className="truncate">{genre}</span>
-                    </div>
-
-                    <span className="text-3xs font-mono text-ink-muted tabular-nums shrink-0 ml-1">
-                      {count}
-                    </span>
-                  </label>
-                );
-              })
-            )}
-          </div>
-
-          {/* Footer Controls */}
-          <div className="pt-2 border-t border-rule/50 dark:border-rule-dark/50 flex items-center justify-between gap-2">
-            <button
-              type="button"
-              onClick={() => setSelectedGenres(allGenres)}
-              className="text-3xs text-ink-muted hover:text-ink transition-colors"
-            >
-              Select All
-            </button>
-            <button
-              type="button"
-              onClick={() => setOpen(false)}
-              className="px-3 py-1 rounded-lg bg-accent hover:bg-accent-hover text-white text-3xs font-medium transition-colors"
-            >
-              Apply ({countSelected})
-            </button>
-          </div>
-        </div>
+        </>
       )}
     </div>
   );

@@ -322,44 +322,34 @@ export const BookDetailDrawer: React.FC = () => {
             )}
           </div>
 
-          {/* Financial & Audit Details (21 Columns Inspection) */}
+          {/* Volume & Publication Details */}
           <div className="space-y-2">
             <h3 className="font-serif text-sm font-medium text-ink dark:text-ink-dark">
-              Financial & Catalog Details
+              Volume & Publication Details
             </h3>
-            <div className="grid grid-cols-2 gap-2 text-xs">
-              <div className="p-3 rounded-xl border border-rule dark:border-rule-dark bg-surface-raised dark:bg-surface-dark-raised">
-                <span className="text-3xs text-ink-muted uppercase tracking-wider font-medium">
-                  Cost Paid (CP)
-                </span>
-                <p className="font-mono text-base font-medium mt-0.5 text-ink dark:text-ink-dark tabular-nums">
-                  ₹{cp.toLocaleString('en-IN')}
-                </p>
+            <div className="p-3 rounded-xl border border-rule dark:border-rule-dark bg-surface-raised dark:bg-surface-dark-raised space-y-2 text-xs">
+              <div className="flex justify-between items-center">
+                <span className="text-ink-muted">Publisher</span>
+                <span className="font-medium text-ink dark:text-ink-dark">{selectedBook.publisher || '—'}</span>
               </div>
-              <div className="p-3 rounded-xl border border-rule dark:border-rule-dark bg-surface-raised dark:bg-surface-dark-raised">
-                <span className="text-3xs text-ink-muted uppercase tracking-wider font-medium">
-                  Retail MRP (RP)
-                </span>
-                <p className="font-mono text-base font-medium mt-0.5 text-ink-secondary dark:text-ink-dark-secondary tabular-nums">
-                  ₹{rp.toLocaleString('en-IN')}
-                </p>
+              <div className="flex justify-between items-center">
+                <span className="text-ink-muted">Publication Year</span>
+                <span className="font-mono text-ink dark:text-ink-dark">{selectedBook.publication_year || '—'}</span>
               </div>
-              <div className="p-3 rounded-xl border border-rule dark:border-rule-dark bg-surface-raised dark:bg-surface-dark-raised">
-                <span className="text-3xs text-accent uppercase tracking-wider font-medium">
-                  Savings
-                </span>
-                <p className="font-mono text-base font-medium mt-0.5 text-accent dark:text-accent-dark tabular-nums">
-                  ₹{saved.toLocaleString('en-IN')} ({discount}%)
-                </p>
+              <div className="flex justify-between items-center">
+                <span className="text-ink-muted">Language</span>
+                <span className="text-ink dark:text-ink-dark">{selectedBook.language || 'English'}</span>
               </div>
-              <div className="p-3 rounded-xl border border-rule dark:border-rule-dark bg-surface-raised dark:bg-surface-dark-raised">
-                <span className="text-3xs text-ink-muted uppercase tracking-wider font-medium">
-                  Acquired Date
-                </span>
-                <p className="font-mono text-xs font-medium mt-1 text-ink dark:text-ink-dark">
-                  {selectedBook.purchase_date || 'Unknown'}
-                </p>
+              <div className="flex justify-between items-center">
+                <span className="text-ink-muted">Acquired Date</span>
+                <span className="font-mono text-ink dark:text-ink-dark">{selectedBook.purchase_date || '—'}</span>
               </div>
+              {selectedBook.purchase_price !== undefined && selectedBook.purchase_price > 0 && (
+                <div className="flex justify-between items-center pt-1 border-t border-rule/50 dark:border-rule-dark/50">
+                  <span className="text-ink-muted">Acquisition Price</span>
+                  <span className="font-mono text-ink-secondary dark:text-ink-dark-secondary">₹{selectedBook.purchase_price.toLocaleString('en-IN')}</span>
+                </div>
+              )}
             </div>
 
             <div className="p-3 rounded-xl border border-rule dark:border-rule-dark bg-surface-raised dark:bg-surface-dark-raised space-y-1.5 text-xs">
@@ -382,7 +372,7 @@ export const BookDetailDrawer: React.FC = () => {
                       .map((g, idx) => (
                         <span
                           key={idx}
-                          className="px-2 py-0.5 rounded-md bg-surface-raised dark:bg-surface-dark-raised border border-rule/60 dark:border-rule-dark/60 text-2xs font-medium text-ink dark:text-ink-dark"
+                          className="px-2 py-0.5 rounded-md bg-surface dark:bg-surface-dark border border-rule/60 dark:border-rule-dark/60 text-2xs font-medium text-ink dark:text-ink-dark"
                         >
                           {g}
                         </span>
@@ -397,8 +387,8 @@ export const BookDetailDrawer: React.FC = () => {
                 <span>{selectedBook.rating ? `★ ${selectedBook.rating}/5` : 'Unrated'}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-ink-muted">Last Updated</span>
-                <span className="font-mono text-ink-muted">{selectedBook.updated_at}</span>
+                <span className="text-ink-muted">Catalogue ID</span>
+                <span className="font-mono text-ink dark:text-ink-dark">{selectedBook.book_id}</span>
               </div>
             </div>
           </div>

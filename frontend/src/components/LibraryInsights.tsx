@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import {
   PieChart as PieChartIcon,
   TrendingUp,
-  DollarSign,
   Bookmark,
   BookOpen,
   CheckCircle2,
@@ -14,6 +13,9 @@ import {
   Layers,
   ArrowUpRight,
   Library,
+  Star,
+  Globe,
+  Calendar,
 } from 'lucide-react';
 import type { Book, PortfolioSummary, StreakSummary } from '../types/book';
 import { useLibraryStore } from '../store/useLibraryStore';
@@ -122,33 +124,31 @@ export const LibraryInsights: React.FC<LibraryInsightsProps> = ({
       .slice(0, 5);
   }, [books]);
 
-  // 4. Financial Highlights
-  const financialHighlights = React.useMemo(() => {
-    const validBooks = books.filter((b) => (b.purchase_price || 0) > 0);
-    const avgCost =
-      validBooks.length > 0
-        ? Math.round(
-            validBooks.reduce((sum, b) => sum + (b.purchase_price || 0), 0) / validBooks.length
-          )
-        : 0;
+  // 4. Top Rated Volumes
+  const topRatedBooks = React.useMemo(() => {
+    return books
+      .filter((b) => (b.rating || 0) > 0)
+      .sort((a, b) => (b.rating || 0) - (a.rating || 0))
+      .slice(0, 5);
+  }, [books]);
 
-    // Highest Retail MRP
-    const topValue = [...books]
-      .filter((b) => (b.rp || 0) > 0)
-      .sort((a, b) => (b.rp || 0) - (a.rp || 0))
-      .slice(0, 3);
-
-    // Biggest Savings in INR
-    const topSavings = [...books]
-      .filter((b) => (b.rp || 0) > (b.purchase_price || 0))
-      .sort(
-        (a, b) =>
-          ((b.rp || 0) - (b.purchase_price || 0)) -
-          ((a.rp || 0) - (a.purchase_price || 0))
-      )
-      .slice(0, 3);
-
-    return { avgCost, topValue, topSavings };
+  // 5. Publication Eras
+  const publicationEras = React.useMemo(() => {
+    const eras: Record<string, number> = {
+      '2020s Contemporary': 0,
+      '2010s': 0,
+      '2000s': 0,
+      '20th Century & Classics': 0,
+    };
+    for (const b of books) {
+      const yr = b.publication_year;
+      if (!yr) continue;
+      if (yr >= 2020) eras['2020s Contemporary']++;
+      else if (yr >= 2010) eras['2010s']++;
+      else if (yr >= 2000) eras['2000s']++;
+      else eras['20th Century & Classics']++;
+    }
+    return eras;
   }, [books]);
 
   // Total pages logged across the year from heatmap
@@ -156,14 +156,14 @@ export const LibraryInsights: React.FC<LibraryInsightsProps> = ({
     return Object.values(streakSummary?.heatmap_365 || {}).reduce((acc, curr) => acc + curr, 0);
   }, [streakSummary]);
 
-  // 5. Physical Condition Breakdown
-  const conditionCounts = React.useMemo(() => {
-    const counts: Record<string, number> = { New: 0, Good: 0, Fair: 0, Damaged: 0 };
+  // 6. Language Distribution
+  const languageCounts = React.useMemo(() => {
+    const counts: Record<string, number> = {};
     for (const b of books) {
-      const c = b.condition || 'Good';
-      counts[c] = (counts[c] || 0) + 1;
+      const lang = b.language || 'English';
+      counts[lang] = (counts[lang] || 0) + 1;
     }
-    return counts;
+    return Object.entries(counts).sort((a, b) => b[1] - a[1]);
   }, [books]);
 
   // 6. Shelf Locations
@@ -242,7 +242,7 @@ export const LibraryInsights: React.FC<LibraryInsightsProps> = ({
             <span>Library Insights & Analytics</span>
           </h2>
           <p className="text-xs text-ink-secondary dark:text-ink-dark-secondary">
-            Visual statistics, category distribution, investment yield, and reading patterns across your collection.
+            Visual statistics, category distribution, reading velocity, and habits across your personal collection.
           </p>
         </div>
       </div>
@@ -264,14 +264,15 @@ export const LibraryInsights: React.FC<LibraryInsightsProps> = ({
 
         <div className="p-4 rounded-2xl border border-rule dark:border-rule-dark bg-surface-raised dark:bg-surface-dark-raised shadow-xs space-y-1">
           <div className="flex items-center justify-between text-ink-muted">
-            <span className="text-3xs uppercase tracking-wider font-medium">Collection Market Value</span>
-            <DollarSign size={16} className="text-emerald-600 dark:text-emerald-400" />
+            <span className="text-3xs uppercase tracking-wider font-medium">Reading Velocity</span>
+            <TrendingUp size={16} className="text-accent dark:text-accent-dark" />
           </div>
           <p className="font-mono text-2xl font-semibold text-ink dark:text-ink-dark">
-            ₹{(portfolio?.total_rp || 0).toLocaleString('en-IN')}
+            {streakSummary?.reading_velocity_pages_per_day || 0}{' '}
+            <span className="text-xs font-normal text-ink-muted">pg/day</span>
           </p>
-          <p className="text-3xs text-emerald-700 dark:text-emerald-400 font-medium">
-            Acquired for ₹{(portfolio?.total_cp || 0).toLocaleString('en-IN')} ({portfolio?.discount_pct || 0}% saved)
+          <p className="text-3xs text-ink-secondary">
+            {totalPagesYear} pages logged &bull; {streakSummary?.current_streak_days || 0}d current streak
           </p>
         </div>
 
@@ -465,75 +466,8 @@ export const LibraryInsights: React.FC<LibraryInsightsProps> = ({
         </div>
       </div>
 
-      {/* Secondary Analytics: Financial Value & Top Authors */}
+      {/* Secondary Analytics: Authors, Top Rated & Publication Eras */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-        {/* Top Value Volumes */}
-        <div className="p-5 rounded-2xl border border-rule dark:border-rule-dark bg-surface-raised dark:bg-surface-dark-raised space-y-3 shadow-xs">
-          <div className="flex items-center justify-between">
-            <h3 className="font-serif text-sm font-medium text-ink dark:text-ink-dark flex items-center gap-1.5">
-              <Award size={15} className="text-amber-500" />
-              <span>Highest Value Volumes</span>
-            </h3>
-            <span className="text-3xs font-mono text-ink-muted">By Retail MRP</span>
-          </div>
-
-          <div className="space-y-2.5">
-            {financialHighlights.topValue.map((book, idx) => (
-              <div
-                key={book.book_id}
-                onClick={() => setSelectedBook(book)}
-                className="flex items-center justify-between p-2 rounded-xl hover:bg-surface dark:hover:bg-surface-dark cursor-pointer transition-colors"
-              >
-                <div className="min-w-0 pr-2">
-                  <p className="font-serif text-xs font-medium text-ink dark:text-ink-dark truncate">
-                    {idx + 1}. {book.title}
-                  </p>
-                  <p className="text-3xs text-ink-muted truncate">{book.authors || 'Unknown'}</p>
-                </div>
-                <span className="font-mono text-xs font-semibold text-ink dark:text-ink-dark shrink-0">
-                  ₹{book.rp?.toLocaleString('en-IN')}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Greatest Savings Volumes */}
-        <div className="p-5 rounded-2xl border border-rule dark:border-rule-dark bg-surface-raised dark:bg-surface-dark-raised space-y-3 shadow-xs">
-          <div className="flex items-center justify-between">
-            <h3 className="font-serif text-sm font-medium text-ink dark:text-ink-dark flex items-center gap-1.5">
-              <Sparkles size={15} className="text-emerald-500" />
-              <span>Best Value Acquisitions</span>
-            </h3>
-            <span className="text-3xs font-mono text-ink-muted">Net Savings</span>
-          </div>
-
-          <div className="space-y-2.5">
-            {financialHighlights.topSavings.map((book, idx) => {
-              const diff = (book.rp || 0) - (book.purchase_price || 0);
-              return (
-                <div
-                  key={book.book_id}
-                  onClick={() => setSelectedBook(book)}
-                  className="flex items-center justify-between p-2 rounded-xl hover:bg-surface dark:hover:bg-surface-dark cursor-pointer transition-colors"
-                >
-                  <div className="min-w-0 pr-2">
-                    <p className="font-serif text-xs font-medium text-ink dark:text-ink-dark truncate">
-                      {idx + 1}. {book.title}
-                    </p>
-                    <p className="text-3xs text-ink-muted truncate">
-                      Paid ₹{book.purchase_price} vs MRP ₹{book.rp}
-                    </p>
-                  </div>
-                  <span className="font-mono text-xs font-semibold text-emerald-600 dark:text-emerald-400 shrink-0">
-                    +₹{diff.toLocaleString('en-IN')}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
         {/* Most Collected Authors */}
         <div className="p-5 rounded-2xl border border-rule dark:border-rule-dark bg-surface-raised dark:bg-surface-dark-raised space-y-3 shadow-xs">
           <div className="flex items-center justify-between">
@@ -560,9 +494,74 @@ export const LibraryInsights: React.FC<LibraryInsightsProps> = ({
             ))}
           </div>
         </div>
+
+        {/* Top Rated Volumes */}
+        <div className="p-5 rounded-2xl border border-rule dark:border-rule-dark bg-surface-raised dark:bg-surface-dark-raised space-y-3 shadow-xs">
+          <div className="flex items-center justify-between">
+            <h3 className="font-serif text-sm font-medium text-ink dark:text-ink-dark flex items-center gap-1.5">
+              <Award size={15} className="text-amber-500" />
+              <span>Top Rated Volumes</span>
+            </h3>
+            <span className="text-3xs font-mono text-ink-muted">Personal Rating</span>
+          </div>
+
+          <div className="space-y-2.5">
+            {topRatedBooks.length > 0 ? (
+              topRatedBooks.map((book) => (
+                <div
+                  key={book.book_id}
+                  onClick={() => setSelectedBook(book)}
+                  className="flex items-center justify-between p-2 rounded-xl hover:bg-surface dark:hover:bg-surface-dark cursor-pointer transition-colors"
+                >
+                  <div className="min-w-0 pr-2">
+                    <p className="font-serif text-xs font-medium text-ink dark:text-ink-dark truncate">
+                      {book.title}
+                    </p>
+                    <p className="text-3xs text-ink-muted truncate">{book.authors || 'Unknown'}</p>
+                  </div>
+                  <span className="inline-flex items-center gap-1 font-mono text-xs font-semibold text-amber-600 dark:text-amber-400 shrink-0">
+                    <Star size={11} className="fill-amber-400 text-amber-500" />
+                    <span>{book.rating}/5</span>
+                  </span>
+                </div>
+              ))
+            ) : (
+              <p className="text-2xs text-ink-muted italic py-3 text-center">
+                Rate books in your shelf to see your favorites here.
+              </p>
+            )}
+          </div>
+        </div>
+
+        {/* Publication Eras & Timeline */}
+        <div className="p-5 rounded-2xl border border-rule dark:border-rule-dark bg-surface-raised dark:bg-surface-dark-raised space-y-3 shadow-xs">
+          <div className="flex items-center justify-between">
+            <h3 className="font-serif text-sm font-medium text-ink dark:text-ink-dark flex items-center gap-1.5">
+              <Calendar size={15} className="text-accent" />
+              <span>Publication Eras</span>
+            </h3>
+            <span className="text-3xs font-mono text-ink-muted">Timeline</span>
+          </div>
+
+          <div className="space-y-2">
+            {Object.entries(publicationEras).map(([era, count]) => (
+              <div
+                key={era}
+                className="flex items-center justify-between p-2 rounded-xl text-xs hover:bg-surface dark:hover:bg-surface-dark transition-colors"
+              >
+                <span className="truncate pr-2 text-ink dark:text-ink-dark font-medium">
+                  {era}
+                </span>
+                <span className="font-mono text-2xs font-semibold text-ink-secondary dark:text-ink-dark-secondary shrink-0">
+                  {count} {count === 1 ? 'vol' : 'vols'}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
 
-      {/* Tertiary Row: Shelf Locations & Physical Condition */}
+      {/* Tertiary Row: Shelf Locations & Languages */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
         {/* Shelf Placement */}
         <div className="p-5 rounded-2xl border border-rule dark:border-rule-dark bg-surface-raised dark:bg-surface-dark-raised space-y-3 shadow-xs">
@@ -584,21 +583,21 @@ export const LibraryInsights: React.FC<LibraryInsightsProps> = ({
           </div>
         </div>
 
-        {/* Condition Distribution */}
+        {/* Library Languages */}
         <div className="p-5 rounded-2xl border border-rule dark:border-rule-dark bg-surface-raised dark:bg-surface-dark-raised space-y-3 shadow-xs">
           <h3 className="font-serif text-sm font-medium text-ink dark:text-ink-dark flex items-center gap-1.5">
-            <Layers size={15} className="text-ink-muted" />
-            <span>Physical Volume Condition</span>
+            <Globe size={15} className="text-ink-muted" />
+            <span>Languages & Editions</span>
           </h3>
 
-          <div className="grid grid-cols-4 gap-2 text-center">
-            {Object.entries(conditionCounts).map(([cond, count]) => (
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-center">
+            {languageCounts.map(([lang, count]) => (
               <div
-                key={cond}
+                key={lang}
                 className="p-3 rounded-xl border border-rule/50 dark:border-rule-dark/50 bg-surface dark:bg-surface-dark space-y-1"
               >
-                <span className="text-3xs uppercase tracking-wider text-ink-muted block font-medium">
-                  {cond}
+                <span className="text-3xs uppercase tracking-wider text-ink-muted block font-medium truncate">
+                  {lang}
                 </span>
                 <p className="font-mono text-lg font-semibold text-ink dark:text-ink-dark">
                   {count}
