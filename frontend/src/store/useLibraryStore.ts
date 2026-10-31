@@ -28,13 +28,14 @@ interface LibraryState {
   toasts: Toast[];
   
   // Navigation & View Mode
-  activeTab: 'home' | 'shelf' | 'tracker' | 'wishlist' | 'maintenance';
+  activeTab: 'home' | 'shelf' | 'tracker' | 'wishlist' | 'maintenance' | 'insights';
   viewMode: 'grid' | 'spine' | 'table';
   
   // Filters & Search
   search: string;
   statusFilter: string;
   genreFilter: string;
+  selectedGenres: string[];
   conditionFilter: string;
   
   // Drawers & Modals
@@ -51,11 +52,14 @@ interface LibraryState {
   theme: 'light' | 'dark';
   
   // Setters & Actions
-  setActiveTab: (tab: 'home' | 'shelf' | 'tracker' | 'wishlist' | 'maintenance') => void;
+  setActiveTab: (tab: 'home' | 'shelf' | 'tracker' | 'wishlist' | 'maintenance' | 'insights') => void;
   setViewMode: (mode: 'grid' | 'spine' | 'table') => void;
   setSearch: (search: string) => void;
   setStatusFilter: (status: string) => void;
   setGenreFilter: (genre: string) => void;
+  setSelectedGenres: (genres: string[]) => void;
+  toggleGenre: (genre: string) => void;
+  clearSelectedGenres: () => void;
   setConditionFilter: (condition: string) => void;
   setSelectedBook: (book: Book | null) => void;
   openQuickLog: (book?: Book) => void;
@@ -96,6 +100,7 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
   search: '',
   statusFilter: 'ALL',
   genreFilter: 'ALL',
+  selectedGenres: [],
   conditionFilter: 'ALL',
   
   selectedBook: null,
@@ -114,6 +119,15 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
   setSearch: (search) => set({ search }),
   setStatusFilter: (statusFilter) => set({ statusFilter }),
   setGenreFilter: (genreFilter) => set({ genreFilter }),
+  setSelectedGenres: (selectedGenres) => set({ selectedGenres }),
+  toggleGenre: (genre) => set((state) => {
+    const exists = state.selectedGenres.includes(genre);
+    const updated = exists
+      ? state.selectedGenres.filter((g) => g !== genre)
+      : [...state.selectedGenres, genre];
+    return { selectedGenres: updated };
+  }),
+  clearSelectedGenres: () => set({ selectedGenres: [] }),
   setConditionFilter: (conditionFilter) => set({ conditionFilter }),
   setSelectedBook: (selectedBook) => set({ selectedBook }),
   

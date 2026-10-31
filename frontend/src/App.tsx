@@ -20,6 +20,8 @@ import {
   ChevronRight,
   ArrowRight,
   MoreVertical,
+  PieChart,
+  X,
 } from 'lucide-react';
 
 import { StreakBanner } from './components/StreakBanner';
@@ -34,11 +36,14 @@ import { WishlistScreen } from './components/WishlistScreen';
 import { BarcodeScannerModal } from './components/BarcodeScannerModal';
 import { KeySettingsModal } from './components/KeySettingsModal';
 import { ToastContainer } from './components/ToastContainer';
+import { GenreFilterPopover } from './components/GenreFilterPopover';
+import { LibraryInsights } from './components/LibraryInsights';
 
 export default function App() {
   const {
     books,
     portfolio,
+    streakSummary,
     loading,
     refreshing,
     error,
@@ -52,6 +57,9 @@ export default function App() {
     setStatusFilter,
     genreFilter,
     setGenreFilter,
+    selectedGenres,
+    toggleGenre,
+    clearSelectedGenres,
     conditionFilter,
     setConditionFilter,
     setSelectedBook,
@@ -92,7 +100,15 @@ export default function App() {
     }
 
     if (statusFilter !== 'ALL' && b.reading_status !== statusFilter) return false;
-    if (genreFilter !== 'ALL') {
+    if (selectedGenres.length > 0) {
+      const bookGenres = (b.genre || '')
+        .split(',')
+        .map((g) => g.trim().toLowerCase());
+      const hasMatch = selectedGenres.some((sg) =>
+        bookGenres.includes(sg.toLowerCase())
+      );
+      if (!hasMatch) return false;
+    } else if (genreFilter !== 'ALL') {
       const bookGenres = (b.genre || '')
         .split(',')
         .map((g) => g.trim().toLowerCase());
@@ -155,6 +171,17 @@ export default function App() {
             >
               <Library size={14} />
               <span>Bookshelf</span>
+            </button>
+            <button
+              onClick={() => setActiveTab('insights')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-colors min-h-[36px] ${
+                activeTab === 'insights'
+                  ? 'bg-canvas dark:bg-canvas-dark text-ink dark:text-ink-dark shadow-xs font-semibold'
+                  : 'text-ink-secondary hover:text-ink dark:hover:text-ink-dark'
+              }`}
+            >
+              <PieChart size={14} />
+              <span>Insights</span>
             </button>
             <button
               onClick={() => setActiveTab('tracker')}
@@ -299,6 +326,17 @@ export default function App() {
                     <button
                       onClick={() => {
                         setHeaderMenuOpen(false);
+                        setActiveTab('insights');
+                      }}
+                      className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-surface dark:hover:bg-surface-dark text-xs font-medium transition-colors text-left"
+                    >
+                      <PieChart size={14} className="text-accent dark:text-accent-dark" />
+                      <span>Library Insights</span>
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        setHeaderMenuOpen(false);
                         setActiveTab('maintenance');
                       }}
                       className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-surface dark:hover:bg-surface-dark text-xs font-medium transition-colors text-left"
@@ -416,34 +454,68 @@ export default function App() {
               </button>
             </div>
 
-            {/* Acquisitions Wishlist Quick Card */}
-            <div className="p-4 sm:p-5 rounded-2xl border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-accent-subtle dark:bg-accent-dark-subtle border border-accent/20 flex items-center justify-center text-accent dark:text-accent-dark shrink-0">
-                  <ShoppingBag size={20} />
+            {/* Quick Cards Grid: Wishlist & Insights */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* Acquisitions Wishlist Quick Card */}
+              <div className="p-4 sm:p-5 rounded-2xl border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark flex flex-col justify-between gap-4 shadow-sm">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-accent-subtle dark:bg-accent-dark-subtle border border-accent/20 flex items-center justify-center text-accent dark:text-accent-dark shrink-0">
+                    <ShoppingBag size={20} />
+                  </div>
+                  <div>
+                    <h3 className="font-serif text-sm sm:text-base font-medium">Acquisitions Wishlist</h3>
+                    <p className="text-xs text-ink-secondary dark:text-ink-dark-secondary">
+                      Plan book purchases, set target prices, and acquire into your library with 1-tap.
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="font-serif text-sm sm:text-base font-medium">Acquisitions Wishlist</h3>
-                  <p className="text-xs text-ink-secondary dark:text-ink-dark-secondary">
-                    Plan book purchases, set target prices, and acquire into your library with 1-tap.
-                  </p>
-                </div>
+                <button
+                  onClick={() => setActiveTab('wishlist')}
+                  className="flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-surface-raised dark:bg-surface-dark-raised border border-rule dark:border-rule-dark hover:bg-rule/40 text-xs font-medium text-ink dark:text-ink-dark transition-colors self-start min-h-[38px]"
+                >
+                  <span>Open Wishlist</span>
+                  <ArrowRight size={13} />
+                </button>
               </div>
-              <button
-                onClick={() => setActiveTab('wishlist')}
-                className="flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-surface-raised dark:bg-surface-dark-raised border border-rule dark:border-rule-dark hover:bg-rule/40 text-xs font-medium text-ink dark:text-ink-dark transition-colors self-start sm:self-auto min-h-[40px]"
-              >
-                <span>Open Wishlist</span>
-                <ArrowRight size={13} />
-              </button>
+
+              {/* Library Insights Quick Card */}
+              <div className="p-4 sm:p-5 rounded-2xl border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark flex flex-col justify-between gap-4 shadow-sm">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-accent-subtle dark:bg-accent-dark-subtle border border-accent/20 flex items-center justify-center text-accent dark:text-accent-dark shrink-0">
+                    <PieChart size={20} />
+                  </div>
+                  <div>
+                    <h3 className="font-serif text-sm sm:text-base font-medium">Library Insights</h3>
+                    <p className="text-xs text-ink-secondary dark:text-ink-dark-secondary">
+                      Interactive category pie chart, reading backlog index, and author statistics.
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setActiveTab('insights')}
+                  className="flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-surface-raised dark:bg-surface-dark-raised border border-rule dark:border-rule-dark hover:bg-rule/40 text-xs font-medium text-ink dark:text-ink-dark transition-colors self-start min-h-[38px]"
+                >
+                  <span>View Insights</span>
+                  <ArrowRight size={13} />
+                </button>
+              </div>
             </div>
           </div>
         )}
 
-        {/* 2. READING TRACKER & HEATMAP */}
+        {/* 2. LIBRARY INSIGHTS & ANALYTICS */}
+        {activeTab === 'insights' && (
+          <LibraryInsights
+            books={books}
+            portfolio={portfolio}
+            streakSummary={streakSummary}
+          />
+        )}
+
+        {/* 3. READING TRACKER & HEATMAP */}
         {activeTab === 'tracker' && <HeatmapScreen />}
 
-        {/* 3. WISHLIST ACQUISITION BOARD */}
+        {/* 4. WISHLIST ACQUISITION BOARD */}
         {activeTab === 'wishlist' && <WishlistScreen />}
 
         {/* 4. VISUAL BOOKSHELF OR MAINTENANCE AUDIT */}
@@ -544,26 +616,14 @@ export default function App() {
                     <option value="ABANDONED">Abandoned</option>
                   </select>
 
-                  {/* Genre Filter */}
-                  <select
-                    value={genreFilter}
-                    onChange={(e) => setGenreFilter(e.target.value)}
-                    className="w-full sm:w-auto text-xs py-1.5 px-1.5 sm:px-2.5 rounded-lg border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark text-ink dark:text-ink-dark focus:outline-none focus:border-accent truncate cursor-pointer"
-                    title="Filter by Genre"
-                  >
-                    <option value="ALL">All Genres</option>
-                    {allGenres.map((g) => (
-                      <option key={g} value={g}>
-                        {g}
-                      </option>
-                    ))}
-                  </select>
+                  {/* Genre Filter Popover with Multi-Select Checkboxes */}
+                  <GenreFilterPopover allGenres={allGenres} books={books} />
 
                   {/* Condition Filter */}
                   <select
                     value={conditionFilter}
                     onChange={(e) => setConditionFilter(e.target.value)}
-                    className="w-full sm:w-auto text-xs py-1.5 px-1.5 sm:px-2.5 rounded-lg border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark text-ink dark:text-ink-dark focus:outline-none focus:border-accent truncate cursor-pointer"
+                    className="w-full sm:w-auto text-xs py-1.5 px-1.5 sm:px-2.5 rounded-lg border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark text-ink dark:text-ink-dark focus:outline-none focus:border-accent truncate cursor-pointer min-h-[34px]"
                     title="Filter by Condition"
                   >
                     <option value="ALL">All Cond.</option>
@@ -573,19 +633,45 @@ export default function App() {
                     <option value="Damaged">Damaged</option>
                   </select>
 
-                  {(search || statusFilter !== 'ALL' || genreFilter !== 'ALL' || conditionFilter !== 'ALL') && (
+                  {(search || statusFilter !== 'ALL' || genreFilter !== 'ALL' || selectedGenres.length > 0 || conditionFilter !== 'ALL') && (
                     <button
                       onClick={() => {
                         setSearch('');
                         setStatusFilter('ALL');
                         setGenreFilter('ALL');
+                        clearSelectedGenres();
                         setConditionFilter('ALL');
                       }}
-                      className="col-span-3 sm:col-auto px-2 py-1 text-2xs text-ink-muted hover:text-accent underline transition-colors self-center"
+                      className="col-span-3 sm:col-auto px-2 py-1 text-2xs text-ink-muted hover:text-accent underline transition-colors self-center cursor-pointer"
                     >
                       Reset filters
                     </button>
                   )}
+                </div>
+
+                {/* Selected Genre Pill Badges */}
+                {selectedGenres.length > 0 && (
+                  <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                    <span className="text-3xs text-ink-muted font-medium">Filtering by:</span>
+                    {selectedGenres.map((genre) => (
+                      <button
+                        key={genre}
+                        onClick={() => toggleGenre(genre)}
+                        className="flex items-center gap-1 px-2 py-0.5 rounded-full text-3xs font-medium bg-accent/10 dark:bg-accent/20 text-accent dark:text-accent-dark hover:bg-accent/20 border border-accent/20 transition-colors cursor-pointer"
+                        title="Click to remove"
+                      >
+                        <span>{genre}</span>
+                        <X size={10} />
+                      </button>
+                    ))}
+                    <button
+                      onClick={clearSelectedGenres}
+                      className="text-3xs text-ink-muted hover:text-accent underline ml-1 cursor-pointer"
+                    >
+                      Clear all
+                    </button>
+                  </div>
+                )}
                 </div>
 
                 <div className="flex items-center justify-between text-2xs text-ink-muted px-0.5">
@@ -598,7 +684,6 @@ export default function App() {
                   )}
                 </div>
               </div>
-            </div>
 
             {/* Collection View Renderers */}
             {loading && books.length === 0 ? (
