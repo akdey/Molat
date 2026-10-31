@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useMemo } from 'react';
 import { motion } from 'motion/react';
 import {
   Flame,
@@ -14,6 +14,7 @@ import {
   AlertTriangle,
   ShieldCheck,
   Handshake,
+  Shuffle,
 } from 'lucide-react';
 import type { Book, StreakSummary } from '../types/book';
 import { BookCover } from './BookCover';
@@ -46,10 +47,20 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({
   const unreadBooks = books.filter((b) => b.reading_status === 'UNREAD').length;
   const readingBooks = activeBooks.length;
 
-  // Curated shelf spotlight (first 6 books with covers, or recent additions)
-  const spotlightBooks = React.useMemo(() => {
-    return [...books].slice(0, 6);
-  }, [books]);
+  const [shuffleKey, setShuffleKey] = useState(0);
+
+  // Randomised shelf spotlight (6 randomly sampled volumes across library)
+  const spotlightBooks = useMemo(() => {
+    if (!books.length) return [];
+    const pool = [...books];
+    for (let i = pool.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [pool[i], pool[j]] = [pool[j], pool[i]];
+    }
+    return pool.slice(0, 6);
+  }, [books, shuffleKey]);
+
+  const handleShuffle = () => setShuffleKey((prev) => prev + 1);
 
   const currentStreak = streakSummary?.current_streak_days || 0;
   const longestStreak = streakSummary?.longest_streak_days || 0;
@@ -263,16 +274,27 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({
                 From Your Bookshelf
               </h2>
               <p className="text-3xs text-ink-muted">
-                Highlights from your physical collection
+                Random highlights from your physical collection
               </p>
             </div>
-            <button
-              onClick={() => setActiveTab('shelf')}
-              className="flex items-center gap-1 text-xs text-accent hover:underline font-medium cursor-pointer"
-            >
-              <span>Explore all {totalBooks}</span>
-              <ArrowRight size={13} />
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleShuffle}
+                className="flex items-center gap-1 px-2.5 py-1 rounded-lg border border-rule/70 dark:border-rule-dark/70 bg-surface dark:bg-surface-dark hover:bg-surface-raised dark:hover:bg-surface-dark-raised text-2xs text-ink-secondary hover:text-ink transition-colors cursor-pointer active:scale-95"
+                title="Shuffle Random Spotlight"
+                aria-label="Shuffle Spotlight Books"
+              >
+                <Shuffle size={11} className="text-accent dark:text-accent-dark" />
+                <span>Shuffle</span>
+              </button>
+              <button
+                onClick={() => setActiveTab('shelf')}
+                className="flex items-center gap-1 text-xs text-accent hover:underline font-medium cursor-pointer"
+              >
+                <span>Explore all {totalBooks}</span>
+                <ArrowRight size={13} />
+              </button>
+            </div>
           </div>
 
           <div className="grid grid-cols-3 sm:grid-cols-6 gap-2.5 sm:gap-3">
