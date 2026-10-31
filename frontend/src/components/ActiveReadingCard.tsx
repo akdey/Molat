@@ -53,8 +53,23 @@ export const ActiveReadingCard: React.FC = () => {
               <p className="text-xs text-ink-secondary dark:text-ink-dark-secondary truncate">
                 {primaryBook.authors || 'Unknown author'}
               </p>
-              <div className="flex flex-wrap items-center gap-2 text-2xs text-ink-muted pt-0.5">
-                <span>{primaryBook.genre || 'General'}</span>
+              <div className="flex flex-wrap items-center gap-1.5 text-2xs text-ink-muted pt-0.5">
+                {primaryBook.genre ? (
+                  primaryBook.genre
+                    .split(',')
+                    .map((g) => g.trim())
+                    .filter(Boolean)
+                    .map((g, idx) => (
+                      <span
+                        key={idx}
+                        className="px-1.5 py-0.5 rounded bg-surface dark:bg-surface-dark border border-rule/50 dark:border-rule-dark/50 text-3xs font-medium text-ink-secondary dark:text-ink-dark-secondary"
+                      >
+                        {g}
+                      </span>
+                    ))
+                ) : (
+                  <span>General</span>
+                )}
                 <span>•</span>
                 <span>{primaryBook.location || 'Home Shelf'}</span>
               </div>

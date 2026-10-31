@@ -429,13 +429,13 @@ export const BarcodeScannerModal: React.FC = () => {
               </div>
               <div className="space-y-1">
                 <label className="text-3xs uppercase tracking-wider font-medium text-ink-muted">
-                  Genre
+                  Categories / Genres (comma-separated)
                 </label>
                 <input
                   type="text"
                   value={genre}
                   onChange={(e) => setGenre(e.target.value)}
-                  placeholder="e.g. Mystery / Thriller"
+                  placeholder="e.g. Fiction, Mystery, Thriller"
                   className="w-full px-2.5 py-1.5 rounded-lg border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark text-xs focus:outline-none focus:border-accent"
                 />
               </div>

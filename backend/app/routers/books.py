@@ -41,7 +41,10 @@ async def list_books(
         filtered = [b for b in filtered if b.reading_status.value == rs or b.reading_status == rs]
     if genre:
         g = genre.lower().strip()
-        filtered = [b for b in filtered if b.genre and b.genre.lower() == g]
+        filtered = [
+            b for b in filtered
+            if b.genre and g in [part.strip().lower() for part in b.genre.split(",") if part.strip()]
+        ]
     if location:
         loc = location.lower().strip()
         filtered = [b for b in filtered if b.location and b.location.lower() == loc]

@@ -295,9 +295,26 @@ export const BookDetailDrawer: React.FC = () => {
                 <span className="text-ink-muted">ISBN-10</span>
                 <span className="font-mono text-ink dark:text-ink-dark">{selectedBook.isbn_10 || '—'}</span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-ink-muted">Genre</span>
-                <span>{selectedBook.genre || 'General'}</span>
+              <div className="flex justify-between items-start gap-2">
+                <span className="text-ink-muted shrink-0">Genre / Categories</span>
+                <div className="flex flex-wrap justify-end gap-1.5 max-w-[70%]">
+                  {selectedBook.genre ? (
+                    selectedBook.genre
+                      .split(',')
+                      .map((g) => g.trim())
+                      .filter(Boolean)
+                      .map((g, idx) => (
+                        <span
+                          key={idx}
+                          className="px-2 py-0.5 rounded-md bg-surface-raised dark:bg-surface-dark-raised border border-rule/60 dark:border-rule-dark/60 text-2xs font-medium text-ink dark:text-ink-dark"
+                        >
+                          {g}
+                        </span>
+                      ))
+                  ) : (
+                    <span className="text-ink-muted">General</span>
+                  )}
+                </div>
               </div>
               <div className="flex justify-between">
                 <span className="text-ink-muted">Rating</span>

@@ -72,8 +72,15 @@ export default function App() {
     loadAllData();
   }, [loadAllData]);
 
-  // Extract unique genres for filter dropdown
-  const allGenres = Array.from(new Set(books.map((b) => b.genre).filter(Boolean))) as string[];
+  // Extract unique individual genres for filter dropdown
+  const allGenres = Array.from(
+    new Set(
+      books
+        .flatMap((b) => (b.genre ? b.genre.split(',') : []))
+        .map((g) => g.trim())
+        .filter((g) => g.length > 0)
+    )
+  ).sort((a, b) => a.localeCompare(b));
 
   // Filter books based on search and facet filters
   const filteredBooks = books.filter((b) => {
@@ -85,7 +92,12 @@ export default function App() {
     }
 
     if (statusFilter !== 'ALL' && b.reading_status !== statusFilter) return false;
-    if (genreFilter !== 'ALL' && b.genre !== genreFilter) return false;
+    if (genreFilter !== 'ALL') {
+      const bookGenres = (b.genre || '')
+        .split(',')
+        .map((g) => g.trim().toLowerCase());
+      if (!bookGenres.includes(genreFilter.toLowerCase())) return false;
+    }
     if (conditionFilter !== 'ALL' && b.condition !== conditionFilter) return false;
 
     if (!search.trim()) return true;
@@ -655,10 +667,37 @@ export default function App() {
                       <p className="text-3xs text-ink-secondary dark:text-ink-dark-secondary truncate">
                         {book.authors || 'Unknown author'}
                       </p>
-                      <div className="flex items-center justify-between text-3xs pt-1 text-ink-muted">
-                        <span className="truncate max-w-[80px]">{book.genre || 'General'}</span>
+                      <div className="flex items-center justify-between gap-1 text-3xs pt-1 text-ink-muted">
+                        <div className="flex flex-wrap items-center gap-1 overflow-hidden max-h-5 min-w-0">
+                          {book.genre ? (
+                            book.genre
+                              .split(',')
+                              .map((g) => g.trim())
+                              .filter(Boolean)
+                              .slice(0, 2)
+                              .map((g, idx) => (
+                                <span
+                                  key={idx}
+                                  className="px-1.5 py-0.5 rounded bg-surface dark:bg-surface-dark border border-rule/50 dark:border-rule-dark/50 text-3xs font-medium text-ink-secondary dark:text-ink-dark-secondary truncate max-w-[85px]"
+                                >
+                                  {g}
+                                </span>
+                              ))
+                          ) : (
+                            <span className="truncate max-w-[80px]">General</span>
+                          )}
+                          {book.genre &&
+                            book.genre
+                              .split(',')
+                              .map((g) => g.trim())
+                              .filter(Boolean).length > 2 && (
+                              <span className="text-3xs text-ink-muted font-mono font-medium">
+                                +{book.genre.split(',').map((g) => g.trim()).filter(Boolean).length - 2}
+                              </span>
+                            )}
+                        </div>
                         {book.purchase_price !== undefined && (
-                          <span className="font-mono font-medium text-ink dark:text-ink-dark tabular-nums">
+                          <span className="font-mono font-medium text-ink dark:text-ink-dark tabular-nums shrink-0 ml-1">
                             ₹{book.purchase_price}
                           </span>
                         )}
