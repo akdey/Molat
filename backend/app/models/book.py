@@ -1,7 +1,7 @@
 from enum import Enum
 from typing import Optional, List, Dict, Any
 from datetime import datetime
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 
 class ReadingStatus(str, Enum):
@@ -74,6 +74,26 @@ class BookBase(BaseModel):
         if cleaned.startswith("'"):
             cleaned = cleaned[1:]
         return cleaned or None
+
+    @model_validator(mode="after")
+    def sync_both_isbns(self) -> "BookBase":
+        """Guarantees both ISBN-10 and ISBN-13 are populated in sheet records."""
+        if self.isbn_13 and not self.isbn_10:
+            clean13 = self.isbn_13.replace("-", "").replace(" ", "").strip()
+            if len(clean13) == 13 and clean13.startswith("978"):
+                core = clean13[3:12]
+                s = sum(int(core[i]) * (10 - i) for i in range(9))
+                rem = (11 - (s % 11)) % 11
+                cd = "X" if rem == 10 else str(rem)
+                self.isbn_10 = core + cd
+        elif self.isbn_10 and not self.isbn_13:
+            clean10 = self.isbn_10.replace("-", "").replace(" ", "").strip()
+            if len(clean10) == 10:
+                core = "978" + clean10[:9]
+                s = sum(int(core[i]) * (1 if i % 2 == 0 else 3) for i in range(12))
+                cd = str((10 - (s % 10)) % 10)
+                self.isbn_13 = core + cd
+        return self
 
 
 class BookCreate(BookBase):

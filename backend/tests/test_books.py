@@ -98,3 +98,37 @@ def test_book_crud_lifecycle():
     get_after = client.get(f"/api/v1/books/{book_id}")
     assert get_after.status_code == 404
 
+
+def test_both_isbn10_and_isbn13_auto_sync():
+    """Verify that submitting only ISBN-13 automatically computes ISBN-10, and vice versa."""
+    auth_headers = {"X-Library-Key": "development-secret-key-change-in-production"}
+
+    # 1. Provide only ISBN-13 -> should auto-derive ISBN-10
+    book_only_13 = {
+        "title": "Appointment with Death",
+        "authors": "Agatha Christie",
+        "isbn_13": "9780007119356",
+    }
+    res13 = client.post("/api/v1/books", json=book_only_13, headers=auth_headers)
+    assert res13.status_code == 201
+    created13 = res13.json()
+    assert created13["isbn_13"] == "9780007119356"
+    assert created13["isbn_10"] == "0007119356"
+
+    # 2. Provide only ISBN-10 -> should auto-derive ISBN-13
+    book_only_10 = {
+        "title": "Murder on the Orient Express",
+        "authors": "Agatha Christie",
+        "isbn_10": "0007119356",
+    }
+    res10 = client.post("/api/v1/books", json=book_only_10, headers=auth_headers)
+    assert res10.status_code == 201
+    created10 = res10.json()
+    assert created10["isbn_10"] == "0007119356"
+    assert created10["isbn_13"] == "9780007119356"
+
+    # Cleanup
+    client.delete(f"/api/v1/books/{created13['book_id']}", headers=auth_headers)
+    client.delete(f"/api/v1/books/{created10['book_id']}", headers=auth_headers)
+
+

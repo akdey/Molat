@@ -5,6 +5,32 @@ import { useLibraryStore } from '../store/useLibraryStore';
 import { createBook } from '../api/client';
 import type { BookCondition, ReadingStatus } from '../types/book';
 
+// Helper functions to convert between ISBN-13 and ISBN-10
+function deriveIsbn10(isbn13: string): string | null {
+  const clean = isbn13.replace(/[^0-9X]/gi, '').trim();
+  if (clean.length !== 13 || !clean.startsWith('978')) return null;
+  const core = clean.substring(3, 12);
+  let s = 0;
+  for (let i = 0; i < 9; i++) {
+    s += parseInt(core[i]) * (10 - i);
+  }
+  const rem = (11 - (s % 11)) % 11;
+  const cd = rem === 10 ? 'X' : rem.toString();
+  return core + cd;
+}
+
+function deriveIsbn13(isbn10: string): string | null {
+  const clean = isbn10.replace(/[^0-9X]/gi, '').trim();
+  if (clean.length !== 10) return null;
+  const core = '978' + clean.substring(0, 9);
+  let s = 0;
+  for (let i = 0; i < 12; i++) {
+    s += parseInt(core[i]) * (i % 2 === 0 ? 1 : 3);
+  }
+  const cd = (10 - (s % 10)) % 10;
+  return core + cd.toString();
+}
+
 export const BarcodeScannerModal: React.FC = () => {
   const {
     scannerOpen,
@@ -18,6 +44,8 @@ export const BarcodeScannerModal: React.FC = () => {
   } = useLibraryStore();
 
   const [scannedIsbn, setScannedIsbn] = useState<string>('');
+  const [isbn10, setIsbn10] = useState<string>('');
+  const [isbn13, setIsbn13] = useState<string>('');
   const [duplicateBook, setDuplicateBook] = useState<any>(null);
   const [cameraActive, setCameraActive] = useState<boolean>(false);
   const [cameraError, setCameraError] = useState<string | null>(null);
@@ -27,6 +55,8 @@ export const BarcodeScannerModal: React.FC = () => {
   const [title, setTitle] = useState('');
   const [authors, setAuthors] = useState('');
   const [genre, setGenre] = useState('');
+  const [publisher, setPublisher] = useState('');
+  const [pubYear, setPubYear] = useState<number | undefined>(undefined);
   const [coverUrl, setCoverUrl] = useState('');
   const [purchasePrice, setPurchasePrice] = useState<number>(0);
   const [rp, setRp] = useState<number>(0);
@@ -127,104 +157,175 @@ export const BarcodeScannerModal: React.FC = () => {
     }, 150);
   };
 
-  // Lookup metadata from Open Library & Google Books
+  // Lookup metadata from Google Books, Apple Books, and Open Library
   const lookupMetadata = async (isbn: string) => {
     const clean = isbn.replace(/[^0-9X]/gi, '').trim();
     if (clean.length < 9) return;
 
+    // Derive counterpart ISBN immediately so both are present
+    let i10 = isbn10;
+    let i13 = isbn13;
+    if (clean.length === 13) {
+      i13 = clean;
+      if (!i10) i10 = deriveIsbn10(clean) || '';
+    } else if (clean.length === 10) {
+      i10 = clean;
+      if (!i13) i13 = deriveIsbn13(clean) || '';
+    }
+    if (i10) setIsbn10(i10);
+    if (i13) setIsbn13(i13);
+
     setLookingUp(true);
+    let foundTitle = '';
+    let foundRp = 0;
+
     try {
-      // 1. Open Library API
-      const olRes = await fetch(
-        `https://openlibrary.org/api/books?bibkeys=ISBN:${clean}&format=json&jscmd=data`
-      );
-      if (olRes.ok) {
-        const data = await olRes.json();
-        const item = data[`ISBN:${clean}`];
-        if (item) {
-          if (item.title) setTitle(item.title);
-          if (item.authors && item.authors.length > 0) {
-            setAuthors(item.authors.map((a: any) => a.name).join(', '));
-          }
-          if (item.subjects && item.subjects.length > 0) {
-            setGenre(item.subjects[0].name);
-          }
-          if (item.cover?.large || item.cover?.medium) {
-            setCoverUrl(item.cover.large || item.cover.medium);
-          } else {
-            setCoverUrl(`https://covers.openlibrary.org/b/isbn/${clean}-L.jpg`);
-          }
-          addToast(`Found details for "${item.title}"!`, 'success');
-          setLookingUp(false);
-          return;
-        }
-      }
-
-      // 2. Google Books fallback
-      const gbRes = await fetch(
-        `https://www.googleapis.com/books/v1/volumes?q=isbn:${clean}`
-      );
-      if (gbRes.ok) {
-        const data = await gbRes.json();
-        if (data.items && data.items.length > 0) {
-          const item = data.items[0];
-          const info = item.volumeInfo || {};
-          const saleInfo = item.saleInfo || {};
-          if (info.title) setTitle(info.title);
-          if (info.authors && info.authors.length > 0) {
-            setAuthors(info.authors.join(', '));
-          }
-          if (info.categories && info.categories.length > 0) {
-            setGenre(info.categories[0]);
-          }
-          // Extract Retail Price (MRP) from Google Books
-          const listPrice = saleInfo.listPrice?.amount || saleInfo.retailPrice?.amount;
-          if (listPrice && typeof listPrice === 'number' && listPrice > 0) {
-            setRp(Math.round(listPrice));
-          }
-          if (info.imageLinks?.extraLarge || info.imageLinks?.large || info.imageLinks?.medium || info.imageLinks?.thumbnail || info.imageLinks?.smallThumbnail) {
-            const rawImg = info.imageLinks.extraLarge || info.imageLinks.large || info.imageLinks.medium || info.imageLinks.thumbnail || info.imageLinks.smallThumbnail;
-            setCoverUrl(rawImg.replace(/^http:\/\//i, 'https://'));
-          } else {
-            setCoverUrl(`https://covers.openlibrary.org/b/isbn/${clean}-L.jpg`);
-          }
-          addToast(`Found details for "${info.title}"!`, 'success');
-          setLookingUp(false);
-          return;
-        }
-      }
-
-      // 3. Apple Books fallback (iTunes Search API)
+      // 1. Google Books API (best for Retail MRP, categories, publisher, both ISBNs)
       try {
-        const appleRes = await fetch(
-          `https://itunes.apple.com/search?term=${encodeURIComponent(clean)}&country=IN&media=ebook&limit=1`
+        const gbRes = await fetch(
+          `https://www.googleapis.com/books/v1/volumes?q=isbn:${clean}`
         );
-        if (appleRes.ok) {
-          const appleData = await appleRes.json();
-          if (appleData.results && appleData.results.length > 0) {
-            const item = appleData.results[0];
-            if (item.trackName) setTitle(item.trackName);
-            if (item.artistName) setAuthors(item.artistName);
-            if (item.primaryGenreName) setGenre(item.primaryGenreName);
-            if (item.price && typeof item.price === 'number' && item.price > 0) {
-              setRp(Math.round(item.price));
+        if (gbRes.ok) {
+          const data = await gbRes.json();
+          if (data.items && data.items.length > 0) {
+            const item = data.items[0];
+            const info = item.volumeInfo || {};
+            const saleInfo = item.saleInfo || {};
+
+            if (info.title) {
+              setTitle(info.title);
+              foundTitle = info.title;
             }
-            if (item.artworkUrl100) {
-              setCoverUrl(item.artworkUrl100.replace('100x100bb', '600x600bb'));
+            if (info.authors && info.authors.length > 0) {
+              setAuthors(info.authors.join(', '));
             }
-            addToast(`Found details for "${item.trackName}"!`, 'success');
-            setLookingUp(false);
-            return;
+            if (info.categories && info.categories.length > 0) {
+              setGenre(info.categories[0]);
+            }
+            if (info.publisher) {
+              setPublisher(info.publisher);
+            }
+            if (info.publishedDate) {
+              const yr = parseInt(info.publishedDate.substring(0, 4));
+              if (!isNaN(yr)) setPubYear(yr);
+            }
+
+            // Extract industry identifiers (ISBN-10 & ISBN-13)
+            if (info.industryIdentifiers && Array.isArray(info.industryIdentifiers)) {
+              for (const id of info.industryIdentifiers) {
+                if (id.type === 'ISBN_10' && id.identifier) {
+                  setIsbn10(id.identifier);
+                  i10 = id.identifier;
+                } else if (id.type === 'ISBN_13' && id.identifier) {
+                  setIsbn13(id.identifier);
+                  i13 = id.identifier;
+                }
+              }
+            }
+
+            // Extract Verified Retail Price (MRP) from Google Books saleInfo
+            const listPrice = saleInfo.listPrice?.amount || saleInfo.retailPrice?.amount;
+            if (listPrice && typeof listPrice === 'number' && listPrice > 0) {
+              foundRp = Math.round(listPrice);
+              setRp(foundRp);
+            }
+
+            // Image cover
+            const rawImg =
+              info.imageLinks?.extraLarge ||
+              info.imageLinks?.large ||
+              info.imageLinks?.medium ||
+              info.imageLinks?.thumbnail ||
+              info.imageLinks?.smallThumbnail;
+            if (rawImg) {
+              setCoverUrl(rawImg.replace(/^http:\/\//i, 'https://'));
+            }
           }
         }
-      } catch (appleErr) {
-        // Continue to unindexed notification
+      } catch (gbErr) {
+        console.warn('Google Books lookup notice:', gbErr);
       }
 
-      // 4. Default to direct Open Library jacket endpoint if ISBN was detected
-      setCoverUrl(`https://covers.openlibrary.org/b/isbn/${clean}-L.jpg`);
+      // 2. Apple Books Search fallback (country=IN) for price & artwork if needed
+      if (foundRp === 0 || !foundTitle) {
+        try {
+          const appleRes = await fetch(
+            `https://itunes.apple.com/search?term=${encodeURIComponent(clean)}&country=IN&media=ebook&limit=1`
+          );
+          if (appleRes.ok) {
+            const appleData = await appleRes.json();
+            if (appleData.results && appleData.results.length > 0) {
+              const item = appleData.results[0];
+              if (!foundTitle && item.trackName) {
+                setTitle(item.trackName);
+                foundTitle = item.trackName;
+              }
+              if (item.artistName) setAuthors((prev) => prev || item.artistName);
+              if (item.primaryGenreName) setGenre((prev) => prev || item.primaryGenreName);
+              if (foundRp === 0 && item.price && typeof item.price === 'number' && item.price > 0) {
+                foundRp = Math.round(item.price);
+                setRp(foundRp);
+              }
+              if (item.artworkUrl100) {
+                setCoverUrl((prev) => prev || item.artworkUrl100.replace('100x100bb', '600x600bb'));
+              }
+            }
+          }
+        } catch (appleErr) {
+          console.warn('Apple Books lookup notice:', appleErr);
+        }
+      }
 
-      addToast(`ISBN identified: ${clean}. Fill in title & author to save.`, 'info');
+      // 3. Open Library fallback for extra details, ISBN-10, ISBN-13
+      try {
+        const olRes = await fetch(
+          `https://openlibrary.org/api/books?bibkeys=ISBN:${clean}&format=json&jscmd=data`
+        );
+        if (olRes.ok) {
+          const data = await olRes.json();
+          const item = data[`ISBN:${clean}`];
+          if (item) {
+            if (!foundTitle && item.title) {
+              setTitle(item.title);
+              foundTitle = item.title;
+            }
+            if (item.authors && item.authors.length > 0) {
+              setAuthors((prev) => prev || item.authors.map((a: any) => a.name).join(', '));
+            }
+            if (item.subjects && item.subjects.length > 0) {
+              setGenre((prev) => prev || item.subjects[0].name);
+            }
+            if (item.publishers && item.publishers.length > 0) {
+              setPublisher((prev) => prev || item.publishers[0].name);
+            }
+            if (item.identifiers) {
+              if (item.identifiers.isbn_10 && item.identifiers.isbn_10.length > 0) {
+                setIsbn10((prev) => prev || item.identifiers.isbn_10[0]);
+              }
+              if (item.identifiers.isbn_13 && item.identifiers.isbn_13.length > 0) {
+                setIsbn13((prev) => prev || item.identifiers.isbn_13[0]);
+              }
+            }
+            if (item.cover?.large || item.cover?.medium) {
+              setCoverUrl((prev) => prev || item.cover.large || item.cover.medium);
+            }
+          }
+        }
+      } catch (olErr) {
+        console.warn('Open Library lookup notice:', olErr);
+      }
+
+      // 4. Default cover fallback if still empty
+      setCoverUrl((prev) => prev || `https://covers.openlibrary.org/b/isbn/${clean}-L.jpg`);
+
+      if (foundTitle) {
+        addToast(
+          `Found "${foundTitle}"${foundRp > 0 ? ` (MRP ₹${foundRp})` : ''}!`,
+          'success'
+        );
+      } else {
+        addToast(`ISBN identified: ${clean}. Confirm book details to save.`, 'info');
+      }
     } catch (err) {
       console.warn('Metadata lookup error:', err);
     } finally {
@@ -236,11 +337,25 @@ export const BarcodeScannerModal: React.FC = () => {
     const cleanIsbn = isbn.replace(/[^0-9X]/gi, '').trim();
     setScannedIsbn(cleanIsbn);
 
+    let i10 = '';
+    let i13 = '';
+    if (cleanIsbn.length === 13) {
+      i13 = cleanIsbn;
+      i10 = deriveIsbn10(cleanIsbn) || '';
+    } else if (cleanIsbn.length === 10) {
+      i10 = cleanIsbn;
+      i13 = deriveIsbn13(cleanIsbn) || '';
+    }
+    setIsbn10(i10);
+    setIsbn13(i13);
+
     // Duplicate check in existing catalogue
     const match = books.find(
       (b) =>
         (b.isbn_13 && b.isbn_13.replace(/[^0-9X]/gi, '') === cleanIsbn) ||
-        (b.isbn_10 && b.isbn_10.replace(/[^0-9X]/gi, '') === cleanIsbn)
+        (b.isbn_10 && b.isbn_10.replace(/[^0-9X]/gi, '') === cleanIsbn) ||
+        (i10 && b.isbn_10 && b.isbn_10.replace(/[^0-9X]/gi, '') === i10) ||
+        (i13 && b.isbn_13 && b.isbn_13.replace(/[^0-9X]/gi, '') === i13)
     );
     if (match) {
       setDuplicateBook(match);
@@ -263,15 +378,21 @@ export const BarcodeScannerModal: React.FC = () => {
     setSaving(true);
     setErrorMsg(null);
     const token = authToken || libraryKey;
+
+    const finalIsbn13 = isbn13.trim() || (scannedIsbn.length === 13 ? scannedIsbn : deriveIsbn13(scannedIsbn) || undefined);
+    const finalIsbn10 = isbn10.trim() || (scannedIsbn.length === 10 ? scannedIsbn : deriveIsbn10(scannedIsbn) || undefined);
+
     try {
       const created = await createBook(
         {
           title: title.trim(),
           authors: authors.trim() || undefined,
           genre: genre.trim() || undefined,
+          publisher: publisher.trim() || undefined,
+          publication_year: pubYear || undefined,
           cover_url: coverUrl.trim() || undefined,
-          isbn_13: scannedIsbn.length === 13 ? scannedIsbn : undefined,
-          isbn_10: scannedIsbn.length === 10 ? scannedIsbn : undefined,
+          isbn_13: finalIsbn13,
+          isbn_10: finalIsbn10,
           purchase_price: purchasePrice,
           rp: rp,
           condition,
@@ -418,6 +539,50 @@ export const BarcodeScannerModal: React.FC = () => {
 
           {/* Review-Before-Save Form */}
           <form onSubmit={handleSaveBook} className="space-y-2.5 pt-2 border-t border-rule/60">
+            {/* ISBN-13 and ISBN-10 Dual Identification */}
+            <div className="grid grid-cols-2 gap-2 font-mono">
+              <div className="space-y-1">
+                <label className="text-3xs uppercase tracking-wider font-medium text-ink-muted font-sans flex items-center justify-between">
+                  <span>ISBN-13</span>
+                  {isbn13 && <span className="text-emerald-600 dark:text-emerald-400 font-normal lowercase">saved</span>}
+                </label>
+                <input
+                  type="text"
+                  value={isbn13}
+                  onChange={(e) => {
+                    const val = e.target.value.trim();
+                    setIsbn13(val);
+                    if (val.length === 13 && !isbn10) {
+                      const d10 = deriveIsbn10(val);
+                      if (d10) setIsbn10(d10);
+                    }
+                  }}
+                  placeholder="978..."
+                  className="w-full px-2.5 py-1.5 rounded-lg border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark text-xs focus:outline-none focus:border-accent"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-3xs uppercase tracking-wider font-medium text-ink-muted font-sans flex items-center justify-between">
+                  <span>ISBN-10</span>
+                  {isbn10 && <span className="text-emerald-600 dark:text-emerald-400 font-normal lowercase">saved</span>}
+                </label>
+                <input
+                  type="text"
+                  value={isbn10}
+                  onChange={(e) => {
+                    const val = e.target.value.trim();
+                    setIsbn10(val);
+                    if (val.length === 10 && !isbn13) {
+                      const d13 = deriveIsbn13(val);
+                      if (d13) setIsbn13(d13);
+                    }
+                  }}
+                  placeholder="0..."
+                  className="w-full px-2.5 py-1.5 rounded-lg border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark text-xs focus:outline-none focus:border-accent"
+                />
+              </div>
+            </div>
+
             <div className="space-y-1">
               <label className="text-3xs uppercase tracking-wider font-medium text-ink-muted">
                 Title *
@@ -447,7 +612,7 @@ export const BarcodeScannerModal: React.FC = () => {
               </div>
               <div className="space-y-1">
                 <label className="text-3xs uppercase tracking-wider font-medium text-ink-muted">
-                  Categories / Genres (comma-separated)
+                  Categories / Genres
                 </label>
                 <input
                   type="text"
@@ -473,15 +638,19 @@ export const BarcodeScannerModal: React.FC = () => {
                 />
               </div>
               <div className="space-y-1">
-                <label className="text-3xs uppercase tracking-wider font-medium text-ink-muted font-sans">
-                  Retail MRP (₹)
+                <label className="text-3xs uppercase tracking-wider font-medium text-ink-muted font-sans flex items-center justify-between">
+                  <span>Retail MRP (₹)</span>
+                  {rp > 0 && (
+                    <span className="text-emerald-600 dark:text-emerald-400 font-normal lowercase">auto-fetched</span>
+                  )}
                 </label>
                 <input
                   type="number"
                   min="0"
                   value={rp}
                   onChange={(e) => setRp(parseFloat(e.target.value) || 0)}
-                  className="w-full px-2.5 py-1.5 rounded-lg border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark text-xs focus:outline-none focus:border-accent"
+                  placeholder="e.g. 499"
+                  className="w-full px-2.5 py-1.5 rounded-lg border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark text-xs focus:outline-none focus:border-accent font-mono font-medium"
                 />
               </div>
             </div>
