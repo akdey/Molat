@@ -13,16 +13,18 @@ import {
   Plus,
   AlertTriangle,
   ShieldCheck,
+  Handshake,
 } from 'lucide-react';
 import type { Book, StreakSummary } from '../types/book';
 import { BookCover } from './BookCover';
+import { useLibraryStore } from '../store/useLibraryStore';
 
 interface HomeDashboardProps {
   books: Book[];
   streakSummary: StreakSummary | null;
   openQuickLog: (book?: Book) => void;
   setSelectedBook: (book: Book | null) => void;
-  setActiveTab: (tab: 'home' | 'shelf' | 'insights' | 'tracker' | 'wishlist' | 'maintenance') => void;
+  setActiveTab: (tab: 'home' | 'shelf' | 'insights' | 'tracker' | 'wishlist' | 'maintenance' | 'lending') => void;
 }
 
 export const HomeDashboard: React.FC<HomeDashboardProps> = ({
@@ -34,6 +36,10 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({
 }) => {
   const activeBooks = books.filter((b) => b.reading_status === 'READING');
   const primaryBook = activeBooks[0];
+
+  const { lendingRecords } = useLibraryStore();
+  const activeLentCount = lendingRecords.filter((r) => r.status === 'ACTIVE').length;
+  const overdueLentCount = lendingRecords.filter((r) => r.status === 'ACTIVE' && r.is_overdue).length;
 
   const totalBooks = books.length;
   const completedBooks = books.filter((b) => b.reading_status === 'COMPLETED').length;
@@ -300,7 +306,7 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({
       )}
 
       {/* 4. SLEEK COMPACT SHORTCUTS */}
-      <section aria-label="Library Tools" className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+      <section aria-label="Library Tools" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         <motion.button
           onClick={() => setActiveTab('shelf')}
           whileHover={{ y: -2, scale: 1.01 }}
@@ -330,6 +336,37 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({
           <div className="min-w-0">
             <h3 className="font-serif text-xs font-medium text-ink dark:text-ink-dark">Wishlist Board</h3>
             <p className="text-3xs text-ink-muted truncate">Planned acquisitions & target prices</p>
+          </div>
+        </motion.button>
+
+        <motion.button
+          onClick={() => setActiveTab('lending')}
+          whileHover={{ y: -2, scale: 1.01 }}
+          whileTap={{ scale: 0.98 }}
+          transition={{ type: 'spring', damping: 20, stiffness: 350 }}
+          className="p-3.5 rounded-xl border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark hover:border-accent/40 flex items-center gap-3 transition-colors text-left"
+        >
+          <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
+            overdueLentCount > 0 ? 'bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300' : 'bg-accent/10 text-accent'
+          }`}>
+            <Handshake size={16} />
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center justify-between gap-1">
+              <h3 className="font-serif text-xs font-medium text-ink dark:text-ink-dark">Lent Out Books</h3>
+              {activeLentCount > 0 && (
+                <span className={`px-1.5 py-0.2 rounded-full text-3xs font-mono font-semibold ${
+                  overdueLentCount > 0
+                    ? 'bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300'
+                    : 'bg-surface-raised dark:bg-surface-dark-raised text-ink-muted'
+                }`}>
+                  {activeLentCount}
+                </span>
+              )}
+            </div>
+            <p className="text-3xs text-ink-muted truncate">
+              {activeLentCount > 0 ? `${activeLentCount} on loan (${overdueLentCount} late)` : 'Track loans & WhatsApp pings'}
+            </p>
           </div>
         </motion.button>
 

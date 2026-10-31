@@ -82,7 +82,6 @@ export default function App() {
 
   const [centerMenuOpen, setCenterMenuOpen] = useState(false);
   const [headerMenuOpen, setHeaderMenuOpen] = useState(false);
-  const [shelfSubTab, setShelfSubTab] = useState<'catalog' | 'lending'>('catalog');
 
   const activeLentCount = lendingRecords.filter((r) => r.status === 'ACTIVE').length;
   const overdueLentCount = lendingRecords.filter((r) => r.status === 'ACTIVE' && r.is_overdue).length;
@@ -243,6 +242,26 @@ export default function App() {
               <span>Wishlist</span>
             </button>
             <button
+              onClick={() => switchTab('lending')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-colors min-h-[36px] ${
+                activeTab === 'lending'
+                  ? 'bg-canvas dark:bg-canvas-dark text-ink dark:text-ink-dark shadow-xs font-semibold'
+                  : 'text-ink-secondary hover:text-ink dark:hover:text-ink-dark'
+              }`}
+            >
+              <Handshake size={14} className={overdueLentCount > 0 ? 'text-amber-600 dark:text-amber-400' : ''} />
+              <span>Lent Out</span>
+              {activeLentCount > 0 && (
+                <span className={`px-1.5 py-0.2 rounded-full text-3xs font-mono font-semibold ${
+                  overdueLentCount > 0
+                    ? 'bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300'
+                    : 'bg-surface-raised dark:bg-surface-dark-raised text-ink-muted'
+                }`}>
+                  {activeLentCount}
+                </span>
+              )}
+            </button>
+            <button
               onClick={() => switchTab('maintenance')}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-colors min-h-[36px] ${
                 activeTab === 'maintenance'
@@ -374,6 +393,28 @@ export default function App() {
                     <button
                       onClick={() => {
                         setHeaderMenuOpen(false);
+                        switchTab('lending');
+                      }}
+                      className="w-full flex items-center justify-between px-3 py-2 rounded-xl hover:bg-surface dark:hover:bg-surface-dark text-xs font-medium transition-colors text-left"
+                    >
+                      <span className="flex items-center gap-2.5">
+                        <Handshake size={14} className={overdueLentCount > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-accent dark:text-accent-dark'} />
+                        <span>Lent Out Books</span>
+                      </span>
+                      {activeLentCount > 0 && (
+                        <span className={`px-1.5 py-0.2 rounded-full text-3xs font-mono font-semibold ${
+                          overdueLentCount > 0
+                            ? 'bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300'
+                            : 'bg-surface-raised dark:bg-surface-dark-raised text-ink-muted'
+                        }`}>
+                          {activeLentCount}
+                        </span>
+                      )}
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        setHeaderMenuOpen(false);
                         switchTab('insights');
                       }}
                       className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-surface dark:hover:bg-surface-dark text-xs font-medium transition-colors text-left"
@@ -470,48 +511,12 @@ export default function App() {
             {/* 4. WISHLIST ACQUISITION BOARD */}
             {activeTab === 'wishlist' && <WishlistScreen />}
 
-            {/* 5. VISUAL BOOKSHELF OR MAINTENANCE AUDIT */}
+            {/* 5. LENT OUT BOOKS LEDGER */}
+            {activeTab === 'lending' && <LendingLedger />}
+
+            {/* 6. VISUAL BOOKSHELF OR MAINTENANCE AUDIT */}
             {(activeTab === 'shelf' || activeTab === 'maintenance') && (
           <div className="space-y-5 flex-1 flex flex-col">
-            {/* Shelf Sub-Navigation: Catalogue vs Lending Ledger */}
-            {activeTab === 'shelf' && (
-              <div className="flex items-center gap-1.5 p-1 rounded-xl bg-surface dark:bg-surface-dark border border-rule dark:border-rule-dark w-fit">
-                <button
-                  onClick={() => setShelfSubTab('catalog')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                    shelfSubTab === 'catalog'
-                      ? 'bg-canvas dark:bg-canvas-dark text-ink dark:text-ink-dark shadow-xs'
-                      : 'text-ink-secondary hover:text-ink'
-                  }`}
-                >
-                  All Catalogue ({books.length})
-                </button>
-                <button
-                  onClick={() => setShelfSubTab('lending')}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                    shelfSubTab === 'lending'
-                      ? 'bg-canvas dark:bg-canvas-dark text-ink dark:text-ink-dark shadow-xs'
-                      : 'text-ink-secondary hover:text-ink'
-                  }`}
-                >
-                  <Handshake size={13} className={overdueLentCount > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-accent dark:text-accent-dark'} />
-                  <span>Lent Out</span>
-                  <span className={`px-1.5 py-0.2 rounded-full text-3xs font-mono font-semibold ${
-                    overdueLentCount > 0
-                      ? 'bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300'
-                      : 'bg-surface-raised dark:bg-surface-dark-raised text-ink-muted'
-                  }`}>
-                    {activeLentCount}
-                  </span>
-                </button>
-              </div>
-            )}
-
-            {/* If Lending Ledger is selected, render ledger directly */}
-            {activeTab === 'shelf' && shelfSubTab === 'lending' ? (
-              <LendingLedger />
-            ) : (
-              <>
             {/* Maintenance Audit Banner */}
             {activeTab === 'maintenance' && (
               <div className="p-4 rounded-2xl border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark space-y-2">
@@ -774,8 +779,6 @@ export default function App() {
                 ))}
               </div>
             )}
-            </>
-          )}
           </div>
         )}
           </motion.div>

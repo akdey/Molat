@@ -41,7 +41,7 @@ interface LibraryState {
   toasts: Toast[];
   
   // Navigation & View Mode
-  activeTab: 'home' | 'shelf' | 'tracker' | 'wishlist' | 'maintenance' | 'insights';
+  activeTab: 'home' | 'shelf' | 'tracker' | 'wishlist' | 'maintenance' | 'insights' | 'lending';
   viewMode: 'grid' | 'spine' | 'table';
   
   // Filters & Search
@@ -68,7 +68,7 @@ interface LibraryState {
   theme: 'light' | 'dark';
   
   // Setters & Actions
-  setActiveTab: (tab: 'home' | 'shelf' | 'tracker' | 'wishlist' | 'maintenance' | 'insights') => void;
+  setActiveTab: (tab: 'home' | 'shelf' | 'tracker' | 'wishlist' | 'maintenance' | 'insights' | 'lending') => void;
   setViewMode: (mode: 'grid' | 'spine' | 'table') => void;
   setSearch: (search: string) => void;
   setStatusFilter: (status: string) => void;
