@@ -273,7 +273,7 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({
                 From Your Bookshelf
               </h2>
               <p className="text-3xs text-ink-muted truncate">
-                Highlights from collection
+                Highlights from your collection
               </p>
             </div>
             <div className="flex items-center gap-1.5 shrink-0">
