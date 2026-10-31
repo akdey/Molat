@@ -285,7 +285,7 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({
                 aria-label="Shuffle Spotlight Books"
               >
                 <Shuffle size={11} className="text-accent dark:text-accent-dark" />
-                <span>Shuffle</span>
+                {/* <span>Shuffle</span> */}
               </button>
               <button
                 onClick={() => setActiveTab('shelf')}
