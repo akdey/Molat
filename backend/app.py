@@ -21,7 +21,7 @@ import gradio as gr
 from fastapi.middleware.cors import CORSMiddleware
 from gradio.routes import App
 from app.config import settings
-from app.routers import health, books, reading, wishlist, auth
+from app.routers import health, books, reading, wishlist, auth, lending
 
 
 def attach_api_routes(target_app):
@@ -38,6 +38,7 @@ def attach_api_routes(target_app):
     target_app.include_router(books.router, prefix="/api/v1")
     target_app.include_router(reading.router, prefix="/api/v1")
     target_app.include_router(wishlist.router, prefix="/api/v1")
+    target_app.include_router(lending.router, prefix="/api/v1")
 
 
 # Patch Gradio App.create_app so that whatever App Gradio instantiates in launch(),
