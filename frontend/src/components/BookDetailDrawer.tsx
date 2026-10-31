@@ -21,7 +21,6 @@ import type { Book, ReadingStatus, BookCondition, ReadingLog } from '../types/bo
 import { useLibraryStore } from '../store/useLibraryStore';
 import { BookCover } from './BookCover';
 import { CoverPickerModal } from './CoverPickerModal';
-import { StatusRibbon } from './StatusRibbon';
 import { fetchReadingLogs } from '../api/client';
 
 // In-memory synopsis cache so previously fetched blurbs load with 0ms delay
@@ -129,6 +128,7 @@ export const BookDetailDrawer: React.FC = () => {
 
   const [synopsis, setSynopsis] = useState<string | null>(null);
   const [loadingSynopsis, setLoadingSynopsis] = useState<boolean>(false);
+  const [expandedSynopsis, setExpandedSynopsis] = useState<boolean>(false);
 
   const [logs, setLogs] = useState<ReadingLog[]>([]);
   const [loadingLogs, setLoadingLogs] = useState<boolean>(false);
@@ -147,6 +147,7 @@ export const BookDetailDrawer: React.FC = () => {
       setIsEditing(false);
       setSaveSuccess(false);
       setErrorMsg(null);
+      setExpandedSynopsis(false);
 
       // 1. Dynamic fetch synopsis (Approach A - Zero Sheet Bloat)
       setLoadingSynopsis(true);
@@ -225,61 +226,40 @@ export const BookDetailDrawer: React.FC = () => {
       <AnimatePresence>
         {selectedBook && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 md:p-6 overflow-hidden">
-            {/* macOS Vibrant Backdrop */}
+            {/* Backdrop */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              transition={{ duration: 0.18, ease: 'easeOut' }}
+              transition={{ duration: 0.18 }}
               onClick={() => setSelectedBook(null)}
-              className="fixed inset-0 bg-black/55 backdrop-blur-md"
+              className="fixed inset-0 bg-black/60 backdrop-blur-xs"
             />
 
-            {/* macOS Quick Look / Inspector Window (Smooth Apple Spring) */}
+            {/* App-Opening Zoom Animation Modal */}
             <motion.div
-              initial={{ opacity: 0, scale: 0.94, y: 16 }}
+              initial={{ opacity: 0, scale: 0.93, y: 12 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.94, y: 10 }}
-              transition={{ type: 'spring', damping: 28, stiffness: 350, mass: 0.8 }}
-              className="relative z-10 w-full max-w-2xl bg-canvas dark:bg-canvas-dark border border-rule/80 dark:border-rule-dark/80 rounded-2xl shadow-[0_25px_70px_rgba(0,0,0,0.38)] flex flex-col overflow-hidden max-h-[90vh] my-auto"
+              exit={{ opacity: 0, scale: 0.93, y: 12 }}
+              transition={{ type: 'spring', damping: 26, stiffness: 340 }}
+              className="relative z-10 w-full max-w-xl bg-canvas dark:bg-canvas-dark border border-rule dark:border-rule-dark rounded-2xl shadow-2xl flex flex-col overflow-hidden max-h-[90vh] my-auto"
               role="dialog"
               aria-modal="true"
               aria-labelledby="drawer-title"
             >
-              {/* macOS Window Titlebar Header */}
-              <div className="flex items-center justify-between px-4 sm:px-5 py-3 border-b border-rule/60 dark:border-rule-dark/60 bg-surface/80 dark:bg-surface-dark/80 backdrop-blur-md select-none">
-                {/* macOS Traffic Lights */}
+              {/* Clean Molat Header */}
+              <div className="flex items-center justify-between px-5 py-3.5 border-b border-rule dark:border-rule-dark bg-surface/50 dark:bg-surface-dark/50">
                 <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => setSelectedBook(null)}
-                    className="w-3 h-3 rounded-full bg-rose-500 hover:bg-rose-600 transition-colors flex items-center justify-center group"
-                    title="Close"
-                    aria-label="Close"
-                  >
-                    <X size={8} className="text-white opacity-0 group-hover:opacity-100 transition-opacity" />
-                  </button>
-                  <span className="w-3 h-3 rounded-full bg-amber-400/80" />
-                  <span className="w-3 h-3 rounded-full bg-emerald-400/80" />
-                  <span className="ml-2 font-mono text-3xs uppercase tracking-wider text-accent dark:text-accent-dark font-medium">
+                  <span className="font-mono text-2xs uppercase tracking-wider text-accent dark:text-accent-dark font-medium">
                     {selectedBook.book_id}
                   </span>
                 </div>
-
-                <div className="font-serif text-2xs uppercase tracking-widest text-ink-muted hidden sm:inline-block">
-                  Volume Inspector
-                </div>
-
-                <div className="flex items-center gap-1.5">
-                  <kbd className="hidden sm:inline-block px-1.5 py-0.5 rounded text-3xs font-mono text-ink-muted bg-surface-raised dark:bg-surface-dark-raised border border-rule/60 dark:border-rule-dark/60">
-                    esc
-                  </kbd>
-                  <button
-                    onClick={() => setSelectedBook(null)}
-                    className="p-1 rounded-lg text-ink-muted hover:text-ink dark:hover:text-ink-dark hover:bg-surface-raised dark:hover:bg-surface-dark-raised transition-colors"
-                  >
-                    <X size={16} />
-                  </button>
-                </div>
+                <button
+                  onClick={() => setSelectedBook(null)}
+                  className="p-1 rounded-lg text-ink-muted hover:text-ink dark:hover:text-ink-dark hover:bg-surface dark:hover:bg-surface-dark transition-colors"
+                >
+                  <X size={18} />
+                </button>
               </div>
 
               {/* Inspector Content */}
@@ -309,24 +289,20 @@ export const BookDetailDrawer: React.FC = () => {
                         readingStatus={status}
                       />
                     </div>
+                    {/* Change Cover Single-Line Button */}
                     <button
                       type="button"
                       onClick={() => setCoverModalOpen(true)}
-                      className="w-full py-1 px-1.5 rounded-lg border border-rule/80 dark:border-rule-dark/80 bg-surface dark:bg-surface-dark hover:bg-surface-raised dark:hover:bg-surface-dark-raised text-3xs font-medium text-ink-secondary hover:text-accent dark:hover:text-accent-dark transition-colors flex items-center justify-center gap-1 shadow-2xs"
+                      className="w-full whitespace-nowrap py-1 px-2 rounded-lg border border-rule/80 dark:border-rule-dark/80 bg-surface dark:bg-surface-dark hover:bg-surface-raised dark:hover:bg-surface-dark-raised text-3xs font-medium text-ink-secondary hover:text-accent dark:hover:text-accent-dark transition-colors flex items-center justify-center gap-1 shadow-2xs shrink-0"
                       title="Change or refetch cover edition"
                     >
-                      <Sparkles size={11} className="text-accent dark:text-accent-dark" />
-                      <span>Change Cover</span>
+                      <Sparkles size={11} className="text-accent dark:text-accent-dark shrink-0" />
+                      <span className="whitespace-nowrap">Change Cover</span>
                     </button>
                   </div>
 
                   <div className="flex-1 min-w-0 flex flex-col justify-between py-0.5 space-y-2">
-                    <div className="space-y-1.5">
-                      {/* Status Ribbon Banner */}
-                      <div className="pb-0.5">
-                        <StatusRibbon status={status} variant="banner" size="sm" />
-                      </div>
-
+                    <div className="space-y-1">
                       <h2
                         id="drawer-title"
                         className="font-serif text-lg sm:text-xl font-medium text-ink dark:text-ink-dark leading-snug"
@@ -390,14 +366,27 @@ export const BookDetailDrawer: React.FC = () => {
                     </div>
                   </div>
                 ) : synopsis ? (
-                  <div className="p-4 rounded-xl border border-rule/60 dark:border-rule-dark/60 bg-surface dark:bg-surface-dark space-y-1.5 shadow-2xs">
+                  <div className="p-4 rounded-xl border border-rule/60 dark:border-rule-dark/60 bg-surface dark:bg-surface-dark space-y-2 shadow-2xs">
                     <span className="text-3xs uppercase tracking-wider text-ink-muted font-medium flex items-center gap-1.5">
                       <Quote size={11} className="text-accent" />
                       About the Work
                     </span>
-                    <p className="font-serif text-xs text-ink-secondary dark:text-ink-dark-secondary italic leading-relaxed whitespace-pre-wrap">
+                    <p
+                      className={`font-serif text-xs text-ink-secondary dark:text-ink-dark-secondary italic leading-relaxed whitespace-pre-wrap ${
+                        !expandedSynopsis ? 'line-clamp-5' : ''
+                      }`}
+                    >
                       "{synopsis}"
                     </p>
+                    {synopsis.length > 220 && (
+                      <button
+                        type="button"
+                        onClick={() => setExpandedSynopsis(!expandedSynopsis)}
+                        className="text-3xs font-medium text-accent dark:text-accent-dark hover:underline flex items-center gap-0.5 pt-0.5"
+                      >
+                        {expandedSynopsis ? 'Show less' : '... Read more'}
+                      </button>
+                    )}
                   </div>
                 ) : null}
 
@@ -421,21 +410,46 @@ export const BookDetailDrawer: React.FC = () => {
 
                   {!isEditing ? (
                     <div className="space-y-2.5 text-xs">
-                      {/* Coupled Reading Status Ribbon & Shelf Location Grid */}
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 rounded-xl bg-surface-raised/70 dark:bg-surface-dark-raised/70 border border-rule/40 dark:border-rule-dark/40">
-                        <div className="space-y-1.5">
+                      {/* Simple Clean Status & Shelf Location Grid */}
+                      <div className="grid grid-cols-2 gap-3 p-3 rounded-xl bg-surface-raised/70 dark:bg-surface-dark-raised/70 border border-rule/40 dark:border-rule-dark/40">
+                        <div className="space-y-1">
                           <span className="text-3xs uppercase tracking-wider text-ink-muted block font-medium">
                             Reading Status
                           </span>
-                          <StatusRibbon status={status} variant="banner" size="md" />
+                          <div className="flex items-center gap-1.5 pt-0.5">
+                            <span
+                              className={`w-2 h-2 rounded-full shrink-0 ${
+                                status === 'READING'
+                                  ? 'bg-accent animate-pulse'
+                                  : status === 'COMPLETED'
+                                  ? 'bg-emerald-600'
+                                  : status === 'PAUSED'
+                                  ? 'bg-purple-500'
+                                  : status === 'ABANDONED'
+                                  ? 'bg-rose-500'
+                                  : 'bg-ink-muted/60'
+                              }`}
+                            />
+                            <span className="font-serif text-xs font-medium text-ink dark:text-ink-dark">
+                              {status === 'READING'
+                                ? 'Currently Reading'
+                                : status === 'COMPLETED'
+                                ? 'Completed'
+                                : status === 'PAUSED'
+                                ? 'Paused'
+                                : status === 'ABANDONED'
+                                ? 'Abandoned'
+                                : 'To Be Read'}
+                            </span>
+                          </div>
                         </div>
 
-                        <div className="space-y-1.5">
+                        <div className="space-y-1">
                           <span className="text-3xs uppercase tracking-wider text-ink-muted block font-medium flex items-center gap-1">
-                            <MapPin size={10} className="text-accent shrink-0" />
+                            <MapPin size={11} className="text-accent shrink-0" />
                             Shelf Location
                           </span>
-                          <span className="font-serif text-xs font-medium text-ink dark:text-ink-dark truncate block pt-1">
+                          <span className="font-serif text-xs font-medium text-ink dark:text-ink-dark truncate block pt-0.5">
                             {location || 'Home Shelf'}
                           </span>
                         </div>

@@ -392,7 +392,7 @@ export default function App() {
       </header>
 
       {/* Main Container across all 6 viewports */}
-      <main className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 py-5 sm:py-6 space-y-6">
+      <main className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 py-5 sm:py-6 space-y-6 flex-1 flex flex-col w-full">
         {error && (
           <div className="p-4 rounded-xl bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/40 text-red-700 dark:text-red-400 text-sm">
             {error}
@@ -407,7 +407,7 @@ export default function App() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -4 }}
             transition={{ duration: 0.16, ease: 'easeOut' }}
-            className="space-y-6"
+            className="space-y-6 flex-1 flex flex-col"
           >
             {/* 1. HOME / COMMAND DASHBOARD */}
             {activeTab === 'home' && (
@@ -706,7 +706,7 @@ export default function App() {
         </AnimatePresence>
 
         {/* Subtle Brand & Creator Footer */}
-        <footer className="pt-10 pb-4 text-center border-t border-rule/50 dark:border-rule-dark/50">
+        <footer className="mt-auto pt-8 pb-24 md:pb-8 text-center border-t border-rule/50 dark:border-rule-dark/50">
           <p className="text-3xs text-ink-muted">
             Molat Personal Library &bull; Engineered by{' '}
             <a
@@ -721,24 +721,24 @@ export default function App() {
         </footer>
       </main>
 
-      {/* Center Action Popup on Mobile with macOS Spring */}
+      {/* Center Action Popup on Mobile */}
       <AnimatePresence>
         {centerMenuOpen && (
-          <div className="fixed inset-0 z-40 md:hidden">
+          <div className="fixed inset-0 z-40 md:hidden flex items-end justify-center pb-20 pointer-events-none">
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.15 }}
-              className="fixed inset-0 bg-black/50 backdrop-blur-xs"
+              className="fixed inset-0 bg-black/50 backdrop-blur-xs pointer-events-auto"
               onClick={() => setCenterMenuOpen(false)}
             />
             <motion.div
-              initial={{ opacity: 0, scale: 0.93, y: 16 }}
+              initial={{ opacity: 0, scale: 0.92, y: 12 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.93, y: 16 }}
+              exit={{ opacity: 0, scale: 0.92, y: 12 }}
               transition={{ type: 'spring', damping: 25, stiffness: 350 }}
-              className="absolute bottom-20 left-1/2 -translate-x-1/2 w-64 bg-canvas dark:bg-canvas-dark border border-rule dark:border-rule-dark rounded-2xl shadow-2xl p-2 space-y-1 z-10"
+              className="relative z-10 w-64 bg-canvas dark:bg-canvas-dark border border-rule dark:border-rule-dark rounded-2xl shadow-2xl p-2 space-y-1 pointer-events-auto mb-2"
             >
               <button
                 onClick={() => {
