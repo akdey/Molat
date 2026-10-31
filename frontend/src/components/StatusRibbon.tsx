@@ -104,13 +104,12 @@ export const StatusRibbon: React.FC<StatusRibbonProps> = ({
       className={`relative inline-flex items-center select-none filter drop-shadow-[0_2px_4px_rgba(0,0,0,0.18)] ${className}`}
     >
       <div
-        className={`relative inline-flex items-center gap-2 bg-gradient-to-r ${config.gradient} shadow-md border-y border-dashed ${config.borderColor} ${
-          isSm
+        className={`relative inline-flex items-center gap-2 bg-gradient-to-r ${config.gradient} shadow-md border-y border-dashed ${config.borderColor} ${isSm
             ? 'px-2.5 py-0.5 text-3xs'
             : isLg
-            ? 'px-4 py-1.5 text-xs'
-            : 'px-3 py-1 text-2xs'
-        } font-serif font-semibold tracking-wider uppercase`}
+              ? 'px-4 py-1.5 text-xs'
+              : 'px-3 py-1 text-2xs'
+          } font-serif font-semibold tracking-wider uppercase`}
         style={{
           clipPath: 'polygon(0 0, calc(100% - 9px) 0, 100% 50%, calc(100% - 9px) 100%, 0 100%)',
           paddingRight: isSm ? '1rem' : isLg ? '1.5rem' : '1.25rem',
