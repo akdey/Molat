@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { X, Check, Star, BookOpen, Clock, FileText, RefreshCw } from 'lucide-react';
 import { useLibraryStore } from '../store/useLibraryStore';
 
@@ -32,8 +33,6 @@ export const QuickLogModal: React.FC = () => {
       setSelectedBookId(active ? active.book_id : books[0].book_id);
     }
   }, [quickLogBook, books]);
-
-  if (!quickLogOpen) return null;
 
   const pagesRead = Math.max(0, endPage - startPage);
 
@@ -80,28 +79,42 @@ export const QuickLogModal: React.FC = () => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-0 sm:p-4 animate-in fade-in duration-200">
-      <div
-        className="w-full sm:max-w-md bg-canvas dark:bg-canvas-dark border-t sm:border border-rule dark:border-rule-dark rounded-t-2xl sm:rounded-2xl shadow-xl overflow-hidden max-h-[90vh] flex flex-col"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="modal-title"
-      >
-        {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-rule dark:border-rule-dark">
-          <div className="flex items-center gap-2">
-            <BookOpen className="text-accent dark:text-accent-dark h-5 w-5" />
-            <h2 id="modal-title" className="font-serif text-lg font-medium text-ink dark:text-ink-dark">
-              Log Reading Session
-            </h2>
-          </div>
-          <button
+    <AnimatePresence>
+      {quickLogOpen && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.18 }}
             onClick={closeQuickLog}
-            className="p-1 rounded-lg text-ink-muted hover:text-ink dark:hover:text-ink-dark hover:bg-surface dark:hover:bg-surface-dark transition-colors"
+            className="fixed inset-0 bg-black/60 backdrop-blur-xs"
+          />
+          <motion.div
+            initial={{ opacity: 0, scale: 0.96, y: 16 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.96, y: 16 }}
+            transition={{ type: 'spring', damping: 26, stiffness: 320 }}
+            className="relative z-10 w-full sm:max-w-md bg-canvas dark:bg-canvas-dark border-t sm:border border-rule dark:border-rule-dark rounded-t-2xl sm:rounded-2xl shadow-xl overflow-hidden max-h-[90vh] flex flex-col"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="modal-title"
           >
-            <X size={20} />
-          </button>
-        </div>
+            {/* Header */}
+            <div className="flex items-center justify-between px-5 py-4 border-b border-rule dark:border-rule-dark">
+              <div className="flex items-center gap-2">
+                <BookOpen className="text-accent dark:text-accent-dark h-5 w-5" />
+                <h2 id="modal-title" className="font-serif text-lg font-medium text-ink dark:text-ink-dark">
+                  Log Reading Session
+                </h2>
+              </div>
+              <button
+                onClick={closeQuickLog}
+                className="p-1 rounded-lg text-ink-muted hover:text-ink dark:hover:text-ink-dark hover:bg-surface dark:hover:bg-surface-dark transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
 
         {/* Form Body */}
         <form onSubmit={handleSubmit} className="p-5 space-y-4 overflow-y-auto">
@@ -278,8 +291,10 @@ export const QuickLogModal: React.FC = () => {
             </button>
           </div>
         </form>
-      </div>
-    </div>
+          </motion.div>
+        </div>
+      )}
+    </AnimatePresence>
   );
 };
 

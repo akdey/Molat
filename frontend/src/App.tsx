@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { useLibraryStore } from './store/useLibraryStore';
 import {
   Home,
@@ -386,34 +387,44 @@ export default function App() {
           </div>
         )}
 
-        {/* 1. HOME / COMMAND DASHBOARD */}
-        {activeTab === 'home' && (
-          <HomeDashboard
-            books={books}
-            streakSummary={streakSummary}
-            openQuickLog={openQuickLog}
-            setSelectedBook={setSelectedBook}
-            setActiveTab={setActiveTab}
-          />
-        )}
+        {/* Animated View Transitions across Main Tabs */}
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={activeTab}
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -4 }}
+            transition={{ duration: 0.16, ease: 'easeOut' }}
+            className="space-y-6"
+          >
+            {/* 1. HOME / COMMAND DASHBOARD */}
+            {activeTab === 'home' && (
+              <HomeDashboard
+                books={books}
+                streakSummary={streakSummary}
+                openQuickLog={openQuickLog}
+                setSelectedBook={setSelectedBook}
+                setActiveTab={setActiveTab}
+              />
+            )}
 
-        {/* 2. LIBRARY INSIGHTS & ANALYTICS */}
-        {activeTab === 'insights' && (
-          <LibraryInsights
-            books={books}
-            portfolio={portfolio}
-            streakSummary={streakSummary}
-          />
-        )}
+            {/* 2. LIBRARY INSIGHTS & ANALYTICS */}
+            {activeTab === 'insights' && (
+              <LibraryInsights
+                books={books}
+                portfolio={portfolio}
+                streakSummary={streakSummary}
+              />
+            )}
 
-        {/* 3. READING TRACKER & HEATMAP */}
-        {activeTab === 'tracker' && <HeatmapScreen />}
+            {/* 3. READING TRACKER & HEATMAP */}
+            {activeTab === 'tracker' && <HeatmapScreen />}
 
-        {/* 4. WISHLIST ACQUISITION BOARD */}
-        {activeTab === 'wishlist' && <WishlistScreen />}
+            {/* 4. WISHLIST ACQUISITION BOARD */}
+            {activeTab === 'wishlist' && <WishlistScreen />}
 
-        {/* 4. VISUAL BOOKSHELF OR MAINTENANCE AUDIT */}
-        {(activeTab === 'shelf' || activeTab === 'maintenance') && (
+            {/* 5. VISUAL BOOKSHELF OR MAINTENANCE AUDIT */}
+            {(activeTab === 'shelf' || activeTab === 'maintenance') && (
           <div className="space-y-5">
             {/* Maintenance Audit Banner */}
             {activeTab === 'maintenance' && (
@@ -614,7 +625,7 @@ export default function App() {
                   <article
                     key={book.book_id}
                     onClick={() => setSelectedBook(book)}
-                    className="group flex flex-col gap-2 p-2 rounded-xl border border-rule/60 dark:border-rule-dark/60 bg-surface dark:bg-surface-dark hover:border-accent/40 dark:hover:border-accent-dark/40 transition-all duration-200 cursor-pointer shadow-2xs"
+                    className="group flex flex-col gap-2 p-2 rounded-xl border border-rule/60 dark:border-rule-dark/60 bg-surface dark:bg-surface-dark hover:border-accent/40 dark:hover:border-accent-dark/40 hover:-translate-y-0.5 active:scale-[0.98] transition-all duration-200 cursor-pointer shadow-2xs hover:shadow-xs"
                   >
                     {/* Cover Container (strict 2:3 aspect) */}
                     <BookCover
@@ -678,6 +689,8 @@ export default function App() {
             )}
           </div>
         )}
+          </motion.div>
+        </AnimatePresence>
 
         {/* Subtle Brand & Creator Footer */}
         <footer className="pt-10 pb-4 text-center border-t border-rule/50 dark:border-rule-dark/50">

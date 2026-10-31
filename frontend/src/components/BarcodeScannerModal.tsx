@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode';
 import { X, Camera, Check, AlertTriangle, BookOpen, RefreshCw, Search, Sparkles } from 'lucide-react';
 import { useLibraryStore } from '../store/useLibraryStore';
@@ -416,12 +417,26 @@ export const BarcodeScannerModal: React.FC = () => {
     }
   };
 
-  if (!scannerOpen) return null;
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-3 sm:p-4 animate-in fade-in">
-      <div className="w-full max-w-lg bg-canvas dark:bg-canvas-dark border border-rule dark:border-rule-dark rounded-2xl shadow-2xl overflow-hidden max-h-[92vh] flex flex-col">
-        {/* Header */}
+    <AnimatePresence>
+      {scannerOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4">
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.18 }}
+            onClick={() => setScannerOpen(false)}
+            className="fixed inset-0 bg-black/60 backdrop-blur-xs"
+          />
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95, y: 16 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: 16 }}
+            transition={{ type: 'spring', damping: 26, stiffness: 320 }}
+            className="relative z-10 w-full max-w-lg bg-canvas dark:bg-canvas-dark border border-rule dark:border-rule-dark rounded-2xl shadow-2xl overflow-hidden max-h-[92vh] flex flex-col"
+          >
+            {/* Header */}
         <div className="flex items-center justify-between px-4 sm:px-5 py-3.5 border-b border-rule dark:border-rule-dark bg-surface/50 dark:bg-surface-dark/50">
           <div className="flex items-center gap-2">
             <Camera className="text-accent dark:text-accent-dark h-5 w-5 shrink-0" />
@@ -728,7 +743,9 @@ export const BarcodeScannerModal: React.FC = () => {
             </div>
           </form>
         </div>
-      </div>
-    </div>
+          </motion.div>
+        </div>
+      )}
+    </AnimatePresence>
   );
 };
