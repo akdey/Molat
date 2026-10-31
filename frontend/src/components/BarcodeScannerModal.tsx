@@ -80,6 +80,9 @@ export const BarcodeScannerModal: React.FC = () => {
             Html5QrcodeSupportedFormats.UPC_E,
           ],
           verbose: false,
+          experimentalFeatures: {
+            useBarCodeDetectorIfSupported: true,
+          },
         });
 
         qrCodeScannerRef.current = html5QrCode;
@@ -87,13 +90,18 @@ export const BarcodeScannerModal: React.FC = () => {
         await html5QrCode.start(
           { facingMode: 'environment' },
           {
-            fps: 15,
+            fps: 20,
             qrbox: (viewfinderWidth, viewfinderHeight) => {
-              const width = Math.min(viewfinderWidth * 0.85, 300);
-              const height = Math.min(width * 0.55, 160);
-              return { width: Math.floor(width), height: Math.floor(height) };
+              const width = Math.floor(Math.min(viewfinderWidth * 0.9, 320));
+              const height = Math.floor(Math.min(viewfinderHeight * 0.55, 170));
+              return { width, height };
             },
-            aspectRatio: 1.5,
+            videoConstraints: {
+              facingMode: { ideal: 'environment' },
+              width: { min: 640, ideal: 1920 },
+              height: { min: 480, ideal: 1080 },
+              advanced: [{ focusMode: 'continuous' } as any],
+            },
           },
           (decodedText) => {
             // Haptic feedback on phone
@@ -159,13 +167,20 @@ export const BarcodeScannerModal: React.FC = () => {
       if (gbRes.ok) {
         const data = await gbRes.json();
         if (data.items && data.items.length > 0) {
-          const info = data.items[0].volumeInfo || {};
+          const item = data.items[0];
+          const info = item.volumeInfo || {};
+          const saleInfo = item.saleInfo || {};
           if (info.title) setTitle(info.title);
           if (info.authors && info.authors.length > 0) {
             setAuthors(info.authors.join(', '));
           }
           if (info.categories && info.categories.length > 0) {
             setGenre(info.categories[0]);
+          }
+          // Extract Retail Price (MRP) from Google Books
+          const listPrice = saleInfo.listPrice?.amount || saleInfo.retailPrice?.amount;
+          if (listPrice && typeof listPrice === 'number' && listPrice > 0) {
+            setRp(Math.round(listPrice));
           }
           if (info.imageLinks?.extraLarge || info.imageLinks?.large || info.imageLinks?.medium || info.imageLinks?.thumbnail || info.imageLinks?.smallThumbnail) {
             const rawImg = info.imageLinks.extraLarge || info.imageLinks.large || info.imageLinks.medium || info.imageLinks.thumbnail || info.imageLinks.smallThumbnail;
@@ -191,6 +206,9 @@ export const BarcodeScannerModal: React.FC = () => {
             if (item.trackName) setTitle(item.trackName);
             if (item.artistName) setAuthors(item.artistName);
             if (item.primaryGenreName) setGenre(item.primaryGenreName);
+            if (item.price && typeof item.price === 'number' && item.price > 0) {
+              setRp(Math.round(item.price));
+            }
             if (item.artworkUrl100) {
               setCoverUrl(item.artworkUrl100.replace('100x100bb', '600x600bb'));
             }
@@ -317,15 +335,15 @@ export const BarcodeScannerModal: React.FC = () => {
           {/* Active Camera Viewfinder */}
           {cameraActive ? (
             <div className="space-y-2">
-              <div className="relative w-full rounded-2xl overflow-hidden border-2 border-accent/40 bg-black aspect-video flex items-center justify-center shadow-inner">
-                <div id="barcode-scanner-video" className="w-full h-full" />
-                {/* Aiming Reticle */}
+              <div className="relative w-full rounded-2xl overflow-hidden border border-rule dark:border-rule-dark bg-black shadow-inner min-h-[260px] flex items-center justify-center">
+                <div id="barcode-scanner-video" className="w-full h-full [&_video]:w-full [&_video]:h-full [&_video]:object-cover [&_video]:rounded-2xl" />
+                {/* Aiming Reticle (aligned directly with scanner detection box) */}
                 <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-                  <div className="w-64 h-28 border-2 border-dashed border-white/80 rounded-xl relative shadow-lg">
+                  <div className="w-[88%] max-w-[320px] h-[150px] border-2 border-accent/80 rounded-xl relative shadow-lg bg-accent/5">
                     {/* Animated scanning laser line */}
-                    <div className="w-full h-0.5 bg-red-500/80 shadow-[0_0_8px_rgba(239,68,68,0.8)] absolute top-1/2 -translate-y-1/2 animate-pulse" />
-                    <span className="absolute -bottom-5 left-1/2 -translate-x-1/2 text-3xs font-medium text-white/90 bg-black/60 px-2 py-0.5 rounded-full whitespace-nowrap">
-                      Align ISBN Barcode inside box
+                    <div className="w-full h-0.5 bg-accent/90 shadow-[0_0_10px_rgba(180,83,9,0.9)] absolute top-1/2 -translate-y-1/2 animate-pulse" />
+                    <span className="absolute -bottom-6 left-1/2 -translate-x-1/2 text-3xs font-medium text-white/95 bg-black/75 backdrop-blur-xs px-2.5 py-0.5 rounded-full whitespace-nowrap">
+                      Align barcode inside frame
                     </span>
                   </div>
                 </div>

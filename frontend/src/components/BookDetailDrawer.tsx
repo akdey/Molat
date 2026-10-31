@@ -189,19 +189,42 @@ export const BookDetailDrawer: React.FC = () => {
               <div className="space-y-3 text-xs">
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <span className="text-3xs uppercase tracking-wider font-medium text-ink-muted block">
+                    <span className="text-3xs uppercase tracking-wider font-medium text-ink-muted block mb-1">
                       Reading Status
                     </span>
-                    <span className="inline-block mt-1 px-2 py-0.5 rounded text-2xs font-mono font-medium uppercase bg-surface-raised dark:bg-surface-dark-raised border border-rule/60 dark:border-rule-dark/60 text-ink dark:text-ink-dark">
-                      {status}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={`w-2 h-2 rounded-full shrink-0 ${
+                          status === 'READING'
+                            ? 'bg-accent animate-pulse'
+                            : status === 'COMPLETED'
+                            ? 'bg-emerald-600'
+                            : status === 'PAUSED'
+                            ? 'bg-purple-500'
+                            : status === 'ABANDONED'
+                            ? 'bg-rose-500'
+                            : 'bg-ink-muted'
+                        }`}
+                      />
+                      <span className="text-xs font-serif font-medium text-ink dark:text-ink-dark">
+                        {status === 'READING'
+                          ? 'Currently Reading'
+                          : status === 'COMPLETED'
+                          ? 'Completed'
+                          : status === 'PAUSED'
+                          ? 'Paused'
+                          : status === 'ABANDONED'
+                          ? 'Abandoned'
+                          : 'To Be Read (Unread)'}
+                      </span>
+                    </div>
                   </div>
                   <div>
-                    <span className="text-3xs uppercase tracking-wider font-medium text-ink-muted block">
+                    <span className="text-3xs uppercase tracking-wider font-medium text-ink-muted block mb-1">
                       Physical Condition
                     </span>
-                    <span className="inline-block mt-1 text-xs text-ink dark:text-ink-dark font-medium">
-                      {condition}
+                    <span className="text-xs font-serif font-medium text-ink dark:text-ink-dark">
+                      {condition || 'Good'}
                     </span>
                   </div>
                 </div>
@@ -341,12 +364,22 @@ export const BookDetailDrawer: React.FC = () => {
                 <span className="text-ink dark:text-ink-dark">{selectedBook.language || 'English'}</span>
               </div>
               <div className="flex justify-between items-center">
+                <span className="text-ink-muted">Physical Condition</span>
+                <span className="font-medium text-ink dark:text-ink-dark">{selectedBook.condition || 'Good'}</span>
+              </div>
+              <div className="flex justify-between items-center">
                 <span className="text-ink-muted">Acquired Date</span>
                 <span className="font-mono text-ink dark:text-ink-dark">{selectedBook.purchase_date || '—'}</span>
               </div>
-              {selectedBook.purchase_price !== undefined && selectedBook.purchase_price > 0 && (
+              {selectedBook.rp !== undefined && selectedBook.rp > 0 && (
                 <div className="flex justify-between items-center pt-1 border-t border-rule/50 dark:border-rule-dark/50">
-                  <span className="text-ink-muted">Acquisition Price</span>
+                  <span className="text-ink-muted">Retail Price (MRP)</span>
+                  <span className="font-mono font-medium text-ink dark:text-ink-dark">₹{selectedBook.rp.toLocaleString('en-IN')}</span>
+                </div>
+              )}
+              {selectedBook.purchase_price !== undefined && selectedBook.purchase_price > 0 && (
+                <div className="flex justify-between items-center">
+                  <span className="text-ink-muted">Purchase Cost</span>
                   <span className="font-mono text-ink-secondary dark:text-ink-dark-secondary">₹{selectedBook.purchase_price.toLocaleString('en-IN')}</span>
                 </div>
               )}

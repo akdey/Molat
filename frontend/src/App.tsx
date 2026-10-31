@@ -38,6 +38,7 @@ import { KeySettingsModal } from './components/KeySettingsModal';
 import { ToastContainer } from './components/ToastContainer';
 import { GenreFilterPopover } from './components/GenreFilterPopover';
 import { LibraryInsights } from './components/LibraryInsights';
+import { HomeDashboard } from './components/HomeDashboard';
 
 export default function App() {
   const {
@@ -387,118 +388,13 @@ export default function App() {
 
         {/* 1. HOME / COMMAND DASHBOARD */}
         {activeTab === 'home' && (
-          <div className="space-y-6">
-            {/* Top Streak & Daily Goal Banner */}
-            <StreakBanner />
-
-            {/* Currently Reading Active Card */}
-            <ActiveReadingCard />
-
-            {/* Collection & Reading Highlights Strip */}
-            <section
-              aria-label="Collection Highlights"
-              className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3"
-            >
-              <div className="p-3.5 sm:p-4 rounded-xl border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark">
-                <span className="text-3xs uppercase tracking-wider text-ink-muted dark:text-ink-dark-muted font-medium">
-                  Total Volumes
-                </span>
-                <p className="text-2xl font-serif font-medium mt-1 tabular-nums">
-                  {books.length}
-                </p>
-              </div>
-              <div className="p-3.5 sm:p-4 rounded-xl border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark">
-                <span className="text-3xs uppercase tracking-wider text-ink-muted dark:text-ink-dark-muted font-medium">
-                  Currently Reading
-                </span>
-                <p className="text-2xl font-serif font-medium mt-1 text-accent dark:text-accent-dark tabular-nums">
-                  {books.filter((b) => b.reading_status === 'READING').length}
-                </p>
-              </div>
-              <div className="p-3.5 sm:p-4 rounded-xl border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark">
-                <span className="text-3xs uppercase tracking-wider text-ink-muted dark:text-ink-dark-muted font-medium">
-                  Volumes Read
-                </span>
-                <p className="text-2xl font-serif font-medium mt-1 tabular-nums">
-                  {books.filter((b) => b.reading_status === 'COMPLETED').length}
-                </p>
-              </div>
-              <div className="p-3.5 sm:p-4 rounded-xl border border-rule dark:border-rule-dark bg-accent-subtle dark:bg-accent-dark-subtle border-accent/20 dark:border-accent-dark/30">
-                <span className="text-3xs uppercase tracking-wider text-accent dark:text-accent-dark font-medium">
-                  To Be Read (TBR)
-                </span>
-                <p className="text-2xl font-serif font-medium mt-1 text-accent dark:text-accent-dark tabular-nums">
-                  {books.filter((b) => b.reading_status === 'UNREAD').length}
-                </p>
-              </div>
-            </section>
-
-            {/* Quick Link to Visual Bookshelf */}
-            <div className="p-5 rounded-2xl border border-rule dark:border-rule-dark bg-surface-raised dark:bg-surface-dark-raised flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm">
-              <div className="space-y-1">
-                <h3 className="font-serif text-base font-medium">
-                  Explore Your Physical Collection
-                </h3>
-                <p className="text-xs text-ink-secondary dark:text-ink-dark-secondary">
-                  Browse {books.length} physical volumes across Cover Grid, Tactile Wooden Spine Shelf, or Catalog List View.
-                </p>
-              </div>
-              <button
-                onClick={() => setActiveTab('shelf')}
-                className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-surface dark:bg-surface-dark border border-rule dark:border-rule-dark hover:bg-rule/40 text-xs font-medium text-ink dark:text-ink-dark transition-colors self-start sm:self-auto min-h-[44px]"
-              >
-                <span>Open Bookshelf</span>
-                <ArrowRight size={15} />
-              </button>
-            </div>
-
-            {/* Quick Cards Grid: Wishlist & Insights */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {/* Acquisitions Wishlist Quick Card */}
-              <div className="p-4 sm:p-5 rounded-2xl border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark flex flex-col justify-between gap-4 shadow-sm">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-accent-subtle dark:bg-accent-dark-subtle border border-accent/20 flex items-center justify-center text-accent dark:text-accent-dark shrink-0">
-                    <ShoppingBag size={20} />
-                  </div>
-                  <div>
-                    <h3 className="font-serif text-sm sm:text-base font-medium">Acquisitions Wishlist</h3>
-                    <p className="text-xs text-ink-secondary dark:text-ink-dark-secondary">
-                      Plan book purchases, set target prices, and acquire into your library with 1-tap.
-                    </p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => setActiveTab('wishlist')}
-                  className="flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-surface-raised dark:bg-surface-dark-raised border border-rule dark:border-rule-dark hover:bg-rule/40 text-xs font-medium text-ink dark:text-ink-dark transition-colors self-start min-h-[38px]"
-                >
-                  <span>Open Wishlist</span>
-                  <ArrowRight size={13} />
-                </button>
-              </div>
-
-              {/* Library Insights Quick Card */}
-              <div className="p-4 sm:p-5 rounded-2xl border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark flex flex-col justify-between gap-4 shadow-sm">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-accent-subtle dark:bg-accent-dark-subtle border border-accent/20 flex items-center justify-center text-accent dark:text-accent-dark shrink-0">
-                    <PieChart size={20} />
-                  </div>
-                  <div>
-                    <h3 className="font-serif text-sm sm:text-base font-medium">Library Insights</h3>
-                    <p className="text-xs text-ink-secondary dark:text-ink-dark-secondary">
-                      Interactive category pie chart, reading backlog index, and author statistics.
-                    </p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => setActiveTab('insights')}
-                  className="flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-surface-raised dark:bg-surface-dark-raised border border-rule dark:border-rule-dark hover:bg-rule/40 text-xs font-medium text-ink dark:text-ink-dark transition-colors self-start min-h-[38px]"
-                >
-                  <span>View Insights</span>
-                  <ArrowRight size={13} />
-                </button>
-              </div>
-            </div>
-          </div>
+          <HomeDashboard
+            books={books}
+            streakSummary={streakSummary}
+            openQuickLog={openQuickLog}
+            setSelectedBook={setSelectedBook}
+            setActiveTab={setActiveTab}
+          />
         )}
 
         {/* 2. LIBRARY INSIGHTS & ANALYTICS */}
