@@ -103,11 +103,10 @@ export const LendingLedger: React.FC = () => {
         <div className="flex items-center gap-2">
           <button
             onClick={() => setActiveSubTab('active')}
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-medium transition-colors ${
-              activeSubTab === 'active'
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-medium transition-colors ${activeSubTab === 'active'
                 ? 'bg-accent/10 dark:bg-accent/20 text-accent dark:text-accent-dark font-semibold'
                 : 'text-ink-secondary hover:text-ink'
-            }`}
+              }`}
           >
             <span>Currently Lent</span>
             <span className="px-1.5 py-0.2 rounded-full bg-surface dark:bg-surface-dark border border-rule/50 text-3xs font-mono">
@@ -117,11 +116,10 @@ export const LendingLedger: React.FC = () => {
 
           <button
             onClick={() => setActiveSubTab('returned')}
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-medium transition-colors ${
-              activeSubTab === 'returned'
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-medium transition-colors ${activeSubTab === 'returned'
                 ? 'bg-accent/10 dark:bg-accent/20 text-accent dark:text-accent-dark font-semibold'
                 : 'text-ink-secondary hover:text-ink'
-            }`}
+              }`}
           >
             <span>Past Returns</span>
             <span className="px-1.5 py-0.2 rounded-full bg-surface dark:bg-surface-dark border border-rule/50 text-3xs font-mono">
@@ -167,11 +165,10 @@ export const LendingLedger: React.FC = () => {
               {activeRecords.map((record) => (
                 <div
                   key={record.lending_id}
-                  className={`p-4 rounded-2xl border transition-all space-y-3.5 flex flex-col justify-between ${
-                    record.is_overdue
+                  className={`p-4 rounded-2xl border transition-all space-y-3.5 flex flex-col justify-between ${record.is_overdue
                       ? 'border-rose-300 dark:border-rose-900/60 bg-rose-50/30 dark:bg-rose-950/20 shadow-xs'
                       : 'border-rule dark:border-rule-dark bg-surface-raised dark:bg-surface-dark-raised shadow-xs'
-                  }`}
+                    }`}
                 >
                   {/* Top Details Row */}
                   <div className="flex gap-3.5 items-start">
@@ -241,11 +238,10 @@ export const LendingLedger: React.FC = () => {
                       <span className="text-ink-muted">Expected Due:</span>
                       {record.due_date ? (
                         <span
-                          className={`font-mono font-medium ${
-                            record.is_overdue
+                          className={`font-mono font-medium ${record.is_overdue
                               ? 'text-rose-600 dark:text-rose-400 font-semibold'
                               : 'text-ink dark:text-ink-dark'
-                          }`}
+                            }`}
                         >
                           {record.due_date} {record.is_overdue ? '(Passed)' : ''}
                         </span>

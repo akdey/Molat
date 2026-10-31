@@ -76,3 +76,4 @@ async def return_book(
             detail=f"Lending record '{lending_id}' not found",
         )
     return updated
+

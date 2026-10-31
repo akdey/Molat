@@ -138,3 +138,4 @@ async def test_overdue_calculation(monkeypatch):
     data = res.json()
     assert data["is_overdue"] is True
     assert data["days_lent"] >= 2
+

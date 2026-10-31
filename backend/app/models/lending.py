@@ -121,3 +121,4 @@ class LendingRecord(LendingRecordBase):
             "notes": self.notes or "",
             "created_at": self.created_at or datetime.now(IST).isoformat(),
         }
+
