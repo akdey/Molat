@@ -7,7 +7,7 @@ export const HeatmapScreen: React.FC = () => {
 
   if (!streakSummary) {
     return (
-      <div className="py-20 text-center text-ink-muted animate-pulse">
+      <div className="py-20 flex-1 flex items-center justify-center text-center text-ink-muted animate-pulse">
         Calculating streak ledger and 365-day reading heatmap...
       </div>
     );
@@ -43,7 +43,7 @@ export const HeatmapScreen: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 flex-1 flex flex-col">
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>

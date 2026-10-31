@@ -392,7 +392,7 @@ export default function App() {
       </header>
 
       {/* Main Container across all 6 viewports */}
-      <main className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 py-5 sm:py-6 space-y-6 flex-1 flex flex-col w-full">
+      <main className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 pt-4 sm:pt-6 pb-0 md:pb-6 space-y-6 flex-1 flex flex-col w-full">
         {error && (
           <div className="p-4 rounded-xl bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/40 text-red-700 dark:text-red-400 text-sm">
             {error}
@@ -437,7 +437,7 @@ export default function App() {
 
             {/* 5. VISUAL BOOKSHELF OR MAINTENANCE AUDIT */}
             {(activeTab === 'shelf' || activeTab === 'maintenance') && (
-          <div className="space-y-5">
+          <div className="space-y-5 flex-1 flex flex-col">
             {/* Maintenance Audit Banner */}
             {activeTab === 'maintenance' && (
               <div className="p-4 rounded-2xl border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark space-y-2">
@@ -603,7 +603,7 @@ export default function App() {
                 </div>
               </div>
             ) : filteredBooks.length === 0 ? (
-              <div className="py-16 text-center text-ink-muted space-y-2">
+              <div className="py-16 flex-1 flex flex-col items-center justify-center text-center text-ink-muted space-y-2">
                 <p>No books match your active search or filters.</p>
                 <button
                   onClick={() => {
@@ -706,7 +706,7 @@ export default function App() {
         </AnimatePresence>
 
         {/* Subtle Brand & Creator Footer */}
-        <footer className="mt-auto pt-6 pb-20 md:pb-6 text-center border-t border-rule/50 dark:border-rule-dark/50">
+        <footer className="mt-auto pt-3 md:pt-6 pb-[calc(4rem+10px+env(safe-area-inset-bottom,0px))] md:pb-6 text-center border-t border-rule/50 dark:border-rule-dark/50">
           <p className="text-3xs text-ink-muted">
             Molat Personal Library &bull; Engineered by{' '}
             <a
