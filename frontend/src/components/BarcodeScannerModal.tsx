@@ -420,7 +420,7 @@ export const BarcodeScannerModal: React.FC = () => {
   return (
     <AnimatePresence>
       {scannerOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4">
+        <div className="fixed inset-0 z-50 flex items-end justify-center p-0">
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -430,30 +430,37 @@ export const BarcodeScannerModal: React.FC = () => {
             className="fixed inset-0 bg-black/60 backdrop-blur-xs"
           />
           <motion.div
-            initial={{ opacity: 0, scale: 0.95, y: 16 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: 16 }}
-            transition={{ type: 'spring', damping: 26, stiffness: 320 }}
-            className="relative z-10 w-full max-w-lg bg-canvas dark:bg-canvas-dark border border-rule dark:border-rule-dark rounded-2xl shadow-2xl overflow-hidden max-h-[92vh] flex flex-col"
+            initial={{ opacity: 0, y: '100%' }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: '100%' }}
+            transition={{ type: 'spring', damping: 28, stiffness: 300 }}
+            className="relative z-10 w-full sm:max-w-lg bg-canvas dark:bg-canvas-dark border-t border-rule dark:border-rule-dark rounded-t-3xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="scanner-modal-title"
           >
+            {/* Drawer Pull Handle */}
+            <div className="w-10 h-1 bg-ink-muted/30 rounded-full mx-auto mt-2.5 mb-1 shrink-0" />
+
             {/* Header */}
-        <div className="flex items-center justify-between px-4 sm:px-5 py-3.5 border-b border-rule dark:border-rule-dark bg-surface/50 dark:bg-surface-dark/50">
-          <div className="flex items-center gap-2">
-            <Camera className="text-accent dark:text-accent-dark h-5 w-5 shrink-0" />
-            <div>
-              <h2 className="font-serif text-base sm:text-lg font-medium text-ink dark:text-ink-dark leading-tight">
-                Scan ISBN Barcode / Add Volume
-              </h2>
-              <p className="text-3xs text-ink-muted">PWA Rear Camera Scanner & Auto-Lookup</p>
+            <div className="flex items-center justify-between px-4 sm:px-5 py-3 border-b border-rule dark:border-rule-dark bg-surface/50 dark:bg-surface-dark/50 shrink-0">
+              <div className="flex items-center gap-2">
+                <Camera className="text-accent dark:text-accent-dark h-5 w-5 shrink-0" />
+                <div>
+                  <h2 id="scanner-modal-title" className="font-serif text-base sm:text-lg font-medium text-ink dark:text-ink-dark leading-tight">
+                    Scan ISBN Barcode / Add Volume
+                  </h2>
+                  <p className="text-3xs text-ink-muted">PWA Rear Camera Scanner & Auto-Lookup</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setScannerOpen(false)}
+                className="p-1 rounded-lg text-ink-muted hover:text-ink hover:bg-surface dark:hover:bg-surface-dark transition-colors"
+                aria-label="Close"
+              >
+                <X size={18} />
+              </button>
             </div>
-          </div>
-          <button
-            onClick={() => setScannerOpen(false)}
-            className="p-1 rounded-lg text-ink-muted hover:text-ink hover:bg-surface transition-colors"
-          >
-            <X size={18} />
-          </button>
-        </div>
 
         <div className="p-4 sm:p-5 space-y-3.5 overflow-y-auto">
           {errorMsg && (
@@ -715,7 +722,7 @@ export const BarcodeScannerModal: React.FC = () => {
               />
             </div>
 
-            <div className="flex justify-end gap-2 pt-2">
+            <div className="flex justify-end gap-2 pt-2 pb-4 sm:pb-2">
               <button
                 type="button"
                 onClick={() => setScannerOpen(false)}
