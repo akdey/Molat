@@ -738,25 +738,36 @@ export default function App() {
               animate={{ y: 0 }}
               exit={{ y: '100%' }}
               transition={{ type: 'spring', damping: 28, stiffness: 320 }}
-              className="relative z-10 w-full bg-canvas dark:bg-canvas-dark border-t border-rule dark:border-rule-dark rounded-t-3xl shadow-2xl p-4 pb-8 space-y-2"
+              style={{ paddingBottom: 'calc(5.75rem + env(safe-area-inset-bottom, 0px))' }}
+              className="relative z-10 w-full bg-canvas dark:bg-canvas-dark border-t border-rule dark:border-rule-dark rounded-t-3xl shadow-2xl p-4 space-y-2.5"
             >
-              <div className="w-10 h-1 bg-ink-muted/30 rounded-full mx-auto mb-2" />
-              <div className="text-center font-serif text-sm font-medium pb-1">
-                Library Actions
+              <div className="w-10 h-1 bg-ink-muted/30 rounded-full mx-auto mb-1" />
+              <div className="flex items-center justify-between pb-1 px-1">
+                <div className="w-6" />
+                <div className="text-center font-serif text-sm font-medium">
+                  Library Actions
+                </div>
+                <button
+                  onClick={() => setCenterMenuOpen(false)}
+                  className="p-1 rounded-lg text-ink-muted hover:text-ink transition-colors"
+                  aria-label="Close actions"
+                >
+                  <X size={16} />
+                </button>
               </div>
               <button
                 onClick={() => {
                   setCenterMenuOpen(false);
                   openQuickLog();
                 }}
-                className="w-full flex items-center gap-3 p-3 rounded-2xl bg-surface dark:bg-surface-dark border border-rule/60 dark:border-rule-dark/60 text-xs font-medium text-ink dark:text-ink-dark text-left transition-colors"
+                className="w-full flex items-center gap-3 p-3 rounded-2xl bg-surface dark:bg-surface-dark border border-rule/60 dark:border-rule-dark/60 text-xs font-medium text-ink dark:text-ink-dark text-left transition-colors hover:bg-surface-raised dark:hover:bg-surface-dark-raised active:scale-[0.99]"
               >
                 <div className="w-9 h-9 rounded-xl bg-accent/10 text-accent flex items-center justify-center shrink-0">
                   <BookOpen size={18} />
                 </div>
                 <div>
-                  <div className="font-medium">Log Reading Session</div>
-                  <div className="text-3xs text-ink-muted">Open bottom drawer to track pages & streak</div>
+                  <div className="font-medium text-ink dark:text-ink-dark">Log Reading Session</div>
+                  <div className="text-3xs text-ink-muted">Track pages read, session duration & streak</div>
                 </div>
               </button>
               <button
@@ -764,14 +775,14 @@ export default function App() {
                   setCenterMenuOpen(false);
                   setScannerOpen(true);
                 }}
-                className="w-full flex items-center gap-3 p-3 rounded-2xl bg-surface dark:bg-surface-dark border border-rule/60 dark:border-rule-dark/60 text-xs font-medium text-ink dark:text-ink-dark text-left transition-colors"
+                className="w-full flex items-center gap-3 p-3 rounded-2xl bg-surface dark:bg-surface-dark border border-rule/60 dark:border-rule-dark/60 text-xs font-medium text-ink dark:text-ink-dark text-left transition-colors hover:bg-surface-raised dark:hover:bg-surface-dark-raised active:scale-[0.99]"
               >
                 <div className="w-9 h-9 rounded-xl bg-accent/10 text-accent flex items-center justify-center shrink-0">
                   <Camera size={18} />
                 </div>
                 <div>
-                  <div className="font-medium">Scan ISBN Barcode</div>
-                  <div className="text-3xs text-ink-muted">Open modal camera to scan book barcode</div>
+                  <div className="font-medium text-ink dark:text-ink-dark">Scan ISBN Barcode</div>
+                  <div className="text-3xs text-ink-muted">Scan barcode with camera or auto-fetch by ISBN</div>
                 </div>
               </button>
             </motion.div>
@@ -786,7 +797,10 @@ export default function App() {
       >
         {/* 1. Home */}
         <button
-          onClick={() => setActiveTab('home')}
+          onClick={() => {
+            setActiveTab('home');
+            setCenterMenuOpen(false);
+          }}
           className={`flex flex-col items-center justify-center min-w-[56px] min-h-[48px] rounded-xl transition-colors ${
             activeTab === 'home'
               ? 'text-accent dark:text-accent-dark font-semibold'
@@ -799,7 +813,10 @@ export default function App() {
 
         {/* 2. Shelf */}
         <button
-          onClick={() => setActiveTab('shelf')}
+          onClick={() => {
+            setActiveTab('shelf');
+            setCenterMenuOpen(false);
+          }}
           className={`flex flex-col items-center justify-center min-w-[56px] min-h-[48px] rounded-xl transition-colors ${
             activeTab === 'shelf'
               ? 'text-accent dark:text-accent-dark font-semibold'
@@ -823,7 +840,10 @@ export default function App() {
 
         {/* 4. Streak */}
         <button
-          onClick={() => setActiveTab('tracker')}
+          onClick={() => {
+            setActiveTab('tracker');
+            setCenterMenuOpen(false);
+          }}
           className={`flex flex-col items-center justify-center min-w-[56px] min-h-[48px] rounded-xl transition-colors ${
             activeTab === 'tracker'
               ? 'text-accent dark:text-accent-dark font-semibold'
@@ -836,7 +856,10 @@ export default function App() {
 
         {/* 5. Wishlist */}
         <button
-          onClick={() => setActiveTab('wishlist')}
+          onClick={() => {
+            setActiveTab('wishlist');
+            setCenterMenuOpen(false);
+          }}
           className={`flex flex-col items-center justify-center min-w-[56px] min-h-[48px] rounded-xl transition-colors ${
             activeTab === 'wishlist'
               ? 'text-accent dark:text-accent-dark font-semibold'
