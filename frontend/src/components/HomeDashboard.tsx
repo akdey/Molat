@@ -273,7 +273,7 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({
                 From Your Bookshelf
               </h2>
               <p className="text-3xs text-ink-muted truncate">
-                Random highlights from your physical collection
+                Highlights from collection
               </p>
             </div>
             <div className="flex items-center gap-1.5 shrink-0">
@@ -376,8 +376,8 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({
               <h3 className="font-serif text-xs font-medium text-ink dark:text-ink-dark">Lent Out Books</h3>
               {activeLentCount > 0 && (
                 <span className={`px-1.5 py-0.2 rounded-full text-3xs font-mono font-semibold ${overdueLentCount > 0
-                    ? 'bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300'
-                    : 'bg-surface-raised dark:bg-surface-dark-raised text-ink-muted'
+                  ? 'bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300'
+                  : 'bg-surface-raised dark:bg-surface-dark-raised text-ink-muted'
                   }`}>
                   {activeLentCount}
                 </span>
