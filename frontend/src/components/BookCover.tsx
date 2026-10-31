@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import type { ReadingStatus } from '../types/book';
+import { StatusRibbon } from './StatusRibbon';
 
 interface BookCoverProps {
   title: string;
@@ -90,13 +91,9 @@ export const BookCover: React.FC<BookCoverProps> = ({
       )}
 
       {readingStatus && (
-        <span
-          className={`absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded text-3xs font-medium tracking-wide uppercase backdrop-blur-md ${getStatusBadge(
-            readingStatus
-          )}`}
-        >
-          {readingStatus}
-        </span>
+        <div className="absolute top-0 right-2 z-10">
+          <StatusRibbon status={readingStatus} variant="bookmark" />
+        </div>
       )}
     </div>
   );

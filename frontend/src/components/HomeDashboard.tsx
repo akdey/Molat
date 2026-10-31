@@ -1,4 +1,5 @@
 import React from 'react';
+import { motion } from 'motion/react';
 import {
   Flame,
   Bookmark,
@@ -15,6 +16,7 @@ import {
 } from 'lucide-react';
 import type { Book, StreakSummary } from '../types/book';
 import { BookCover } from './BookCover';
+import { StatusRibbon } from './StatusRibbon';
 
 interface HomeDashboardProps {
   books: Book[];
@@ -59,16 +61,13 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({
           aria-label="Active Reading Focus"
           className="rounded-2xl border border-rule dark:border-rule-dark bg-surface-raised dark:bg-surface-dark-raised p-4 sm:p-5 shadow-sm space-y-4"
         >
-          {/* Header Strip: Currently Reading Label + Streak Pill */}
+          {/* Header Strip: Reading Status Ribbon + Streak Pill */}
           <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-accent animate-pulse" />
-              <h2 className="font-serif text-sm sm:text-base font-medium text-ink dark:text-ink-dark">
-                Currently Reading
-              </h2>
+            <div className="flex items-center gap-2.5">
+              <StatusRibbon status="READING" variant="banner" size="sm" />
               {activeBooks.length > 1 && (
                 <span className="text-3xs text-ink-muted">
-                  (+{activeBooks.length - 1} more)
+                  (+{activeBooks.length - 1} more in progress)
                 </span>
               )}
             </div>
@@ -270,9 +269,12 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({
 
           <div className="grid grid-cols-3 sm:grid-cols-6 gap-2.5 sm:gap-3">
             {spotlightBooks.map((book) => (
-              <article
+              <motion.article
                 key={book.book_id}
                 onClick={() => setSelectedBook(book)}
+                whileHover={{ y: -3, scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                transition={{ type: 'spring', damping: 20, stiffness: 350 }}
                 className="group flex flex-col gap-1.5 p-1.5 rounded-xl border border-rule/50 dark:border-rule-dark/50 bg-surface dark:bg-surface-dark hover:border-accent/40 transition-colors cursor-pointer"
               >
                 <BookCover
@@ -289,7 +291,7 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({
                     {book.authors || 'Unknown'}
                   </p>
                 </div>
-              </article>
+              </motion.article>
             ))}
           </div>
         </section>
@@ -297,8 +299,11 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({
 
       {/* 4. SLEEK COMPACT SHORTCUTS */}
       <section aria-label="Library Tools" className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <button
+        <motion.button
           onClick={() => setActiveTab('shelf')}
+          whileHover={{ y: -2, scale: 1.01 }}
+          whileTap={{ scale: 0.98 }}
+          transition={{ type: 'spring', damping: 20, stiffness: 350 }}
           className="p-3.5 rounded-xl border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark hover:border-accent/40 flex items-center gap-3 transition-colors text-left"
         >
           <div className="w-8 h-8 rounded-lg bg-accent/10 text-accent flex items-center justify-center shrink-0">
@@ -308,10 +313,13 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({
             <h3 className="font-serif text-xs font-medium text-ink dark:text-ink-dark">Bookshelf Views</h3>
             <p className="text-3xs text-ink-muted truncate">Cover grid, wooden spines & list</p>
           </div>
-        </button>
+        </motion.button>
 
-        <button
+        <motion.button
           onClick={() => setActiveTab('wishlist')}
+          whileHover={{ y: -2, scale: 1.01 }}
+          whileTap={{ scale: 0.98 }}
+          transition={{ type: 'spring', damping: 20, stiffness: 350 }}
           className="p-3.5 rounded-xl border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark hover:border-accent/40 flex items-center gap-3 transition-colors text-left"
         >
           <div className="w-8 h-8 rounded-lg bg-accent/10 text-accent flex items-center justify-center shrink-0">
@@ -321,10 +329,13 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({
             <h3 className="font-serif text-xs font-medium text-ink dark:text-ink-dark">Wishlist Board</h3>
             <p className="text-3xs text-ink-muted truncate">Planned acquisitions & target prices</p>
           </div>
-        </button>
+        </motion.button>
 
-        <button
+        <motion.button
           onClick={() => setActiveTab('insights')}
+          whileHover={{ y: -2, scale: 1.01 }}
+          whileTap={{ scale: 0.98 }}
+          transition={{ type: 'spring', damping: 20, stiffness: 350 }}
           className="p-3.5 rounded-xl border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark hover:border-accent/40 flex items-center gap-3 transition-colors text-left"
         >
           <div className="w-8 h-8 rounded-lg bg-accent/10 text-accent flex items-center justify-center shrink-0">
@@ -334,7 +345,7 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({
             <h3 className="font-serif text-xs font-medium text-ink dark:text-ink-dark">Library Insights</h3>
             <p className="text-3xs text-ink-muted truncate">Categories, authors & reading pace</p>
           </div>
-        </button>
+        </motion.button>
       </section>
     </div>
   );

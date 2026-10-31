@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { ChevronDown, Check, X, Search, Tag } from 'lucide-react';
 import { useLibraryStore } from '../store/useLibraryStore';
 import type { Book } from '../types/book';
@@ -85,16 +86,27 @@ export const GenreFilterPopover: React.FC<GenreFilterPopoverProps> = ({
         />
       </button>
 
-      {/* Popover Menu */}
-      {open && (
-        <>
-          {/* Mobile backdrop */}
-          <div
-            className="fixed inset-0 z-40 bg-black/40 backdrop-blur-2xs sm:hidden"
-            onClick={() => setOpen(false)}
-          />
+      {/* Popover Menu with macOS Spring */}
+      <AnimatePresence>
+        {open && (
+          <>
+            {/* Mobile backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.15 }}
+              className="fixed inset-0 z-40 bg-black/40 backdrop-blur-xs sm:hidden"
+              onClick={() => setOpen(false)}
+            />
 
-          <div className="fixed inset-x-4 top-1/2 -translate-y-1/2 sm:translate-y-0 sm:inset-x-auto sm:top-full sm:left-0 sm:absolute sm:mt-1.5 w-auto sm:w-72 max-w-sm mx-auto sm:mx-0 bg-canvas dark:bg-canvas-dark border border-rule dark:border-rule-dark rounded-2xl shadow-2xl z-50 p-3 space-y-2.5 animate-in fade-in zoom-in-95 duration-100">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.94, y: 8 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.94, y: 8 }}
+              transition={{ type: 'spring', damping: 25, stiffness: 350 }}
+              className="fixed inset-x-4 top-1/2 -translate-y-1/2 sm:translate-y-0 sm:inset-x-auto sm:top-full sm:left-0 sm:absolute sm:mt-1.5 w-auto sm:w-72 max-w-sm mx-auto sm:mx-0 bg-canvas dark:bg-canvas-dark border border-rule dark:border-rule-dark rounded-2xl shadow-2xl z-50 p-3 space-y-2.5"
+            >
             {/* Popover Header */}
             <div className="flex items-center justify-between border-b border-rule/50 dark:border-rule-dark/50 pb-2">
               <div className="flex items-center gap-1.5">
@@ -196,10 +208,11 @@ export const GenreFilterPopover: React.FC<GenreFilterPopoverProps> = ({
                 Apply ({countSelected})
               </button>
             </div>
-          </div>
+          </motion.div>
         </>
       )}
-    </div>
-  );
+    </AnimatePresence>
+  </div>
+);
 };
 

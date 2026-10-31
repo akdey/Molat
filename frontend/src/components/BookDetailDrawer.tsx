@@ -21,6 +21,7 @@ import type { Book, ReadingStatus, BookCondition, ReadingLog } from '../types/bo
 import { useLibraryStore } from '../store/useLibraryStore';
 import { BookCover } from './BookCover';
 import { CoverPickerModal } from './CoverPickerModal';
+import { StatusRibbon } from './StatusRibbon';
 import { fetchReadingLogs } from '../api/client';
 
 // In-memory synopsis cache so previously fetched blurbs load with 0ms delay
@@ -164,6 +165,21 @@ export const BookDetailDrawer: React.FC = () => {
     }
   }, [selectedBook]);
 
+  // Close on Escape key (macOS Inspector standard)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setSelectedBook(null);
+      }
+    };
+    if (selectedBook) {
+      window.addEventListener('keydown', handleKeyDown);
+    }
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [selectedBook, setSelectedBook]);
+
   const genres = (selectedBook?.genre || '')
     .split(',')
     .map((g) => g.trim())
@@ -208,45 +224,66 @@ export const BookDetailDrawer: React.FC = () => {
     <>
       <AnimatePresence>
         {selectedBook && (
-          <div className="fixed inset-0 z-50 flex justify-end">
-            {/* Backdrop */}
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 md:p-6 overflow-hidden">
+            {/* macOS Vibrant Backdrop */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
+              transition={{ duration: 0.18, ease: 'easeOut' }}
               onClick={() => setSelectedBook(null)}
-              className="fixed inset-0 bg-black/60 backdrop-blur-xs"
+              className="fixed inset-0 bg-black/55 backdrop-blur-md"
             />
 
-            {/* Slide-over Drawer */}
+            {/* macOS Quick Look / Inspector Window (Smooth Apple Spring) */}
             <motion.div
-              initial={{ x: '100%' }}
-              animate={{ x: 0 }}
-              exit={{ x: '100%' }}
-              transition={{ type: 'spring', damping: 28, stiffness: 280 }}
-              className="relative z-10 w-full max-w-lg bg-canvas dark:bg-canvas-dark border-l border-rule dark:border-rule-dark h-full shadow-2xl flex flex-col overflow-hidden"
+              initial={{ opacity: 0, scale: 0.94, y: 16 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.94, y: 10 }}
+              transition={{ type: 'spring', damping: 28, stiffness: 350, mass: 0.8 }}
+              className="relative z-10 w-full max-w-2xl bg-canvas dark:bg-canvas-dark border border-rule/80 dark:border-rule-dark/80 rounded-2xl shadow-[0_25px_70px_rgba(0,0,0,0.38)] flex flex-col overflow-hidden max-h-[90vh] my-auto"
               role="dialog"
               aria-modal="true"
               aria-labelledby="drawer-title"
             >
-              {/* Top Header */}
-              <div className="flex items-center justify-between px-5 py-3.5 border-b border-rule dark:border-rule-dark bg-surface/50 dark:bg-surface-dark/50">
+              {/* macOS Window Titlebar Header */}
+              <div className="flex items-center justify-between px-4 sm:px-5 py-3 border-b border-rule/60 dark:border-rule-dark/60 bg-surface/80 dark:bg-surface-dark/80 backdrop-blur-md select-none">
+                {/* macOS Traffic Lights */}
                 <div className="flex items-center gap-2">
-                  <span className="font-mono text-2xs uppercase tracking-wider text-accent dark:text-accent-dark font-medium">
+                  <button
+                    onClick={() => setSelectedBook(null)}
+                    className="w-3 h-3 rounded-full bg-rose-500 hover:bg-rose-600 transition-colors flex items-center justify-center group"
+                    title="Close"
+                    aria-label="Close"
+                  >
+                    <X size={8} className="text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                  </button>
+                  <span className="w-3 h-3 rounded-full bg-amber-400/80" />
+                  <span className="w-3 h-3 rounded-full bg-emerald-400/80" />
+                  <span className="ml-2 font-mono text-3xs uppercase tracking-wider text-accent dark:text-accent-dark font-medium">
                     {selectedBook.book_id}
                   </span>
                 </div>
-                <button
-                  onClick={() => setSelectedBook(null)}
-                  className="p-1 rounded-lg text-ink-muted hover:text-ink dark:hover:text-ink-dark hover:bg-surface dark:hover:bg-surface-dark transition-colors"
-                >
-                  <X size={18} />
-                </button>
+
+                <div className="font-serif text-2xs uppercase tracking-widest text-ink-muted hidden sm:inline-block">
+                  Volume Inspector
+                </div>
+
+                <div className="flex items-center gap-1.5">
+                  <kbd className="hidden sm:inline-block px-1.5 py-0.5 rounded text-3xs font-mono text-ink-muted bg-surface-raised dark:bg-surface-dark-raised border border-rule/60 dark:border-rule-dark/60">
+                    esc
+                  </kbd>
+                  <button
+                    onClick={() => setSelectedBook(null)}
+                    className="p-1 rounded-lg text-ink-muted hover:text-ink dark:hover:text-ink-dark hover:bg-surface-raised dark:hover:bg-surface-dark-raised transition-colors"
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
               </div>
 
-              {/* Drawer Content */}
-              <div className="p-5 space-y-5 overflow-y-auto flex-1">
+              {/* Inspector Content */}
+              <div className="p-4 sm:p-6 space-y-5 overflow-y-auto flex-1">
                 {errorMsg && (
                   <div className="p-3 text-xs rounded-xl bg-red-100 dark:bg-red-950/40 text-red-800 dark:text-red-400 border border-red-200 dark:border-red-900/40 flex items-center gap-2">
                     <AlertCircle size={15} />
@@ -262,8 +299,8 @@ export const BookDetailDrawer: React.FC = () => {
                 )}
 
                 {/* 1. HERO BOOK IDENTITY */}
-                <div className="flex gap-4 items-start">
-                  <div className="w-24 shrink-0 flex flex-col items-center gap-1.5">
+                <div className="flex gap-4 sm:gap-5 items-start">
+                  <div className="w-24 sm:w-28 shrink-0 flex flex-col items-center gap-2">
                     <div className="w-full shadow-md rounded-lg overflow-hidden">
                       <BookCover
                         title={selectedBook.title}
@@ -283,39 +320,16 @@ export const BookDetailDrawer: React.FC = () => {
                     </button>
                   </div>
 
-                  <div className="flex-1 min-w-0 flex flex-col justify-between py-0.5">
-                    <div className="space-y-1">
-                      {/* Status indicator dot + text */}
-                      <div className="flex items-center gap-1.5 pb-0.5">
-                        <span
-                          className={`w-2 h-2 rounded-full shrink-0 ${
-                            status === 'READING'
-                              ? 'bg-accent animate-pulse'
-                              : status === 'COMPLETED'
-                              ? 'bg-emerald-600'
-                              : status === 'PAUSED'
-                              ? 'bg-purple-500'
-                              : status === 'ABANDONED'
-                              ? 'bg-rose-500'
-                              : 'bg-ink-muted/60'
-                          }`}
-                        />
-                        <span className="font-serif text-2xs font-medium text-ink-secondary dark:text-ink-dark-secondary">
-                          {status === 'READING'
-                            ? 'Currently Reading'
-                            : status === 'COMPLETED'
-                            ? 'Completed'
-                            : status === 'PAUSED'
-                            ? 'Paused'
-                            : status === 'ABANDONED'
-                            ? 'Abandoned'
-                            : 'To Be Read'}
-                        </span>
+                  <div className="flex-1 min-w-0 flex flex-col justify-between py-0.5 space-y-2">
+                    <div className="space-y-1.5">
+                      {/* Status Ribbon Banner */}
+                      <div className="pb-0.5">
+                        <StatusRibbon status={status} variant="banner" size="sm" />
                       </div>
 
                       <h2
                         id="drawer-title"
-                        className="font-serif text-lg font-medium text-ink dark:text-ink-dark leading-snug"
+                        className="font-serif text-lg sm:text-xl font-medium text-ink dark:text-ink-dark leading-snug"
                       >
                         {selectedBook.title}
                       </h2>
@@ -324,7 +338,7 @@ export const BookDetailDrawer: React.FC = () => {
                           {selectedBook.subtitle}
                         </p>
                       )}
-                      <p className="text-xs text-ink-secondary dark:text-ink-dark-secondary">
+                      <p className="text-xs text-ink-secondary dark:text-ink-dark-secondary font-medium">
                         {selectedBook.authors || 'Unknown author'}
                       </p>
 
@@ -344,7 +358,7 @@ export const BookDetailDrawer: React.FC = () => {
                     </div>
 
                     {/* Personal Star Rating */}
-                    <div className="pt-2 text-2xs text-ink-muted">
+                    <div className="pt-1 text-2xs text-ink-muted">
                       {selectedBook.rating ? (
                         <span className="inline-flex items-center gap-1 font-mono font-medium text-amber-600 dark:text-amber-400">
                           <Star size={12} className="fill-amber-400 text-amber-500" />
@@ -407,46 +421,21 @@ export const BookDetailDrawer: React.FC = () => {
 
                   {!isEditing ? (
                     <div className="space-y-2.5 text-xs">
-                      {/* Coupled Reading Status & Shelf Location Grid */}
-                      <div className="grid grid-cols-2 gap-2.5 p-2.5 rounded-lg bg-surface-raised/70 dark:bg-surface-dark-raised/70 border border-rule/40 dark:border-rule-dark/40">
-                        <div className="space-y-1">
+                      {/* Coupled Reading Status Ribbon & Shelf Location Grid */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 rounded-xl bg-surface-raised/70 dark:bg-surface-dark-raised/70 border border-rule/40 dark:border-rule-dark/40">
+                        <div className="space-y-1.5">
                           <span className="text-3xs uppercase tracking-wider text-ink-muted block font-medium">
                             Reading Status
                           </span>
-                          <div className="flex items-center gap-1.5">
-                            <span
-                              className={`w-2 h-2 rounded-full shrink-0 ${
-                                status === 'READING'
-                                  ? 'bg-accent animate-pulse'
-                                  : status === 'COMPLETED'
-                                  ? 'bg-emerald-600'
-                                  : status === 'PAUSED'
-                                  ? 'bg-purple-500'
-                                  : status === 'ABANDONED'
-                                  ? 'bg-rose-500'
-                                  : 'bg-ink-muted/60'
-                              }`}
-                            />
-                            <span className="font-serif text-xs font-medium text-ink dark:text-ink-dark">
-                              {status === 'READING'
-                                ? 'Currently Reading'
-                                : status === 'COMPLETED'
-                                ? 'Completed'
-                                : status === 'PAUSED'
-                                ? 'Paused'
-                                : status === 'ABANDONED'
-                                ? 'Abandoned'
-                                : 'To Be Read'}
-                            </span>
-                          </div>
+                          <StatusRibbon status={status} variant="banner" size="md" />
                         </div>
 
-                        <div className="space-y-1">
+                        <div className="space-y-1.5">
                           <span className="text-3xs uppercase tracking-wider text-ink-muted block font-medium flex items-center gap-1">
                             <MapPin size={10} className="text-accent shrink-0" />
                             Shelf Location
                           </span>
-                          <span className="font-serif text-xs font-medium text-ink dark:text-ink-dark truncate block">
+                          <span className="font-serif text-xs font-medium text-ink dark:text-ink-dark truncate block pt-1">
                             {location || 'Home Shelf'}
                           </span>
                         </div>

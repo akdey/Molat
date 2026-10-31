@@ -279,14 +279,25 @@ export default function App() {
                 )}
               </button>
 
-              {/* Mobile Popover Menu */}
-              {headerMenuOpen && (
-                <>
-                  <div
-                    className="fixed inset-0 z-40 bg-black/20 backdrop-blur-2xs"
-                    onClick={() => setHeaderMenuOpen(false)}
-                  />
-                  <div className="absolute right-0 top-11 z-50 w-52 p-1.5 rounded-2xl bg-canvas dark:bg-canvas-dark border border-rule dark:border-rule-dark shadow-xl space-y-0.5 animate-in fade-in zoom-in-95 duration-150">
+              {/* Mobile Popover Menu with macOS Spring */}
+              <AnimatePresence>
+                {headerMenuOpen && (
+                  <>
+                    <motion.div
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 0.15 }}
+                      className="fixed inset-0 z-40 bg-black/20 backdrop-blur-2xs"
+                      onClick={() => setHeaderMenuOpen(false)}
+                    />
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.94, y: -6 }}
+                      animate={{ opacity: 1, scale: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.94, y: -6 }}
+                      transition={{ type: 'spring', damping: 25, stiffness: 350 }}
+                      className="absolute right-0 top-11 z-50 w-52 p-1.5 rounded-2xl bg-canvas dark:bg-canvas-dark border border-rule dark:border-rule-dark shadow-xl space-y-0.5"
+                    >
                     <button
                       onClick={() => {
                         setHeaderMenuOpen(false);
@@ -371,9 +382,10 @@ export default function App() {
                       <RefreshCw size={13} className={loading || refreshing ? 'animate-spin' : ''} />
                       <span>Sync with Google Sheets</span>
                     </button>
-                  </div>
+                  </motion.div>
                 </>
               )}
+            </AnimatePresence>
             </div>
           </div>
         </div>
@@ -465,41 +477,39 @@ export default function App() {
                   />
                 </div>
 
-                {/* View Mode Toggle */}
+                {/* View Mode Toggle with macOS Segmented Indicator */}
                 <div className="shrink-0 flex items-center gap-0.5 bg-surface dark:bg-surface-dark p-0.5 rounded-xl border border-rule dark:border-rule-dark h-10">
-                  <button
-                    onClick={() => setViewMode('grid')}
-                    className={`p-1.5 rounded-lg transition-colors w-8 h-8 flex items-center justify-center ${
-                      viewMode === 'grid'
-                        ? 'bg-canvas dark:bg-canvas-dark text-accent shadow-xs'
-                        : 'text-ink-secondary hover:text-ink'
-                    }`}
-                    title="Cover Grid View (2:3 aspect)"
-                  >
-                    <LayoutGrid size={15} />
-                  </button>
-                  <button
-                    onClick={() => setViewMode('spine')}
-                    className={`p-1.5 rounded-lg transition-colors w-8 h-8 flex items-center justify-center ${
-                      viewMode === 'spine'
-                        ? 'bg-canvas dark:bg-canvas-dark text-accent shadow-xs'
-                        : 'text-ink-secondary hover:text-ink'
-                    }`}
-                    title="Tactile Spine Shelf View"
-                  >
-                    <Library size={15} />
-                  </button>
-                  <button
-                    onClick={() => setViewMode('table')}
-                    className={`p-1.5 rounded-lg transition-colors w-8 h-8 flex items-center justify-center ${
-                      viewMode === 'table'
-                        ? 'bg-canvas dark:bg-canvas-dark text-accent shadow-xs'
-                        : 'text-ink-secondary hover:text-ink'
-                    }`}
-                    title="Catalog List View"
-                  >
-                    <Table size={15} />
-                  </button>
+                  {(['grid', 'spine', 'table'] as const).map((mode) => (
+                    <button
+                      key={mode}
+                      onClick={() => setViewMode(mode)}
+                      className={`relative p-1.5 rounded-lg w-8 h-8 flex items-center justify-center transition-colors ${
+                        viewMode === mode
+                          ? 'text-accent dark:text-accent-dark font-medium'
+                          : 'text-ink-secondary hover:text-ink'
+                      }`}
+                      title={
+                        mode === 'grid'
+                          ? 'Cover Grid View (2:3 aspect)'
+                          : mode === 'spine'
+                          ? 'Tactile Spine Shelf View'
+                          : 'Catalog List View'
+                      }
+                    >
+                      {viewMode === mode && (
+                        <motion.span
+                          layoutId="activeViewModePill"
+                          className="absolute inset-0 bg-canvas dark:bg-canvas-dark rounded-lg shadow-xs"
+                          transition={{ type: 'spring', damping: 25, stiffness: 350 }}
+                        />
+                      )}
+                      <span className="relative z-10">
+                        {mode === 'grid' && <LayoutGrid size={15} />}
+                        {mode === 'spine' && <Library size={15} />}
+                        {mode === 'table' && <Table size={15} />}
+                      </span>
+                    </button>
+                  ))}
                 </div>
               </div>
 
@@ -622,10 +632,13 @@ export default function App() {
               */
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-2.5 sm:gap-3.5">
                 {filteredBooks.map((book) => (
-                  <article
+                  <motion.article
                     key={book.book_id}
                     onClick={() => setSelectedBook(book)}
-                    className="group flex flex-col gap-2 p-2 rounded-xl border border-rule/60 dark:border-rule-dark/60 bg-surface dark:bg-surface-dark hover:border-accent/40 dark:hover:border-accent-dark/40 hover:-translate-y-0.5 active:scale-[0.98] transition-all duration-200 cursor-pointer shadow-2xs hover:shadow-xs"
+                    whileHover={{ y: -4, scale: 1.015 }}
+                    whileTap={{ scale: 0.98 }}
+                    transition={{ type: 'spring', damping: 22, stiffness: 350 }}
+                    className="group flex flex-col gap-2 p-2 rounded-xl border border-rule/60 dark:border-rule-dark/60 bg-surface dark:bg-surface-dark hover:border-accent/40 dark:hover:border-accent-dark/40 transition-colors cursor-pointer shadow-2xs hover:shadow-md"
                   >
                     {/* Cover Container (strict 2:3 aspect) */}
                     <BookCover
@@ -683,7 +696,7 @@ export default function App() {
                         ) : null}
                       </div>
                     </div>
-                  </article>
+                  </motion.article>
                 ))}
               </div>
             )}
@@ -708,36 +721,49 @@ export default function App() {
         </footer>
       </main>
 
-      {/* Center Action Popup on Mobile */}
-      {centerMenuOpen && (
-        <div
-          className="fixed inset-0 z-40 bg-black/50 backdrop-blur-xs md:hidden"
-          onClick={() => setCenterMenuOpen(false)}
-        >
-          <div className="absolute bottom-20 left-1/2 -translate-x-1/2 w-64 bg-canvas dark:bg-canvas-dark border border-rule dark:border-rule-dark rounded-2xl shadow-2xl p-2 space-y-1 animate-in slide-in-from-bottom duration-150">
-            <button
-              onClick={() => {
-                setCenterMenuOpen(false);
-                openQuickLog();
-              }}
-              className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl hover:bg-surface dark:hover:bg-surface-dark text-xs font-medium text-ink dark:text-ink-dark text-left transition-colors min-h-[44px]"
+      {/* Center Action Popup on Mobile with macOS Spring */}
+      <AnimatePresence>
+        {centerMenuOpen && (
+          <div className="fixed inset-0 z-40 md:hidden">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.15 }}
+              className="fixed inset-0 bg-black/50 backdrop-blur-xs"
+              onClick={() => setCenterMenuOpen(false)}
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.93, y: 16 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.93, y: 16 }}
+              transition={{ type: 'spring', damping: 25, stiffness: 350 }}
+              className="absolute bottom-20 left-1/2 -translate-x-1/2 w-64 bg-canvas dark:bg-canvas-dark border border-rule dark:border-rule-dark rounded-2xl shadow-2xl p-2 space-y-1 z-10"
             >
-              <BookOpen size={16} className="text-accent" />
-              <span>Log Reading Session</span>
-            </button>
-            <button
-              onClick={() => {
-                setCenterMenuOpen(false);
-                setScannerOpen(true);
-              }}
-              className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl hover:bg-surface dark:hover:bg-surface-dark text-xs font-medium text-ink dark:text-ink-dark text-left transition-colors min-h-[44px]"
-            >
-              <Camera size={16} className="text-accent" />
-              <span>Scan ISBN Barcode</span>
-            </button>
+              <button
+                onClick={() => {
+                  setCenterMenuOpen(false);
+                  openQuickLog();
+                }}
+                className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl hover:bg-surface dark:hover:bg-surface-dark text-xs font-medium text-ink dark:text-ink-dark text-left transition-colors min-h-[44px]"
+              >
+                <BookOpen size={16} className="text-accent" />
+                <span>Log Reading Session</span>
+              </button>
+              <button
+                onClick={() => {
+                  setCenterMenuOpen(false);
+                  setScannerOpen(true);
+                }}
+                className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl hover:bg-surface dark:hover:bg-surface-dark text-xs font-medium text-ink dark:text-ink-dark text-left transition-colors min-h-[44px]"
+              >
+                <Camera size={16} className="text-accent" />
+                <span>Scan ISBN Barcode</span>
+              </button>
+            </motion.div>
           </div>
-        </div>
-      )}
+        )}
+      </AnimatePresence>
 
       {/* Thumb-Zone Sticky Mobile Bottom Navigation Bar (h-16, pb-[env(safe-area-inset-bottom)], <768px) */}
       <nav
