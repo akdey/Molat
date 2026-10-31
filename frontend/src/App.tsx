@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useLibraryStore } from './store/useLibraryStore';
 import {
@@ -78,6 +78,32 @@ export default function App() {
   const [centerMenuOpen, setCenterMenuOpen] = useState(false);
   const [headerMenuOpen, setHeaderMenuOpen] = useState(false);
 
+  // Per-tab scroll position memory (native mobile & desktop standard)
+  const scrollPositions = useRef<Record<string, number>>({});
+
+  const switchTab = (newTab: typeof activeTab) => {
+    if (newTab === activeTab) {
+      // Tap on active tab: smoothly scroll back to top
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      setCenterMenuOpen(false);
+      return;
+    }
+    // Record current scroll position before switching away
+    scrollPositions.current[activeTab] = window.scrollY;
+    setCenterMenuOpen(false);
+    setActiveTab(newTab);
+  };
+
+  useEffect(() => {
+    // When activeTab changes, restore that tab's saved scroll position (defaulting to 0)
+    const targetY = scrollPositions.current[activeTab] ?? 0;
+    window.scrollTo({ top: targetY, behavior: 'instant' });
+    const timer = setTimeout(() => {
+      window.scrollTo({ top: targetY, behavior: 'instant' });
+    }, 20);
+    return () => clearTimeout(timer);
+  }, [activeTab]);
+
   useEffect(() => {
     loadAllData();
   }, [loadAllData]);
@@ -139,7 +165,7 @@ export default function App() {
           {/* Logo & Subtitle */}
           <div
             className="flex items-center gap-2.5 cursor-pointer select-none"
-            onClick={() => setActiveTab('home')}
+            onClick={() => switchTab('home')}
           >
             <BookOpen className="text-accent dark:text-accent-dark h-5 w-5 sm:h-6 sm:w-6 shrink-0" />
             <div>
@@ -153,7 +179,7 @@ export default function App() {
           {/* Desktop & Tablet Navigation Rail/Tabs */}
           <nav className="hidden md:flex items-center gap-1 bg-surface dark:bg-surface-dark p-1 rounded-xl border border-rule dark:border-rule-dark text-xs font-medium">
             <button
-              onClick={() => setActiveTab('home')}
+              onClick={() => switchTab('home')}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-colors min-h-[36px] ${
                 activeTab === 'home'
                   ? 'bg-canvas dark:bg-canvas-dark text-ink dark:text-ink-dark shadow-xs font-semibold'
@@ -164,7 +190,7 @@ export default function App() {
               <span>Home</span>
             </button>
             <button
-              onClick={() => setActiveTab('shelf')}
+              onClick={() => switchTab('shelf')}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-colors min-h-[36px] ${
                 activeTab === 'shelf'
                   ? 'bg-canvas dark:bg-canvas-dark text-ink dark:text-ink-dark shadow-xs font-semibold'
@@ -175,7 +201,7 @@ export default function App() {
               <span>Bookshelf</span>
             </button>
             <button
-              onClick={() => setActiveTab('insights')}
+              onClick={() => switchTab('insights')}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-colors min-h-[36px] ${
                 activeTab === 'insights'
                   ? 'bg-canvas dark:bg-canvas-dark text-ink dark:text-ink-dark shadow-xs font-semibold'
@@ -186,7 +212,7 @@ export default function App() {
               <span>Insights</span>
             </button>
             <button
-              onClick={() => setActiveTab('tracker')}
+              onClick={() => switchTab('tracker')}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-colors min-h-[36px] ${
                 activeTab === 'tracker'
                   ? 'bg-canvas dark:bg-canvas-dark text-accent dark:text-accent-dark shadow-xs font-semibold'
@@ -197,7 +223,7 @@ export default function App() {
               <span>Reading Streak</span>
             </button>
             <button
-              onClick={() => setActiveTab('wishlist')}
+              onClick={() => switchTab('wishlist')}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-colors min-h-[36px] ${
                 activeTab === 'wishlist'
                   ? 'bg-canvas dark:bg-canvas-dark text-ink dark:text-ink-dark shadow-xs font-semibold'
@@ -208,7 +234,7 @@ export default function App() {
               <span>Wishlist</span>
             </button>
             <button
-              onClick={() => setActiveTab('maintenance')}
+              onClick={() => switchTab('maintenance')}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-colors min-h-[36px] ${
                 activeTab === 'maintenance'
                   ? 'bg-canvas dark:bg-canvas-dark text-ink dark:text-ink-dark shadow-xs font-semibold'
@@ -328,7 +354,7 @@ export default function App() {
                     <button
                       onClick={() => {
                         setHeaderMenuOpen(false);
-                        setActiveTab('wishlist');
+                        switchTab('wishlist');
                       }}
                       className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-surface dark:hover:bg-surface-dark text-xs font-medium transition-colors text-left"
                     >
@@ -339,7 +365,7 @@ export default function App() {
                     <button
                       onClick={() => {
                         setHeaderMenuOpen(false);
-                        setActiveTab('insights');
+                        switchTab('insights');
                       }}
                       className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-surface dark:hover:bg-surface-dark text-xs font-medium transition-colors text-left"
                     >
@@ -350,7 +376,7 @@ export default function App() {
                     <button
                       onClick={() => {
                         setHeaderMenuOpen(false);
-                        setActiveTab('maintenance');
+                        switchTab('maintenance');
                       }}
                       className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-surface dark:hover:bg-surface-dark text-xs font-medium transition-colors text-left"
                     >
@@ -416,7 +442,7 @@ export default function App() {
                 streakSummary={streakSummary}
                 openQuickLog={openQuickLog}
                 setSelectedBook={setSelectedBook}
-                setActiveTab={setActiveTab}
+                setActiveTab={switchTab}
               />
             )}
 
@@ -797,10 +823,7 @@ export default function App() {
       >
         {/* 1. Home */}
         <button
-          onClick={() => {
-            setActiveTab('home');
-            setCenterMenuOpen(false);
-          }}
+          onClick={() => switchTab('home')}
           className={`flex flex-col items-center justify-center min-w-[56px] min-h-[48px] rounded-xl transition-colors ${
             activeTab === 'home'
               ? 'text-accent dark:text-accent-dark font-semibold'
@@ -813,10 +836,7 @@ export default function App() {
 
         {/* 2. Shelf */}
         <button
-          onClick={() => {
-            setActiveTab('shelf');
-            setCenterMenuOpen(false);
-          }}
+          onClick={() => switchTab('shelf')}
           className={`flex flex-col items-center justify-center min-w-[56px] min-h-[48px] rounded-xl transition-colors ${
             activeTab === 'shelf'
               ? 'text-accent dark:text-accent-dark font-semibold'
@@ -840,10 +860,7 @@ export default function App() {
 
         {/* 4. Streak */}
         <button
-          onClick={() => {
-            setActiveTab('tracker');
-            setCenterMenuOpen(false);
-          }}
+          onClick={() => switchTab('tracker')}
           className={`flex flex-col items-center justify-center min-w-[56px] min-h-[48px] rounded-xl transition-colors ${
             activeTab === 'tracker'
               ? 'text-accent dark:text-accent-dark font-semibold'
@@ -856,10 +873,7 @@ export default function App() {
 
         {/* 5. Wishlist */}
         <button
-          onClick={() => {
-            setActiveTab('wishlist');
-            setCenterMenuOpen(false);
-          }}
+          onClick={() => switchTab('wishlist')}
           className={`flex flex-col items-center justify-center min-w-[56px] min-h-[48px] rounded-xl transition-colors ${
             activeTab === 'wishlist'
               ? 'text-accent dark:text-accent-dark font-semibold'
