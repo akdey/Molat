@@ -473,55 +473,55 @@ export default function App() {
 
             {/* Search Bar & Multi-Facet Filtering Bar */}
             <div className="space-y-3">
-              <div className="flex flex-col sm:flex-row gap-2">
-                <div className="relative flex-1">
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                <div className="relative flex-1 min-w-0">
                   <Search
-                    size={16}
-                    className="absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-muted pointer-events-none"
+                    size={15}
+                    className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-muted pointer-events-none"
                   />
                   <input
                     type="search"
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
-                    placeholder={books.length > 0 ? `Search ${books.length} volumes by title, author, genre, shelf location...` : "Search collection by title, author, genre, shelf location..."}
-                    className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-rule dark:border-rule-dark bg-surface-raised dark:bg-surface-dark-raised text-xs focus:outline-none focus:border-accent min-h-[44px]"
+                    placeholder={books.length > 0 ? `Search ${books.length} volumes...` : "Search collection..."}
+                    className="w-full pl-8 pr-3 py-2 rounded-xl border border-rule dark:border-rule-dark bg-surface-raised dark:bg-surface-dark-raised text-xs focus:outline-none focus:border-accent h-10"
                   />
                 </div>
 
                 {/* View Mode Toggle */}
-                <div className="flex items-center gap-1 bg-surface dark:bg-surface-dark p-1 rounded-xl border border-rule dark:border-rule-dark self-start sm:self-auto min-h-[44px]">
+                <div className="shrink-0 flex items-center gap-0.5 bg-surface dark:bg-surface-dark p-0.5 rounded-xl border border-rule dark:border-rule-dark h-10">
                   <button
                     onClick={() => setViewMode('grid')}
-                    className={`p-2 rounded-lg transition-colors min-w-[36px] min-h-[36px] flex items-center justify-center ${
+                    className={`p-1.5 rounded-lg transition-colors w-8 h-8 flex items-center justify-center ${
                       viewMode === 'grid'
                         ? 'bg-canvas dark:bg-canvas-dark text-accent shadow-xs'
                         : 'text-ink-secondary hover:text-ink'
                     }`}
                     title="Cover Grid View (2:3 aspect)"
                   >
-                    <LayoutGrid size={16} />
+                    <LayoutGrid size={15} />
                   </button>
                   <button
                     onClick={() => setViewMode('spine')}
-                    className={`p-2 rounded-lg transition-colors min-w-[36px] min-h-[36px] flex items-center justify-center ${
+                    className={`p-1.5 rounded-lg transition-colors w-8 h-8 flex items-center justify-center ${
                       viewMode === 'spine'
                         ? 'bg-canvas dark:bg-canvas-dark text-accent shadow-xs'
                         : 'text-ink-secondary hover:text-ink'
                     }`}
                     title="Tactile Spine Shelf View"
                   >
-                    <Library size={16} />
+                    <Library size={15} />
                   </button>
                   <button
                     onClick={() => setViewMode('table')}
-                    className={`p-2 rounded-lg transition-colors min-w-[36px] min-h-[36px] flex items-center justify-center ${
+                    className={`p-1.5 rounded-lg transition-colors w-8 h-8 flex items-center justify-center ${
                       viewMode === 'table'
                         ? 'bg-canvas dark:bg-canvas-dark text-accent shadow-xs'
                         : 'text-ink-secondary hover:text-ink'
                     }`}
                     title="Financial Table View"
                   >
-                    <Table size={16} />
+                    <Table size={15} />
                   </button>
                 </div>
               </div>
