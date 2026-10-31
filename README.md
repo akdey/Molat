@@ -55,6 +55,13 @@ Whether cataloguing a multi-hundred volume collection, scanning new arrivals at 
 - **Budget & Purchase Planning**: Track books you want to purchase, setting budget target prices alongside retail MRP.
 - **1-Click Shelf Acquisition**: When you purchase a book from your wishlist, a single click moves it into your active library (`Books` tab), records the actual purchase price and condition, and archives the wishlist item.
 
+### 🤝 Personal Book Lending & Borrower Ledger
+- **Volume Loan Tracking**: Keep track of books lent to friends, colleagues, or family with borrower contact, loan notes, lent date, and expected due date.
+- **Dynamic Overdue Computation**: Timezone-aware overdue tracking (`Asia/Kolkata`) with ambient overdue alert badges.
+- **Automated Shelf Location Sync**: Lending a volume automatically synchronizes the book's physical location to `"Lent to {borrower_name}"` across the catalogue; marking it returned instantly restores its location to `"Home Shelf"`.
+- **1-Click WhatsApp Follow-up**: Generates prefilled, friendly literary WhatsApp reminders (`https://wa.me/...`) directly from the loan card to ping the borrower.
+- **Multi-Point Access**: Access via the dedicated **Lent Out** sub-tab in the Bookshelf, from the mobile center `+` action drawer, or straight from any book's details panel.
+
 ### 🖼️ Multi-Tier Automated Cover Enrichment
 - **7-Tier Fallback Waterfall**:
   1. Google Books (ISBN-13 / ISBN-10)
@@ -102,7 +109,7 @@ flowchart LR
 
     subgraph Storage["Zero-Billing Storage"]
         Bridge["Google Apps Script Web App Bridge"]
-        Sheets[("Google Sheets Spreadsheet\n• Books (21 cols)\n• Reading_Logs (9 cols)\n• Wishlist (10 cols)")]
+        Sheets[("Google Sheets Spreadsheet\n• Books (21 cols)\n• Reading_Logs (9 cols)\n• Wishlist (10 cols)\n• Lending (10 cols)")]
     end
 
     UI <-->|REST API + Bearer Auth| API
@@ -119,7 +126,7 @@ flowchart LR
 
 ## 📊 Live Google Sheets Database Contract
 
-Molat connects to a single Google Spreadsheet containing three dedicated tabs:
+Molat connects to a single Google Spreadsheet containing four dedicated tabs:
 
 ### 1. `Books` Tab (21 Columns)
 The catalog of all physical volumes owned in your personal library.
@@ -139,7 +146,7 @@ The catalog of all physical volumes owned in your personal library.
 | **K** | `cover_url` | string | Direct URL to front dust jacket image |
 | **L** | `reading_status` | enum | `UNREAD` \| `READING` \| `COMPLETED` \| `PAUSED` \| `ABANDONED` |
 | **M** | `condition` | enum | `New` \| `Good` \| `Fair` \| `Damaged` |
-| **N** | `location` | string | Physical shelf placement (e.g., `Home Shelf`, `Living Room`) |
+| **N** | `location` | string | Physical shelf placement (e.g., `Home Shelf`, `Lent to John`) |
 | **O** | `purchase_price`| float | Actual cost paid in INR (`CP`) |
 | **P** | `rp` | float | Retail printed MRP in INR (`RP`) |
 | **Q** | `purchase_date` | string | Date acquired (`YYYY-MM-DD`) |
@@ -155,6 +162,10 @@ An append-only log recording every reading session to power the streak engine:
 ### 3. `Wishlist` Tab (10 Columns)
 Future acquisitions and budget planning:
 `wishlist_id` · `title` · `authors` · `isbn_13` · `genre` · `expected_rp` · `target_price` · `priority` · `notes` · `created_at`
+
+### 4. `Lending` Tab (10 Columns)
+Borrower contracts, due date calculations, and loan history:
+`lending_id` · `book_id` · `borrower_name` · `borrower_contact` · `lent_date` · `due_date` · `returned_date` · `status` · `notes` · `created_at`
 
 ---
 
@@ -216,7 +227,7 @@ API Documentation will be available at `http://localhost:7860/docs`.
 #### Run Backend Test Suite:
 ```bash
 pytest -v
-# 28 passed in 0.28s
+# 33 passed in 0.44s
 ```
 
 ---
