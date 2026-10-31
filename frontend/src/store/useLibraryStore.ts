@@ -1,9 +1,22 @@
 import { create } from 'zustand';
-import type { Book, PortfolioSummary, StreakSummary, WishlistItem, ReadingStatus, BookCondition } from '../types/book';
+import type {
+  Book,
+  PortfolioSummary,
+  StreakSummary,
+  WishlistItem,
+  ReadingStatus,
+  BookCondition,
+  LendingRecord,
+  LendingRecordCreate,
+  LendingRecordReturn,
+} from '../types/book';
 import {
   fetchBooks,
   fetchStreakSummary,
   fetchWishlist,
+  fetchLendingRecords,
+  lendBook as apiLendBook,
+  returnBook as apiReturnBook,
   logReadingSession,
   acquireWishlistItem,
   updateBook,
@@ -44,6 +57,9 @@ interface LibraryState {
   quickLogBook: Book | null;
   scannerOpen: boolean;
   keyModalOpen: boolean;
+  lendingModalOpen: boolean;
+  lendingModalBook: Book | null;
+  lendingRecords: LendingRecord[];
   
   // Auth & Settings
   authToken: string | null;
@@ -66,6 +82,8 @@ interface LibraryState {
   closeQuickLog: () => void;
   setScannerOpen: (open: boolean) => void;
   setKeyModalOpen: (open: boolean) => void;
+  openLendModal: (book?: Book) => void;
+  closeLendModal: () => void;
   setLibraryKey: (key: string) => void;
   loginOwner: (username: string, password: string) => Promise<void>;
   logoutOwner: () => void;
@@ -78,6 +96,9 @@ interface LibraryState {
   loadBooks: (forceRefresh?: boolean) => Promise<void>;
   loadStreak: () => Promise<void>;
   loadWishlist: () => Promise<void>;
+  loadLendingRecords: (forceRefresh?: boolean) => Promise<void>;
+  lendBookRecord: (payload: LendingRecordCreate) => Promise<void>;
+  returnBookRecord: (lendingId: string, returnLocation?: string) => Promise<void>;
   submitReadingLog: (payload: import('../types/book').ReadingLogCreate) => Promise<void>;
   acquireItem: (wishlistId: string, payload: import('../types/book').WishlistAcquirePayload) => Promise<void>;
   updateBookDetails: (bookId: string, updates: Partial<Book>) => Promise<void>;
@@ -108,6 +129,9 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
   quickLogBook: null,
   scannerOpen: false,
   keyModalOpen: false,
+  lendingModalOpen: false,
+  lendingModalBook: null,
+  lendingRecords: [],
   
   authToken: localStorage.getItem('molat_auth_token') || null,
   authUser: localStorage.getItem('molat_auth_user') || null,
@@ -138,6 +162,11 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
   closeQuickLog: () => set({ quickLogOpen: false, quickLogBook: null }),
   setScannerOpen: (scannerOpen) => set({ scannerOpen }),
   setKeyModalOpen: (keyModalOpen) => set({ keyModalOpen }),
+  openLendModal: (book) => set({
+    lendingModalOpen: true,
+    lendingModalBook: book || null,
+  }),
+  closeLendModal: () => set({ lendingModalOpen: false, lendingModalBook: null }),
 
   setLibraryKey: (key: string) => {
     localStorage.setItem('molat_library_key', key);
@@ -195,10 +224,11 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
       set({ loading: true, error: null });
     }
     try {
-      const [bookRes, streakRes, wishRes] = await Promise.allSettled([
+      const [bookRes, streakRes, wishRes, lendRes] = await Promise.allSettled([
         fetchBooks(forceRefresh),
         fetchStreakSummary(),
         fetchWishlist(),
+        fetchLendingRecords(undefined, forceRefresh),
       ]);
 
       set((state) => ({
@@ -206,6 +236,7 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
         portfolio: bookRes.status === 'fulfilled' ? bookRes.value.portfolio : state.portfolio,
         streakSummary: streakRes.status === 'fulfilled' ? streakRes.value : state.streakSummary,
         wishlist: wishRes.status === 'fulfilled' ? wishRes.value : state.wishlist,
+        lendingRecords: lendRes.status === 'fulfilled' ? lendRes.value : state.lendingRecords,
         loading: false,
         refreshing: false,
       }));
@@ -245,6 +276,29 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
     } catch (err: any) {
       console.warn('Failed to fetch wishlist:', err);
     }
+  },
+
+  loadLendingRecords: async (forceRefresh = false) => {
+    try {
+      const records = await fetchLendingRecords(undefined, forceRefresh);
+      set({ lendingRecords: records });
+    } catch (err: any) {
+      console.warn('Failed to fetch lending records:', err);
+    }
+  },
+
+  lendBookRecord: async (payload) => {
+    const token = get().authToken || get().libraryKey;
+    const record = await apiLendBook(payload, token || undefined);
+    get().addToast(`Lent volume to ${record.borrower_name}!`, 'success');
+    await Promise.all([get().loadBooks(true), get().loadLendingRecords(true)]);
+  },
+
+  returnBookRecord: async (lendingId, returnLocation = 'Home Shelf') => {
+    const token = get().authToken || get().libraryKey;
+    const record = await apiReturnBook(lendingId, { return_location: returnLocation }, token || undefined);
+    get().addToast(`Marked volume as returned by ${record.borrower_name}!`, 'success');
+    await Promise.all([get().loadBooks(true), get().loadLendingRecords(true)]);
   },
 
   submitReadingLog: async (payload) => {

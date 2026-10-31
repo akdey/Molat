@@ -16,6 +16,10 @@ import {
   Quote,
   Layers,
   Sparkles,
+  Handshake,
+  MessageCircle,
+  RotateCcw,
+  Phone,
 } from 'lucide-react';
 import type { Book, ReadingStatus, BookCondition, ReadingLog } from '../types/book';
 import { useLibraryStore } from '../store/useLibraryStore';
@@ -118,7 +122,12 @@ export const BookDetailDrawer: React.FC = () => {
     updateBookDetails,
     openQuickLog,
     setKeyModalOpen,
+    lendingRecords,
+    openLendModal,
+    returnBookRecord,
   } = useLibraryStore();
+
+  const [returningLend, setReturningLend] = useState(false);
 
   const [status, setStatus] = useState<ReadingStatus>('UNREAD');
   const [condition, setCondition] = useState<BookCondition>('Good');
@@ -363,6 +372,107 @@ export const BookDetailDrawer: React.FC = () => {
                         <BookOpen size={16} />
                         <span>Log Reading Session on This Book</span>
                       </button>
+
+                      {/* Active Lending Banner or Lend Action */}
+                      {(() => {
+                        const activeLend = lendingRecords.find(
+                          (r) => r.book_id === selectedBook.book_id && r.status === 'ACTIVE'
+                        );
+
+                        if (activeLend) {
+                          const openWhatsApp = () => {
+                            if (!activeLend.borrower_contact) return;
+                            const cleanPhone = activeLend.borrower_contact.replace(/[^0-9]/g, '');
+                            let text = `Hi ${activeLend.borrower_name}! Hope you're enjoying reading "${selectedBook.title}". Just checking in from my personal library collection — let me know whenever you're ready to pass it back! 📚`;
+                            if (activeLend.is_overdue && activeLend.due_date) {
+                              text = `Hi ${activeLend.borrower_name}! Gentle ping regarding "${selectedBook.title}" from my personal library (it was expected back around ${activeLend.due_date}). Let me know when it might be convenient to return it! 📚`;
+                            }
+                            const waUrl = cleanPhone
+                              ? `https://wa.me/${cleanPhone}?text=${encodeURIComponent(text)}`
+                              : `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
+                            window.open(waUrl, '_blank');
+                          };
+
+                          return (
+                            <div className="p-3.5 rounded-xl border border-amber-300 dark:border-amber-900/60 bg-amber-50/50 dark:bg-amber-950/30 space-y-2 text-xs">
+                              <div className="flex items-center justify-between">
+                                <span className="font-medium text-amber-900 dark:text-amber-300 flex items-center gap-1.5">
+                                  <Handshake size={14} className="text-amber-600" />
+                                  <span>Currently Lent to {activeLend.borrower_name}</span>
+                                </span>
+                                {activeLend.is_overdue && (
+                                  <span className="px-1.5 py-0.5 rounded bg-rose-100 dark:bg-rose-950/80 text-rose-700 dark:text-rose-400 text-3xs font-semibold uppercase animate-pulse">
+                                    Overdue
+                                  </span>
+                                )}
+                              </div>
+
+                              <div className="text-3xs text-ink-secondary dark:text-ink-dark-secondary space-y-0.5">
+                                <div>Lent: {activeLend.lent_date} ({activeLend.days_lent || 0}d ago)</div>
+                                {activeLend.due_date && (
+                                  <div className={activeLend.is_overdue ? 'text-rose-600 font-medium' : ''}>
+                                    Due: {activeLend.due_date}
+                                  </div>
+                                )}
+                                {activeLend.borrower_contact && (
+                                  <div className="flex items-center gap-1 pt-0.5 text-ink-muted">
+                                    <Phone size={10} />
+                                    <span>{activeLend.borrower_contact}</span>
+                                  </div>
+                                )}
+                              </div>
+
+                              <div className="flex items-center gap-2 pt-1">
+                                {activeLend.borrower_contact && (
+                                  <button
+                                    type="button"
+                                    onClick={openWhatsApp}
+                                    className="flex-1 py-1 px-2 rounded-lg border border-emerald-600/30 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 text-3xs font-medium flex items-center justify-center gap-1 transition-colors"
+                                  >
+                                    <MessageCircle size={12} className="text-emerald-600 dark:text-emerald-400" />
+                                    <span>WhatsApp Ping</span>
+                                  </button>
+                                )}
+                                <button
+                                  type="button"
+                                  disabled={returningLend}
+                                  onClick={async () => {
+                                    setReturningLend(true);
+                                    try {
+                                      await returnBookRecord(activeLend.lending_id, 'Home Shelf');
+                                    } catch (err: any) {
+                                      if (err.message && err.message.includes('401')) {
+                                        setKeyModalOpen(true);
+                                      }
+                                    } finally {
+                                      setReturningLend(false);
+                                    }
+                                  }}
+                                  className="flex-1 py-1 px-2 rounded-lg bg-accent hover:bg-accent-hover text-white text-3xs font-medium flex items-center justify-center gap-1 transition-colors"
+                                >
+                                  {returningLend ? (
+                                    <RefreshCw size={11} className="animate-spin text-white" />
+                                  ) : (
+                                    <RotateCcw size={11} />
+                                  )}
+                                  <span>Mark Returned</span>
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        }
+
+                        return (
+                          <button
+                            type="button"
+                            onClick={() => openLendModal(selectedBook)}
+                            className="w-full py-2 px-3 rounded-xl border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark hover:bg-surface-raised dark:hover:bg-surface-dark-raised text-xs font-medium text-ink-secondary hover:text-ink transition-colors flex items-center justify-center gap-1.5 shadow-2xs"
+                          >
+                            <Handshake size={14} className="text-accent" />
+                            <span>Lend This Volume to Someone</span>
+                          </button>
+                        );
+                      })()}
 
                       {/* 3. DYNAMIC SYNOPSIS / ABOUT THE BOOK (Approach A - Zero Sheet Bloat) */}
                       {loadingSynopsis ? (

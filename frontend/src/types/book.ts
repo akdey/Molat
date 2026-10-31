@@ -92,3 +92,37 @@ export interface WishlistAcquirePayload {
   location?: string;
 }
 
+export type LendingStatus = 'ACTIVE' | 'RETURNED';
+
+export interface LendingRecord {
+  lending_id: string;
+  book_id: string;
+  borrower_name: string;
+  borrower_contact?: string;
+  lent_date: string;
+  due_date?: string;
+  returned_date?: string;
+  status: LendingStatus;
+  notes?: string;
+  created_at?: string;
+  book_title?: string;
+  book_authors?: string;
+  book_cover_url?: string;
+  is_overdue?: boolean;
+  days_lent?: number;
+}
+
+export interface LendingRecordCreate {
+  book_id: string;
+  borrower_name: string;
+  borrower_contact?: string;
+  lent_date?: string;
+  due_date?: string;
+  notes?: string;
+}
+
+export interface LendingRecordReturn {
+  return_location?: string;
+  notes?: string;
+}
+

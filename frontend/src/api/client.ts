@@ -155,3 +155,59 @@ export async function loginUser(
     if (!res.ok) throw new Error(`Failed to acquire wishlist item: ${res.status}`);
     return res.json();
   }
+
+  // ==================== LENDING ====================
+
+  export async function fetchLendingRecords(
+    status?: string,
+    refresh = false
+  ): Promise<import('../types/book').LendingRecord[]> {
+    const params = new URLSearchParams();
+    if (status) params.set('status', status);
+    if (refresh) params.set('refresh', 'true');
+    const qs = params.toString() ? `?${params.toString()}` : '';
+    const res = await fetch(`${API_BASE}/lending${qs}`);
+    if (!res.ok) throw new Error(`Failed to fetch lending records: ${res.status}`);
+    return res.json();
+  }
+
+  export async function fetchActiveLendingForBook(
+    bookId: string
+  ): Promise<import('../types/book').LendingRecord | null> {
+    const res = await fetch(`${API_BASE}/lending/book/${bookId}`);
+    if (!res.ok) throw new Error(`Failed to check lending status: ${res.status}`);
+    return res.json();
+  }
+
+  export async function lendBook(
+    payload: import('../types/book').LendingRecordCreate,
+    tokenOrKey?: string
+  ): Promise<import('../types/book').LendingRecord> {
+    const res = await fetch(`${API_BASE}/lending`, {
+      method: 'POST',
+      headers: getAuthHeaders(tokenOrKey),
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || `Failed to lend book: ${res.status}`);
+    }
+    return res.json();
+  }
+
+  export async function returnBook(
+    lendingId: string,
+    payload: import('../types/book').LendingRecordReturn = {},
+    tokenOrKey?: string
+  ): Promise<import('../types/book').LendingRecord> {
+    const res = await fetch(`${API_BASE}/lending/${lendingId}/return`, {
+      method: 'POST',
+      headers: getAuthHeaders(tokenOrKey),
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || `Failed to return book: ${res.status}`);
+    }
+    return res.json();
+  }

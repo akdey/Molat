@@ -23,6 +23,7 @@ import {
   MoreVertical,
   PieChart,
   X,
+  Handshake,
 } from 'lucide-react';
 
 import { StreakBanner } from './components/StreakBanner';
@@ -40,6 +41,8 @@ import { ToastContainer } from './components/ToastContainer';
 import { GenreFilterPopover } from './components/GenreFilterPopover';
 import { LibraryInsights } from './components/LibraryInsights';
 import { HomeDashboard } from './components/HomeDashboard';
+import { LendBookDrawer } from './components/LendBookDrawer';
+import { LendingLedger } from './components/LendingLedger';
 
 export default function App() {
   const {
@@ -66,6 +69,8 @@ export default function App() {
     setConditionFilter,
     setSelectedBook,
     openQuickLog,
+    openLendModal,
+    lendingRecords,
     setScannerOpen,
     setKeyModalOpen,
     loadAllData,
@@ -77,6 +82,10 @@ export default function App() {
 
   const [centerMenuOpen, setCenterMenuOpen] = useState(false);
   const [headerMenuOpen, setHeaderMenuOpen] = useState(false);
+  const [shelfSubTab, setShelfSubTab] = useState<'catalog' | 'lending'>('catalog');
+
+  const activeLentCount = lendingRecords.filter((r) => r.status === 'ACTIVE').length;
+  const overdueLentCount = lendingRecords.filter((r) => r.status === 'ACTIVE' && r.is_overdue).length;
 
   // Per-tab scroll position memory (native mobile & desktop standard)
   const scrollPositions = useRef<Record<string, number>>({});
@@ -464,6 +473,45 @@ export default function App() {
             {/* 5. VISUAL BOOKSHELF OR MAINTENANCE AUDIT */}
             {(activeTab === 'shelf' || activeTab === 'maintenance') && (
           <div className="space-y-5 flex-1 flex flex-col">
+            {/* Shelf Sub-Navigation: Catalogue vs Lending Ledger */}
+            {activeTab === 'shelf' && (
+              <div className="flex items-center gap-1.5 p-1 rounded-xl bg-surface dark:bg-surface-dark border border-rule dark:border-rule-dark w-fit">
+                <button
+                  onClick={() => setShelfSubTab('catalog')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                    shelfSubTab === 'catalog'
+                      ? 'bg-canvas dark:bg-canvas-dark text-ink dark:text-ink-dark shadow-xs'
+                      : 'text-ink-secondary hover:text-ink'
+                  }`}
+                >
+                  All Catalogue ({books.length})
+                </button>
+                <button
+                  onClick={() => setShelfSubTab('lending')}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                    shelfSubTab === 'lending'
+                      ? 'bg-canvas dark:bg-canvas-dark text-ink dark:text-ink-dark shadow-xs'
+                      : 'text-ink-secondary hover:text-ink'
+                  }`}
+                >
+                  <Handshake size={13} className={overdueLentCount > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-accent dark:text-accent-dark'} />
+                  <span>Lent Out</span>
+                  <span className={`px-1.5 py-0.2 rounded-full text-3xs font-mono font-semibold ${
+                    overdueLentCount > 0
+                      ? 'bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300'
+                      : 'bg-surface-raised dark:bg-surface-dark-raised text-ink-muted'
+                  }`}>
+                    {activeLentCount}
+                  </span>
+                </button>
+              </div>
+            )}
+
+            {/* If Lending Ledger is selected, render ledger directly */}
+            {activeTab === 'shelf' && shelfSubTab === 'lending' ? (
+              <LendingLedger />
+            ) : (
+              <>
             {/* Maintenance Audit Banner */}
             {activeTab === 'maintenance' && (
               <div className="p-4 rounded-2xl border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark space-y-2">
@@ -726,13 +774,15 @@ export default function App() {
                 ))}
               </div>
             )}
+            </>
+          )}
           </div>
         )}
           </motion.div>
         </AnimatePresence>
 
         {/* Subtle Brand & Creator Footer */}
-        <footer className="mt-auto pt-3 md:pt-6 pb-[calc(4rem+10px+env(safe-area-inset-bottom,0px))] md:pb-6 text-center border-t border-rule/50 dark:border-rule-dark/50">
+        <footer className="mt-auto py-2.5 pb-[calc(4.5rem+env(safe-area-inset-bottom,0px))] md:pb-4 text-center">
           <p className="text-3xs text-ink-muted">
             Molat Personal Library &bull; Engineered by{' '}
             <a
@@ -750,13 +800,13 @@ export default function App() {
       {/* Center Action Bottom Drawer on Mobile */}
       <AnimatePresence>
         {centerMenuOpen && (
-          <div className="fixed inset-0 z-40 md:hidden flex items-end justify-center">
+          <div className="fixed inset-0 z-50 md:hidden flex items-end justify-center">
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.15 }}
-              className="fixed inset-0 bg-black/50 backdrop-blur-xs"
+              className="fixed inset-0 bg-black/60 backdrop-blur-xs"
               onClick={() => setCenterMenuOpen(false)}
             />
             <motion.div
@@ -764,8 +814,7 @@ export default function App() {
               animate={{ y: 0 }}
               exit={{ y: '100%' }}
               transition={{ type: 'spring', damping: 28, stiffness: 320 }}
-              style={{ paddingBottom: 'calc(5.75rem + env(safe-area-inset-bottom, 0px))' }}
-              className="relative z-10 w-full bg-canvas dark:bg-canvas-dark border-t border-rule dark:border-rule-dark rounded-t-3xl shadow-2xl p-4 space-y-2.5"
+              className="relative z-10 w-full sm:max-w-lg bg-canvas dark:bg-canvas-dark border-t border-rule dark:border-rule-dark rounded-t-3xl shadow-2xl p-4 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))] space-y-2.5"
             >
               <div className="w-10 h-1 bg-ink-muted/30 rounded-full mx-auto mb-1" />
               <div className="flex items-center justify-between pb-1 px-1">
@@ -781,6 +830,8 @@ export default function App() {
                   <X size={16} />
                 </button>
               </div>
+
+              {/* 1. Log Reading Session */}
               <button
                 onClick={() => {
                   setCenterMenuOpen(false);
@@ -796,6 +847,8 @@ export default function App() {
                   <div className="text-3xs text-ink-muted">Track pages read, session duration & streak</div>
                 </div>
               </button>
+
+              {/* 2. Scan ISBN Barcode */}
               <button
                 onClick={() => {
                   setCenterMenuOpen(false);
@@ -809,6 +862,23 @@ export default function App() {
                 <div>
                   <div className="font-medium text-ink dark:text-ink-dark">Scan ISBN Barcode</div>
                   <div className="text-3xs text-ink-muted">Scan barcode with camera or auto-fetch by ISBN</div>
+                </div>
+              </button>
+
+              {/* 3. Lend a Book */}
+              <button
+                onClick={() => {
+                  setCenterMenuOpen(false);
+                  openLendModal();
+                }}
+                className="w-full flex items-center gap-3 p-3 rounded-2xl bg-surface dark:bg-surface-dark border border-rule/60 dark:border-rule-dark/60 text-xs font-medium text-ink dark:text-ink-dark text-left transition-colors hover:bg-surface-raised dark:hover:bg-surface-dark-raised active:scale-[0.99]"
+              >
+                <div className="w-9 h-9 rounded-xl bg-accent/10 text-accent flex items-center justify-center shrink-0">
+                  <Handshake size={18} />
+                </div>
+                <div>
+                  <div className="font-medium text-ink dark:text-ink-dark">Lend a Book</div>
+                  <div className="text-3xs text-ink-muted">Record borrower, due date & WhatsApp reminder</div>
                 </div>
               </button>
             </motion.div>
@@ -889,6 +959,7 @@ export default function App() {
       <BookDetailDrawer />
       <QuickLogModal />
       <BarcodeScannerModal />
+      <LendBookDrawer />
       <KeySettingsModal />
       <ToastContainer />
     </div>

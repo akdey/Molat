@@ -7,7 +7,8 @@
 const SHEETS = {
   BOOKS: 'Books',
   LOGS: 'Reading_Logs',
-  WISHLIST: 'Wishlist'
+  WISHLIST: 'Wishlist',
+  LENDING: 'Lending'
 };
 
 const SCHEMAS = {
@@ -24,6 +25,10 @@ const SCHEMAS = {
   Wishlist: [
     'wishlist_id', 'title', 'authors', 'isbn_13', 'genre',
     'expected_rp', 'target_price', 'priority', 'notes', 'created_at'
+  ],
+  Lending: [
+    'lending_id', 'book_id', 'borrower_name', 'borrower_contact',
+    'lent_date', 'due_date', 'returned_date', 'status', 'notes', 'created_at'
   ]
 };
 

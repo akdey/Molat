@@ -11,6 +11,7 @@ from app.config import settings
 from app.models.book import Book, BookCreate, BookUpdate, BOOKS_SCHEMA_COLUMNS, ReadingStatus, BookCondition
 from app.models.reading_log import ReadingLog, ReadingLogCreate, READING_LOGS_COLUMNS
 from app.models.wishlist import WishlistItem, WishlistItemCreate, WishlistAcquireRequest, WISHLIST_COLUMNS
+from app.models.lending import LendingRecord, LendingRecordCreate, LendingRecordReturn, LendingStatus, LENDING_COLUMNS
 from app.models.responses import PortfolioSummary
 
 logger = logging.getLogger(__name__)
@@ -37,6 +38,7 @@ class GoogleSheetsRepository:
         self._memory_books: List[Book] = []
         self._memory_logs: List[ReadingLog] = []
         self._memory_wishlist: List[WishlistItem] = []
+        self._memory_lending: List[LendingRecord] = []
 
     @property
     def is_bridge_configured(self) -> bool:
@@ -512,6 +514,228 @@ class GoogleSheetsRepository:
             self._memory_wishlist = [w for w in self._memory_wishlist if w.wishlist_id != wishlist_id]
             self.cache.clear()
             return new_book
+
+    # ==================== LENDING ====================
+
+    async def list_lending(self, status: Optional[str] = None, force_refresh: bool = False) -> List[LendingRecord]:
+        cache_key = "lending:all"
+        records: List[LendingRecord] = []
+
+        if not force_refresh and cache_key in self.cache:
+            records = self.cache[cache_key]
+        elif not self.is_bridge_configured:
+            records = list(self._memory_lending)
+            self.cache[cache_key] = records
+        else:
+            params = {"table": "Lending"}
+            if settings.BRIDGE_TOKEN:
+                params["token"] = settings.BRIDGE_TOKEN
+            try:
+                async with self._client(timeout=15.0) as client:
+                    resp = await client.get(settings.GOOGLE_SHEETS_BRIDGE_URL, params=params)
+                    resp.raise_for_status()
+                    data = resp.json()
+                    if data.get("success"):
+                        raw_rows = data.get("rows") or []
+                        parsed = []
+                        for idx, row in enumerate(raw_rows, start=1):
+                            if not row.get("lending_id"):
+                                row["lending_id"] = f"LEND-{idx:03d}"
+                            try:
+                                parsed.append(LendingRecord.from_sheet_row(row))
+                            except Exception as e:
+                                logger.warning(f"Skipping malformed lending row {row}: {e}")
+                        records = parsed
+                        self.cache[cache_key] = records
+                    else:
+                        records = self._memory_lending
+            except Exception as err:
+                logger.error(f"Error fetching Lending from bridge: {err}")
+                records = self._memory_lending
+
+        # Cross-reference with books collection to populate book_title, book_authors, book_cover_url
+        books = await self.list_books()
+        book_map = {b.book_id: b for b in books}
+        for r in records:
+            matched_book = book_map.get(r.book_id)
+            if matched_book:
+                r.book_title = matched_book.title
+                r.book_authors = matched_book.authors
+                r.book_cover_url = matched_book.cover_url
+
+        if status:
+            target_status = status.upper().strip()
+            records = [r for r in records if r.status.value == target_status]
+
+        # Sort: active first, then by lent_date descending
+        return sorted(
+            records,
+            key=lambda x: (0 if x.status == LendingStatus.ACTIVE else 1, x.lent_date or ""),
+            reverse=False,
+        )
+
+    async def create_lending_record(self, payload: LendingRecordCreate) -> LendingRecord:
+        async with self.write_lock:
+            existing = await self.list_lending(force_refresh=False)
+            next_idx = len(existing) + 1
+            lending_id = f"LEND-{next_idx:03d}"
+
+            lent_date = payload.lent_date or datetime.now(IST).strftime("%Y-%m-%d")
+            today = datetime.now(IST).date()
+            days_lent = 0
+            try:
+                l_d = datetime.strptime(lent_date, "%Y-%m-%d").date()
+                days_lent = max(0, (today - l_d).days)
+            except Exception:
+                pass
+
+            is_overdue = False
+            if payload.due_date:
+                try:
+                    d_d = datetime.strptime(payload.due_date, "%Y-%m-%d").date()
+                    if today > d_d:
+                        is_overdue = True
+                except Exception:
+                    pass
+
+            new_record = LendingRecord(
+                lending_id=lending_id,
+                book_id=payload.book_id,
+                borrower_name=payload.borrower_name,
+                borrower_contact=payload.borrower_contact,
+                lent_date=lent_date,
+                due_date=payload.due_date,
+                status=LendingStatus.ACTIVE,
+                notes=payload.notes,
+                created_at=datetime.now(IST).isoformat(),
+                is_overdue=is_overdue,
+                days_lent=days_lent,
+            )
+
+            # Update book's location in Books table to indicate it is lent out
+            books = await self.list_books()
+            matched_book = next((b for b in books if b.book_id == payload.book_id), None)
+            if matched_book:
+                new_record.book_title = matched_book.title
+                new_record.book_authors = matched_book.authors
+                new_record.book_cover_url = matched_book.cover_url
+
+                updated_location = f"Lent to {payload.borrower_name}"
+                matched_book.location = updated_location
+                matched_book.updated_at = datetime.now(IST).strftime("%Y-%m-%d")
+
+                if self.is_bridge_configured:
+                    book_payload = {
+                        "token": settings.BRIDGE_TOKEN or "",
+                        "action": "update",
+                        "table": "Books",
+                        "keyField": "book_id",
+                        "keyValue": matched_book.book_id,
+                        "record": dict(zip(BOOKS_SCHEMA_COLUMNS, [sanitize_cell_value(v) for v in matched_book.to_sheet_row()])),
+                    }
+                    try:
+                        async with self._client(timeout=15.0) as client:
+                            await client.post(settings.GOOGLE_SHEETS_BRIDGE_URL, json=book_payload)
+                    except Exception as err:
+                        logger.error(f"Error updating book location on lend: {err}")
+
+            if self.is_bridge_configured:
+                lending_payload = {
+                    "token": settings.BRIDGE_TOKEN or "",
+                    "action": "append",
+                    "table": "Lending",
+                    "record": dict(zip(LENDING_COLUMNS, [sanitize_cell_value(v) for v in new_record.to_sheet_row().values()])),
+                }
+                try:
+                    async with self._client(timeout=15.0) as client:
+                        await client.post(settings.GOOGLE_SHEETS_BRIDGE_URL, json=lending_payload)
+                except Exception as err:
+                    logger.error(f"Error appending Lending record to bridge: {err}")
+
+            self._memory_lending.insert(0, new_record)
+            self.cache.clear()
+            return new_record
+
+    async def return_lending_record(
+        self, lending_id: str, return_data: Optional[LendingRecordReturn] = None
+    ) -> Optional[LendingRecord]:
+        async with self.write_lock:
+            existing = await self.list_lending(force_refresh=True)
+            matched = next((r for r in existing if r.lending_id == lending_id), None)
+            if not matched:
+                return None
+
+            data = return_data or LendingRecordReturn()
+            returned_date = datetime.now(IST).strftime("%Y-%m-%d")
+            matched.status = LendingStatus.RETURNED
+            matched.returned_date = returned_date
+            if data.notes:
+                matched.notes = (matched.notes + "\n" if matched.notes else "") + f"Return note: {data.notes}"
+
+            # Calculate final days_lent
+            try:
+                l_d = datetime.strptime(matched.lent_date, "%Y-%m-%d").date()
+                r_d = datetime.strptime(returned_date, "%Y-%m-%d").date()
+                matched.days_lent = max(0, (r_d - l_d).days)
+            except Exception:
+                pass
+            matched.is_overdue = False
+
+            # Restore book location
+            books = await self.list_books()
+            matched_book = next((b for b in books if b.book_id == matched.book_id), None)
+            if matched_book:
+                matched.book_title = matched_book.title
+                matched.book_authors = matched_book.authors
+                matched.book_cover_url = matched_book.cover_url
+
+                matched_book.location = data.return_location or "Home Shelf"
+                matched_book.updated_at = datetime.now(IST).strftime("%Y-%m-%d")
+
+                if self.is_bridge_configured:
+                    book_payload = {
+                        "token": settings.BRIDGE_TOKEN or "",
+                        "action": "update",
+                        "table": "Books",
+                        "keyField": "book_id",
+                        "keyValue": matched_book.book_id,
+                        "record": dict(zip(BOOKS_SCHEMA_COLUMNS, [sanitize_cell_value(v) for v in matched_book.to_sheet_row()])),
+                    }
+                    try:
+                        async with self._client(timeout=15.0) as client:
+                            await client.post(settings.GOOGLE_SHEETS_BRIDGE_URL, json=book_payload)
+                    except Exception as err:
+                        logger.error(f"Error resetting book location on return: {err}")
+
+            if self.is_bridge_configured:
+                lending_payload = {
+                    "token": settings.BRIDGE_TOKEN or "",
+                    "action": "update",
+                    "table": "Lending",
+                    "keyField": "lending_id",
+                    "keyValue": lending_id,
+                    "record": dict(zip(LENDING_COLUMNS, [sanitize_cell_value(v) for v in matched.to_sheet_row().values()])),
+                }
+                try:
+                    async with self._client(timeout=15.0) as client:
+                        await client.post(settings.GOOGLE_SHEETS_BRIDGE_URL, json=lending_payload)
+                except Exception as err:
+                    logger.error(f"Error updating Lending record on return: {err}")
+
+            # Update memory
+            for idx, item in enumerate(self._memory_lending):
+                if item.lending_id == lending_id:
+                    self._memory_lending[idx] = matched
+                    break
+            else:
+                self._memory_lending.append(matched)
+
+            self.cache.clear()
+            return matched
+
+    async def get_active_lending_for_book(self, book_id: str) -> Optional[LendingRecord]:
+        active_list = await self.list_lending(status="ACTIVE")
+        return next((r for r in active_list if r.book_id == book_id), None)
 
 
 sheets_repo = GoogleSheetsRepository()
