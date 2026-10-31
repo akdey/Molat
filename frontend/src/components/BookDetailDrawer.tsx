@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Check, Bookmark, Calendar, MapPin, DollarSign, Tag, BookOpen, Clock, AlertCircle, RefreshCw } from 'lucide-react';
+import { X, Check, Bookmark, Calendar, MapPin, DollarSign, Tag, BookOpen, Clock, AlertCircle, RefreshCw, Edit3 } from 'lucide-react';
 import type { Book, ReadingStatus, BookCondition, ReadingLog } from '../types/book';
 import { useLibraryStore } from '../store/useLibraryStore';
 import { BookCover } from './BookCover';
@@ -18,6 +18,7 @@ export const BookDetailDrawer: React.FC = () => {
   const [condition, setCondition] = useState<BookCondition>('Good');
   const [location, setLocation] = useState<string>('Home Shelf');
   const [notes, setNotes] = useState<string>('');
+  const [isEditing, setIsEditing] = useState<boolean>(false);
   const [logs, setLogs] = useState<ReadingLog[]>([]);
   const [loadingLogs, setLoadingLogs] = useState<boolean>(false);
   const [saving, setSaving] = useState<boolean>(false);
@@ -30,6 +31,7 @@ export const BookDetailDrawer: React.FC = () => {
       setCondition(selectedBook.condition);
       setLocation(selectedBook.location || 'Home Shelf');
       setNotes(selectedBook.notes || '');
+      setIsEditing(false);
       setSaveSuccess(false);
       setErrorMsg(null);
 
@@ -49,6 +51,14 @@ export const BookDetailDrawer: React.FC = () => {
   const saved = Math.max(0, rp - cp);
   const discount = rp > 0 ? Math.round((saved / rp) * 100) : 0;
 
+  const handleCancel = () => {
+    setStatus(selectedBook.reading_status);
+    setCondition(selectedBook.condition);
+    setLocation(selectedBook.location || 'Home Shelf');
+    setNotes(selectedBook.notes || '');
+    setIsEditing(false);
+  };
+
   const handleSave = async () => {
     setSaving(true);
     setErrorMsg(null);
@@ -60,6 +70,7 @@ export const BookDetailDrawer: React.FC = () => {
         notes: notes.trim() || undefined,
       });
       setSaveSuccess(true);
+      setIsEditing(false);
       setTimeout(() => setSaveSuccess(false), 3000);
     } catch (err: any) {
       if (err.message && err.message.includes('401')) {
@@ -155,95 +166,160 @@ export const BookDetailDrawer: React.FC = () => {
             <span>Log Reading Session on This Book</span>
           </button>
 
-          {/* Inline Edit Form */}
+          {/* Status & Location Section */}
           <div className="p-4 rounded-xl border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark space-y-3.5">
-            <h3 className="font-serif text-sm font-medium text-ink dark:text-ink-dark">
-              Status & Location Management
-            </h3>
-
-            <div className="grid grid-cols-2 gap-3">
-              {/* Reading Status */}
-              <div className="space-y-1">
-                <label className="text-3xs uppercase tracking-wider font-medium text-ink-muted">
-                  Reading Status
-                </label>
-                <select
-                  value={status}
-                  onChange={(e) => setStatus(e.target.value as ReadingStatus)}
-                  className="w-full px-2.5 py-1.5 rounded-lg border border-rule dark:border-rule-dark bg-surface-raised dark:bg-surface-dark-raised text-xs text-ink dark:text-ink-dark focus:outline-none focus:border-accent"
+            <div className="flex items-center justify-between">
+              <h3 className="font-serif text-sm font-medium text-ink dark:text-ink-dark">
+                Status & Location
+              </h3>
+              {!isEditing && (
+                <button
+                  type="button"
+                  onClick={() => setIsEditing(true)}
+                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-2xs font-medium text-ink-secondary hover:text-ink dark:hover:text-ink-dark hover:bg-surface-raised dark:hover:bg-surface-dark-raised border border-rule/60 dark:border-rule-dark/60 transition-colors"
                 >
-                  <option value="UNREAD">UNREAD</option>
-                  <option value="READING">READING</option>
-                  <option value="COMPLETED">COMPLETED</option>
-                  <option value="PAUSED">PAUSED</option>
-                  <option value="ABANDONED">ABANDONED</option>
-                </select>
-              </div>
-
-              {/* Condition */}
-              <div className="space-y-1">
-                <label className="text-3xs uppercase tracking-wider font-medium text-ink-muted">
-                  Physical Condition
-                </label>
-                <select
-                  value={condition}
-                  onChange={(e) => setCondition(e.target.value as BookCondition)}
-                  className="w-full px-2.5 py-1.5 rounded-lg border border-rule dark:border-rule-dark bg-surface-raised dark:bg-surface-dark-raised text-xs text-ink dark:text-ink-dark focus:outline-none focus:border-accent"
-                >
-                  <option value="New">New</option>
-                  <option value="Good">Good</option>
-                  <option value="Fair">Fair</option>
-                  <option value="Damaged">Damaged</option>
-                </select>
-              </div>
-            </div>
-
-            {/* Shelf Location */}
-            <div className="space-y-1">
-              <label className="text-3xs uppercase tracking-wider font-medium text-ink-muted flex items-center gap-1">
-                <MapPin size={11} />
-                Shelf Location
-              </label>
-              <input
-                type="text"
-                value={location}
-                onChange={(e) => setLocation(e.target.value)}
-                placeholder="e.g. Home Shelf, Top Rack, Loaned to Rohan"
-                className="w-full px-2.5 py-1.5 rounded-lg border border-rule dark:border-rule-dark bg-surface-raised dark:bg-surface-dark-raised text-xs text-ink dark:text-ink-dark focus:outline-none focus:border-accent"
-              />
-            </div>
-
-            {/* Notes */}
-            <div className="space-y-1">
-              <label className="text-3xs uppercase tracking-wider font-medium text-ink-muted">
-                Notes / Inscription
-              </label>
-              <textarea
-                rows={2}
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                placeholder="Ownership notes, book marks, or quotes..."
-                className="w-full px-2.5 py-1.5 rounded-lg border border-rule dark:border-rule-dark bg-surface-raised dark:bg-surface-dark-raised text-xs text-ink dark:text-ink-dark focus:outline-none focus:border-accent resize-none"
-              />
-            </div>
-
-            <button
-              onClick={handleSave}
-              disabled={saving}
-              className="w-full py-2 rounded-lg bg-accent text-white hover:bg-accent-hover text-xs font-medium transition-colors flex items-center justify-center gap-1.5 shadow-xs"
-            >
-              {saving ? (
-                <>
-                  <RefreshCw size={13} className="animate-spin text-white" />
-                  <span>Saving to Sheets...</span>
-                </>
-              ) : (
-                <>
-                  <Check size={14} />
-                  <span>Save Changes</span>
-                </>
+                  <Edit3 size={12} />
+                  <span>Edit</span>
+                </button>
               )}
-            </button>
+            </div>
+
+            {!isEditing ? (
+              /* Read-only presentation */
+              <div className="space-y-3 text-xs">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <span className="text-3xs uppercase tracking-wider font-medium text-ink-muted block">
+                      Reading Status
+                    </span>
+                    <span className="inline-block mt-1 px-2 py-0.5 rounded text-2xs font-mono font-medium uppercase bg-surface-raised dark:bg-surface-dark-raised border border-rule/60 dark:border-rule-dark/60 text-ink dark:text-ink-dark">
+                      {status}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-3xs uppercase tracking-wider font-medium text-ink-muted block">
+                      Physical Condition
+                    </span>
+                    <span className="inline-block mt-1 text-xs text-ink dark:text-ink-dark font-medium">
+                      {condition}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="pt-2 border-t border-rule/40 dark:border-rule-dark/40 flex items-center gap-1.5 text-xs text-ink-secondary dark:text-ink-dark-secondary">
+                  <MapPin size={13} className="text-ink-muted shrink-0" />
+                  <span>{location || 'Home Shelf'}</span>
+                </div>
+
+                {notes && (
+                  <div className="pt-2 border-t border-rule/40 dark:border-rule-dark/40 text-xs">
+                    <span className="text-3xs uppercase tracking-wider font-medium text-ink-muted block mb-0.5">
+                      Notes / Inscription
+                    </span>
+                    <p className="text-xs text-ink-secondary dark:text-ink-dark-secondary italic whitespace-pre-wrap">
+                      "{notes}"
+                    </p>
+                  </div>
+                )}
+              </div>
+            ) : (
+              /* Active Edit Form */
+              <div className="space-y-3.5">
+                <div className="grid grid-cols-2 gap-3">
+                  {/* Reading Status */}
+                  <div className="space-y-1">
+                    <label className="text-3xs uppercase tracking-wider font-medium text-ink-muted">
+                      Reading Status
+                    </label>
+                    <select
+                      value={status}
+                      onChange={(e) => setStatus(e.target.value as ReadingStatus)}
+                      className="w-full px-2.5 py-1.5 rounded-lg border border-rule dark:border-rule-dark bg-surface-raised dark:bg-surface-dark-raised text-xs text-ink dark:text-ink-dark focus:outline-none focus:border-accent"
+                    >
+                      <option value="UNREAD">UNREAD</option>
+                      <option value="READING">READING</option>
+                      <option value="COMPLETED">COMPLETED</option>
+                      <option value="PAUSED">PAUSED</option>
+                      <option value="ABANDONED">ABANDONED</option>
+                    </select>
+                  </div>
+
+                  {/* Condition */}
+                  <div className="space-y-1">
+                    <label className="text-3xs uppercase tracking-wider font-medium text-ink-muted">
+                      Physical Condition
+                    </label>
+                    <select
+                      value={condition}
+                      onChange={(e) => setCondition(e.target.value as BookCondition)}
+                      className="w-full px-2.5 py-1.5 rounded-lg border border-rule dark:border-rule-dark bg-surface-raised dark:bg-surface-dark-raised text-xs text-ink dark:text-ink-dark focus:outline-none focus:border-accent"
+                    >
+                      <option value="New">New</option>
+                      <option value="Good">Good</option>
+                      <option value="Fair">Fair</option>
+                      <option value="Damaged">Damaged</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Shelf Location */}
+                <div className="space-y-1">
+                  <label className="text-3xs uppercase tracking-wider font-medium text-ink-muted flex items-center gap-1">
+                    <MapPin size={11} />
+                    Shelf Location
+                  </label>
+                  <input
+                    type="text"
+                    value={location}
+                    onChange={(e) => setLocation(e.target.value)}
+                    placeholder="e.g. Home Shelf, Top Rack"
+                    className="w-full px-2.5 py-1.5 rounded-lg border border-rule dark:border-rule-dark bg-surface-raised dark:bg-surface-dark-raised text-xs text-ink dark:text-ink-dark focus:outline-none focus:border-accent"
+                  />
+                </div>
+
+                {/* Notes */}
+                <div className="space-y-1">
+                  <label className="text-3xs uppercase tracking-wider font-medium text-ink-muted">
+                    Notes / Inscription
+                  </label>
+                  <textarea
+                    rows={2}
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    placeholder="Ownership notes, book marks, or quotes..."
+                    className="w-full px-2.5 py-1.5 rounded-lg border border-rule dark:border-rule-dark bg-surface-raised dark:bg-surface-dark-raised text-xs text-ink dark:text-ink-dark focus:outline-none focus:border-accent resize-none"
+                  />
+                </div>
+
+                <div className="flex items-center justify-end gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={handleCancel}
+                    className="px-3 py-1.5 rounded-lg border border-rule dark:border-rule-dark text-xs font-medium text-ink-secondary hover:text-ink transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleSave}
+                    disabled={saving}
+                    className="flex-1 sm:flex-none px-4 py-1.5 rounded-lg bg-accent text-white hover:bg-accent-hover text-xs font-medium transition-colors flex items-center justify-center gap-1.5 shadow-xs"
+                  >
+                    {saving ? (
+                      <>
+                        <RefreshCw size={13} className="animate-spin text-white" />
+                        <span>Saving...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Check size={14} />
+                        <span>Save Changes</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Financial & Audit Details (21 Columns Inspection) */}
