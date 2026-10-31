@@ -181,9 +181,8 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({
             </div>
             <div className="w-full h-1.5 rounded-full bg-rule/50 dark:bg-rule-dark overflow-hidden">
               <div
-                className={`h-full transition-all duration-500 rounded-full ${
-                  todayPages >= dailyGoal ? 'bg-emerald-600' : 'bg-accent'
-                }`}
+                className={`h-full transition-all duration-500 rounded-full ${todayPages >= dailyGoal ? 'bg-emerald-600' : 'bg-accent'
+                  }`}
                 style={{ width: `${goalPercent}%` }}
               />
             </div>
@@ -268,31 +267,31 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({
       {/* 3. FROM YOUR BOOKSHELF (SPOTLIGHT GLANCE) */}
       {spotlightBooks.length > 0 && (
         <section aria-label="Bookshelf Spotlight" className="space-y-3">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="font-serif text-base sm:text-lg font-medium text-ink dark:text-ink-dark">
+          <div className="flex items-center justify-between gap-2">
+            <div className="min-w-0">
+              <h2 className="font-serif text-base sm:text-lg font-medium text-ink dark:text-ink-dark truncate">
                 From Your Bookshelf
               </h2>
-              <p className="text-3xs text-ink-muted">
+              <p className="text-3xs text-ink-muted truncate">
                 Random highlights from your physical collection
               </p>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 shrink-0">
               <button
                 onClick={handleShuffle}
-                className="flex items-center gap-1 px-2.5 py-1 rounded-lg border border-rule/70 dark:border-rule-dark/70 bg-surface dark:bg-surface-dark hover:bg-surface-raised dark:hover:bg-surface-dark-raised text-2xs text-ink-secondary hover:text-ink transition-colors cursor-pointer active:scale-95"
+                className="p-1.5 sm:px-2 sm:py-1 rounded-lg border border-rule/70 dark:border-rule-dark/70 bg-surface dark:bg-surface-dark hover:bg-surface-raised dark:hover:bg-surface-dark-raised text-2xs text-ink-secondary hover:text-ink transition-colors cursor-pointer active:scale-95 flex items-center gap-1"
                 title="Shuffle Random Spotlight"
                 aria-label="Shuffle Spotlight Books"
               >
-                <Shuffle size={11} className="text-accent dark:text-accent-dark" />
-                {/* <span>Shuffle</span> */}
+                <Shuffle size={12} className="text-accent dark:text-accent-dark shrink-0" />
+                <span className="hidden sm:inline">Shuffle</span>
               </button>
               <button
                 onClick={() => setActiveTab('shelf')}
-                className="flex items-center gap-1 text-xs text-accent hover:underline font-medium cursor-pointer"
+                className="flex items-center gap-1 text-xs text-accent hover:underline font-medium cursor-pointer whitespace-nowrap shrink-0"
               >
                 <span>Explore all {totalBooks}</span>
-                <ArrowRight size={13} />
+                <ArrowRight size={13} className="shrink-0" />
               </button>
             </div>
           </div>
@@ -368,20 +367,18 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({
           transition={{ type: 'spring', damping: 20, stiffness: 350 }}
           className="p-3.5 rounded-xl border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark hover:border-accent/40 flex items-center gap-3 transition-colors text-left"
         >
-          <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
-            overdueLentCount > 0 ? 'bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300' : 'bg-accent/10 text-accent'
-          }`}>
+          <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${overdueLentCount > 0 ? 'bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300' : 'bg-accent/10 text-accent'
+            }`}>
             <Handshake size={16} />
           </div>
           <div className="min-w-0 flex-1">
             <div className="flex items-center justify-between gap-1">
               <h3 className="font-serif text-xs font-medium text-ink dark:text-ink-dark">Lent Out Books</h3>
               {activeLentCount > 0 && (
-                <span className={`px-1.5 py-0.2 rounded-full text-3xs font-mono font-semibold ${
-                  overdueLentCount > 0
+                <span className={`px-1.5 py-0.2 rounded-full text-3xs font-mono font-semibold ${overdueLentCount > 0
                     ? 'bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300'
                     : 'bg-surface-raised dark:bg-surface-dark-raised text-ink-muted'
-                }`}>
+                  }`}>
                   {activeLentCount}
                 </span>
               )}
