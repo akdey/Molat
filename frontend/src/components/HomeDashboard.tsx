@@ -16,7 +16,6 @@ import {
 } from 'lucide-react';
 import type { Book, StreakSummary } from '../types/book';
 import { BookCover } from './BookCover';
-import { StatusRibbon } from './StatusRibbon';
 
 interface HomeDashboardProps {
   books: Book[];
@@ -61,10 +60,13 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({
           aria-label="Active Reading Focus"
           className="rounded-2xl border border-rule dark:border-rule-dark bg-surface-raised dark:bg-surface-dark-raised p-4 sm:p-5 shadow-sm space-y-4"
         >
-          {/* Header Strip: Reading Status Ribbon + Streak Pill */}
+          {/* Header Strip: Clean Heading + Streak Pill */}
           <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2.5">
-              <StatusRibbon status="READING" variant="banner" size="sm" />
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-accent animate-pulse" />
+              <h2 className="font-serif text-sm font-medium text-ink dark:text-ink-dark">
+                Continue Reading
+              </h2>
               {activeBooks.length > 1 && (
                 <span className="text-3xs text-ink-muted">
                   (+{activeBooks.length - 1} more in progress)

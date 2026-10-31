@@ -132,7 +132,7 @@ export default function App() {
   const readingBooks = books.filter((b) => b.reading_status === 'READING');
 
   return (
-    <div className="min-h-screen w-full max-w-full overflow-x-hidden bg-canvas dark:bg-canvas-dark text-ink dark:text-ink-dark transition-colors duration-200 pb-24 md:pb-12">
+    <div className="min-h-screen min-h-dvh w-full max-w-full overflow-x-hidden bg-canvas dark:bg-canvas-dark text-ink dark:text-ink-dark transition-colors duration-200 flex flex-col">
       {/* Sticky Header */}
       <header className="sticky top-0 z-30 border-b border-rule dark:border-rule-dark bg-canvas/90 dark:bg-canvas-dark/90 backdrop-blur-md">
         <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between gap-4">
@@ -706,7 +706,7 @@ export default function App() {
         </AnimatePresence>
 
         {/* Subtle Brand & Creator Footer */}
-        <footer className="mt-auto pt-8 pb-24 md:pb-8 text-center border-t border-rule/50 dark:border-rule-dark/50">
+        <footer className="mt-auto pt-6 pb-20 md:pb-6 text-center border-t border-rule/50 dark:border-rule-dark/50">
           <p className="text-3xs text-ink-muted">
             Molat Personal Library &bull; Engineered by{' '}
             <a
@@ -721,44 +721,58 @@ export default function App() {
         </footer>
       </main>
 
-      {/* Center Action Popup on Mobile */}
+      {/* Center Action Bottom Drawer on Mobile */}
       <AnimatePresence>
         {centerMenuOpen && (
-          <div className="fixed inset-0 z-40 md:hidden flex items-end justify-center pb-20 pointer-events-none">
+          <div className="fixed inset-0 z-40 md:hidden flex items-end justify-center">
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.15 }}
-              className="fixed inset-0 bg-black/50 backdrop-blur-xs pointer-events-auto"
+              className="fixed inset-0 bg-black/50 backdrop-blur-xs"
               onClick={() => setCenterMenuOpen(false)}
             />
             <motion.div
-              initial={{ opacity: 0, scale: 0.92, y: 12 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.92, y: 12 }}
-              transition={{ type: 'spring', damping: 25, stiffness: 350 }}
-              className="relative z-10 w-64 bg-canvas dark:bg-canvas-dark border border-rule dark:border-rule-dark rounded-2xl shadow-2xl p-2 space-y-1 pointer-events-auto mb-2"
+              initial={{ y: '100%' }}
+              animate={{ y: 0 }}
+              exit={{ y: '100%' }}
+              transition={{ type: 'spring', damping: 28, stiffness: 320 }}
+              className="relative z-10 w-full bg-canvas dark:bg-canvas-dark border-t border-rule dark:border-rule-dark rounded-t-3xl shadow-2xl p-4 pb-8 space-y-2"
             >
+              <div className="w-10 h-1 bg-ink-muted/30 rounded-full mx-auto mb-2" />
+              <div className="text-center font-serif text-sm font-medium pb-1">
+                Library Actions
+              </div>
               <button
                 onClick={() => {
                   setCenterMenuOpen(false);
                   openQuickLog();
                 }}
-                className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl hover:bg-surface dark:hover:bg-surface-dark text-xs font-medium text-ink dark:text-ink-dark text-left transition-colors min-h-[44px]"
+                className="w-full flex items-center gap-3 p-3 rounded-2xl bg-surface dark:bg-surface-dark border border-rule/60 dark:border-rule-dark/60 text-xs font-medium text-ink dark:text-ink-dark text-left transition-colors"
               >
-                <BookOpen size={16} className="text-accent" />
-                <span>Log Reading Session</span>
+                <div className="w-9 h-9 rounded-xl bg-accent/10 text-accent flex items-center justify-center shrink-0">
+                  <BookOpen size={18} />
+                </div>
+                <div>
+                  <div className="font-medium">Log Reading Session</div>
+                  <div className="text-3xs text-ink-muted">Open bottom drawer to track pages & streak</div>
+                </div>
               </button>
               <button
                 onClick={() => {
                   setCenterMenuOpen(false);
                   setScannerOpen(true);
                 }}
-                className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl hover:bg-surface dark:hover:bg-surface-dark text-xs font-medium text-ink dark:text-ink-dark text-left transition-colors min-h-[44px]"
+                className="w-full flex items-center gap-3 p-3 rounded-2xl bg-surface dark:bg-surface-dark border border-rule/60 dark:border-rule-dark/60 text-xs font-medium text-ink dark:text-ink-dark text-left transition-colors"
               >
-                <Camera size={16} className="text-accent" />
-                <span>Scan ISBN Barcode</span>
+                <div className="w-9 h-9 rounded-xl bg-accent/10 text-accent flex items-center justify-center shrink-0">
+                  <Camera size={18} />
+                </div>
+                <div>
+                  <div className="font-medium">Scan ISBN Barcode</div>
+                  <div className="text-3xs text-ink-muted">Open modal camera to scan book barcode</div>
+                </div>
               </button>
             </motion.div>
           </div>

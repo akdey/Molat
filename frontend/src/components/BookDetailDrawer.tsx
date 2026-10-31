@@ -225,172 +225,183 @@ export const BookDetailDrawer: React.FC = () => {
     <>
       <AnimatePresence>
         {selectedBook && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 md:p-6 overflow-hidden">
+          <div className="fixed inset-0 z-50 flex flex-col justify-end overflow-hidden">
             {/* Backdrop */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              transition={{ duration: 0.18 }}
+              transition={{ duration: 0.2 }}
               onClick={() => setSelectedBook(null)}
               className="fixed inset-0 bg-black/60 backdrop-blur-xs"
             />
 
-            {/* App-Opening Zoom Animation Modal */}
+            {/* Elevated Full-Screen Sheet Canvas (Bit of space on top, minimal on sides) */}
             <motion.div
-              initial={{ opacity: 0, scale: 0.93, y: 12 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.93, y: 12 }}
-              transition={{ type: 'spring', damping: 26, stiffness: 340 }}
-              className="relative z-10 w-full max-w-xl bg-canvas dark:bg-canvas-dark border border-rule dark:border-rule-dark rounded-2xl shadow-2xl flex flex-col overflow-hidden max-h-[90vh] my-auto"
+              initial={{ y: '100%' }}
+              animate={{ y: 0 }}
+              exit={{ y: '100%' }}
+              transition={{ type: 'spring', damping: 28, stiffness: 300 }}
+              className="relative z-10 w-full h-[95vh] sm:h-[93vh] max-w-6xl mx-auto px-1 sm:px-2 md:px-3 flex flex-col"
               role="dialog"
               aria-modal="true"
               aria-labelledby="drawer-title"
             >
-              {/* Clean Molat Header */}
-              <div className="flex items-center justify-between px-5 py-3.5 border-b border-rule dark:border-rule-dark bg-surface/50 dark:bg-surface-dark/50">
-                <div className="flex items-center gap-2">
-                  <span className="font-mono text-2xs uppercase tracking-wider text-accent dark:text-accent-dark font-medium">
-                    {selectedBook.book_id}
-                  </span>
-                </div>
-                <button
-                  onClick={() => setSelectedBook(null)}
-                  className="p-1 rounded-lg text-ink-muted hover:text-ink dark:hover:text-ink-dark hover:bg-surface dark:hover:bg-surface-dark transition-colors"
-                >
-                  <X size={18} />
-                </button>
-              </div>
-
-              {/* Inspector Content */}
-              <div className="p-4 sm:p-6 space-y-5 overflow-y-auto flex-1">
-                {errorMsg && (
-                  <div className="p-3 text-xs rounded-xl bg-red-100 dark:bg-red-950/40 text-red-800 dark:text-red-400 border border-red-200 dark:border-red-900/40 flex items-center gap-2">
-                    <AlertCircle size={15} />
-                    <span>{errorMsg}</span>
-                  </div>
-                )}
-
-                {saveSuccess && (
-                  <div className="p-3 text-xs rounded-xl bg-emerald-100 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900/40 flex items-center gap-2">
-                    <Check size={15} />
-                    <span>Book record updated successfully in Google Sheets!</span>
-                  </div>
-                )}
-
-                {/* 1. HERO BOOK IDENTITY */}
-                <div className="flex gap-4 sm:gap-5 items-start">
-                  <div className="w-24 sm:w-28 shrink-0 flex flex-col items-center gap-2">
-                    <div className="w-full shadow-md rounded-lg overflow-hidden">
-                      <BookCover
-                        title={selectedBook.title}
-                        authors={selectedBook.authors}
-                        coverUrl={selectedBook.cover_url}
-                        readingStatus={status}
-                      />
-                    </div>
-                    {/* Change Cover Single-Line Button */}
-                    <button
-                      type="button"
-                      onClick={() => setCoverModalOpen(true)}
-                      className="w-full whitespace-nowrap py-1 px-2 rounded-lg border border-rule/80 dark:border-rule-dark/80 bg-surface dark:bg-surface-dark hover:bg-surface-raised dark:hover:bg-surface-dark-raised text-3xs font-medium text-ink-secondary hover:text-accent dark:hover:text-accent-dark transition-colors flex items-center justify-center gap-1 shadow-2xs shrink-0"
-                      title="Change or refetch cover edition"
-                    >
-                      <Sparkles size={11} className="text-accent dark:text-accent-dark shrink-0" />
-                      <span className="whitespace-nowrap">Change Cover</span>
-                    </button>
-                  </div>
-
-                  <div className="flex-1 min-w-0 flex flex-col justify-between py-0.5 space-y-2">
-                    <div className="space-y-1">
-                      <h2
-                        id="drawer-title"
-                        className="font-serif text-lg sm:text-xl font-medium text-ink dark:text-ink-dark leading-snug"
-                      >
-                        {selectedBook.title}
-                      </h2>
-                      {selectedBook.subtitle && (
-                        <p className="font-serif text-xs text-ink-secondary dark:text-ink-dark-secondary italic">
-                          {selectedBook.subtitle}
-                        </p>
-                      )}
-                      <p className="text-xs text-ink-secondary dark:text-ink-dark-secondary font-medium">
-                        {selectedBook.authors || 'Unknown author'}
-                      </p>
-
-                      {/* Genre badges */}
-                      {genres.length > 0 && (
-                        <div className="flex flex-wrap gap-1 pt-1">
-                          {genres.map((g, idx) => (
-                            <span
-                              key={idx}
-                              className="px-2 py-0.5 rounded-md bg-surface dark:bg-surface-dark border border-rule/60 dark:border-rule-dark/60 text-3xs font-medium text-ink-secondary"
-                            >
-                              {g}
-                            </span>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Personal Star Rating */}
-                    <div className="pt-1 text-2xs text-ink-muted">
-                      {selectedBook.rating ? (
-                        <span className="inline-flex items-center gap-1 font-mono font-medium text-amber-600 dark:text-amber-400">
-                          <Star size={12} className="fill-amber-400 text-amber-500" />
-                          <span>Personal Rating: {selectedBook.rating}/5</span>
-                        </span>
-                      ) : (
-                        <span className="italic">Unrated volume</span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                {/* 2. PRIMARY ACTION: LOG READING SESSION */}
-                <button
-                  onClick={() => openQuickLog(selectedBook)}
-                  className="w-full py-2.5 px-4 rounded-xl bg-accent hover:bg-accent-hover text-white text-xs font-medium flex items-center justify-center gap-2 shadow-sm transition-all active:scale-98"
-                >
-                  <BookOpen size={16} />
-                  <span>Log Reading Session on This Book</span>
-                </button>
-
-                {/* 3. DYNAMIC SYNOPSIS / ABOUT THE BOOK (Approach A - Zero Sheet Bloat) */}
-                {loadingSynopsis ? (
-                  <div className="p-4 rounded-xl border border-rule/50 dark:border-rule-dark/50 bg-surface/50 dark:bg-surface-dark/50 space-y-2 animate-pulse">
-                    <div className="h-3 w-28 bg-rule/60 rounded" />
-                    <div className="space-y-1.5 pt-1">
-                      <div className="h-2.5 w-full bg-rule/40 rounded" />
-                      <div className="h-2.5 w-4/5 bg-rule/40 rounded" />
-                    </div>
-                  </div>
-                ) : synopsis ? (
-                  <div className="p-4 rounded-xl border border-rule/60 dark:border-rule-dark/60 bg-surface dark:bg-surface-dark space-y-2 shadow-2xs">
-                    <span className="text-3xs uppercase tracking-wider text-ink-muted font-medium flex items-center gap-1.5">
-                      <Quote size={11} className="text-accent" />
-                      About the Work
+              <div className="w-full h-full bg-canvas dark:bg-canvas-dark border-t border-x border-rule dark:border-rule-dark rounded-t-2xl sm:rounded-t-3xl shadow-[0_-16px_50px_rgba(0,0,0,0.35)] flex flex-col overflow-hidden">
+                {/* Clean Molat Header with Volume ID */}
+                <div className="flex items-center justify-between px-4 sm:px-6 py-3.5 border-b border-rule dark:border-rule-dark bg-surface/50 dark:bg-surface-dark/50 shrink-0">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-1 bg-ink-muted/30 rounded-full sm:hidden mr-1" />
+                    <span className="font-mono text-2xs uppercase tracking-wider text-accent dark:text-accent-dark font-medium px-2 py-0.5 rounded-md bg-accent/10 dark:bg-accent/20 border border-accent/20">
+                      {selectedBook.book_id}
                     </span>
-                    <p
-                      className={`font-serif text-xs text-ink-secondary dark:text-ink-dark-secondary italic leading-relaxed whitespace-pre-wrap ${
-                        !expandedSynopsis ? 'line-clamp-5' : ''
-                      }`}
-                    >
-                      "{synopsis}"
-                    </p>
-                    {synopsis.length > 220 && (
-                      <button
-                        type="button"
-                        onClick={() => setExpandedSynopsis(!expandedSynopsis)}
-                        className="text-3xs font-medium text-accent dark:text-accent-dark hover:underline flex items-center gap-0.5 pt-0.5"
-                      >
-                        {expandedSynopsis ? 'Show less' : '... Read more'}
-                      </button>
-                    )}
+                    <span className="text-3xs text-ink-muted hidden sm:inline">Volume Details & Ledger</span>
                   </div>
-                ) : null}
+                  <button
+                    onClick={() => setSelectedBook(null)}
+                    className="p-1.5 rounded-lg text-ink-muted hover:text-ink dark:hover:text-ink-dark hover:bg-surface dark:hover:bg-surface-dark transition-colors"
+                    aria-label="Close book details"
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
 
-                {/* 4. STATUS, SHELF LOCATION & NOTES (EDITABLE IN-PLACE) */}
+                {/* Elevated Canvas Content */}
+                <div className="p-4 sm:p-6 md:p-8 overflow-y-auto flex-1 space-y-6">
+                  {errorMsg && (
+                    <div className="p-3 text-xs rounded-xl bg-red-100 dark:bg-red-950/40 text-red-800 dark:text-red-400 border border-red-200 dark:border-red-900/40 flex items-center gap-2">
+                      <AlertCircle size={15} />
+                      <span>{errorMsg}</span>
+                    </div>
+                  )}
+
+                  {saveSuccess && (
+                    <div className="p-3 text-xs rounded-xl bg-emerald-100 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900/40 flex items-center gap-2">
+                      <Check size={15} />
+                      <span>Book record updated successfully in Google Sheets!</span>
+                    </div>
+                  )}
+
+                  {/* 2-Column Responsive Layout Using Full Space */}
+                  <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
+                    {/* Left Column (Col 5): Identity, Action, Synopsis */}
+                    <div className="md:col-span-5 lg:col-span-4 space-y-5">
+                      {/* 1. HERO BOOK IDENTITY */}
+                      <div className="flex gap-4 sm:gap-5 items-start">
+                        <div className="w-24 sm:w-28 shrink-0 flex flex-col items-center gap-2">
+                          <div className="w-full shadow-md rounded-lg overflow-hidden">
+                            <BookCover
+                              title={selectedBook.title}
+                              authors={selectedBook.authors}
+                              coverUrl={selectedBook.cover_url}
+                              readingStatus={status}
+                            />
+                          </div>
+                          {/* Change Cover Single-Line Button */}
+                          <button
+                            type="button"
+                            onClick={() => setCoverModalOpen(true)}
+                            className="w-full whitespace-nowrap py-1 px-2 rounded-lg border border-rule/80 dark:border-rule-dark/80 bg-surface dark:bg-surface-dark hover:bg-surface-raised dark:hover:bg-surface-dark-raised text-3xs font-medium text-ink-secondary hover:text-accent dark:hover:text-accent-dark transition-colors flex items-center justify-center gap-1 shadow-2xs shrink-0"
+                            title="Change or refetch cover edition"
+                          >
+                            <Sparkles size={11} className="text-accent dark:text-accent-dark shrink-0" />
+                            <span className="whitespace-nowrap">Change Cover</span>
+                          </button>
+                        </div>
+
+                        <div className="flex-1 min-w-0 flex flex-col justify-between py-0.5 space-y-2">
+                          <div className="space-y-1">
+                            <h2
+                              id="drawer-title"
+                              className="font-serif text-lg sm:text-xl font-medium text-ink dark:text-ink-dark leading-snug"
+                            >
+                              {selectedBook.title}
+                            </h2>
+                            {selectedBook.subtitle && (
+                              <p className="font-serif text-xs text-ink-secondary dark:text-ink-dark-secondary italic">
+                                {selectedBook.subtitle}
+                              </p>
+                            )}
+                            <p className="text-xs text-ink-secondary dark:text-ink-dark-secondary font-medium">
+                              {selectedBook.authors || 'Unknown author'}
+                            </p>
+
+                            {/* Genre badges */}
+                            {genres.length > 0 && (
+                              <div className="flex flex-wrap gap-1 pt-1">
+                                {genres.map((g, idx) => (
+                                  <span
+                                    key={idx}
+                                    className="px-2 py-0.5 rounded-md bg-surface dark:bg-surface-dark border border-rule/60 dark:border-rule-dark/60 text-3xs font-medium text-ink-secondary"
+                                  >
+                                    {g}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Personal Star Rating */}
+                          <div className="pt-1 text-2xs text-ink-muted">
+                            {selectedBook.rating ? (
+                              <span className="inline-flex items-center gap-1 font-mono font-medium text-amber-600 dark:text-amber-400">
+                                <Star size={12} className="fill-amber-400 text-amber-500" />
+                                <span>Personal Rating: {selectedBook.rating}/5</span>
+                              </span>
+                            ) : (
+                              <span className="italic">Unrated volume</span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* 2. PRIMARY ACTION: LOG READING SESSION */}
+                      <button
+                        onClick={() => openQuickLog(selectedBook)}
+                        className="w-full py-2.5 px-4 rounded-xl bg-accent hover:bg-accent-hover text-white text-xs font-medium flex items-center justify-center gap-2 shadow-sm transition-all active:scale-98"
+                      >
+                        <BookOpen size={16} />
+                        <span>Log Reading Session on This Book</span>
+                      </button>
+
+                      {/* 3. DYNAMIC SYNOPSIS / ABOUT THE BOOK (Approach A - Zero Sheet Bloat) */}
+                      {loadingSynopsis ? (
+                        <div className="p-4 rounded-xl border border-rule/50 dark:border-rule-dark/50 bg-surface/50 dark:bg-surface-dark/50 space-y-2 animate-pulse">
+                          <div className="h-3 w-28 bg-rule/60 rounded" />
+                          <div className="space-y-1.5 pt-1">
+                            <div className="h-2.5 w-full bg-rule/40 rounded" />
+                            <div className="h-2.5 w-4/5 bg-rule/40 rounded" />
+                          </div>
+                        </div>
+                      ) : synopsis ? (
+                        <div className="p-4 rounded-xl border border-rule/60 dark:border-rule-dark/60 bg-surface dark:bg-surface-dark space-y-2 shadow-2xs">
+                          <span className="text-3xs uppercase tracking-wider text-ink-muted font-medium flex items-center gap-1.5">
+                            <Quote size={11} className="text-accent" />
+                            About the Work
+                          </span>
+                          <p
+                            className={`font-serif text-xs text-ink-secondary dark:text-ink-dark-secondary italic leading-relaxed whitespace-pre-wrap ${
+                              !expandedSynopsis ? 'line-clamp-5' : ''
+                            }`}
+                          >
+                            "{synopsis}"
+                          </p>
+                          {synopsis.length > 220 && (
+                            <button
+                              type="button"
+                              onClick={() => setExpandedSynopsis(!expandedSynopsis)}
+                              className="text-3xs font-medium text-accent dark:text-accent-dark hover:underline flex items-center gap-0.5 pt-0.5"
+                            >
+                              {expandedSynopsis ? 'Show less' : '... Read more'}
+                            </button>
+                          )}
+                        </div>
+                      ) : null}
+                    </div>
+
+                    {/* Right Column (Col 7): Status/Location, Volume Ledger, History */}
+                    <div className="md:col-span-7 lg:col-span-8 space-y-5">
+                      {/* 4. STATUS, SHELF LOCATION & NOTES (EDITABLE IN-PLACE) */}
                 <div className="p-4 rounded-xl border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark space-y-3 shadow-2xs">
                   <div className="flex items-center justify-between">
                     <h3 className="font-serif text-xs font-medium uppercase tracking-wider text-ink-muted">
@@ -672,6 +683,9 @@ export const BookDetailDrawer: React.FC = () => {
                       ))}
                     </div>
                   )}
+                </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </motion.div>

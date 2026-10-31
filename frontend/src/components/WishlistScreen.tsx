@@ -101,7 +101,7 @@ export const WishlistScreen: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 flex-1 flex flex-col">
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -243,7 +243,7 @@ export const WishlistScreen: React.FC = () => {
 
       {/* Wishlist Items List */}
       {wishlist.length === 0 ? (
-        <div className="py-20 text-center text-ink-muted">
+        <div className="py-20 flex-1 flex items-center justify-center text-center text-ink-muted">
           Your acquisition wishlist is empty. Add titles you are hunting for in bookshops!
         </div>
       ) : (
