@@ -625,12 +625,12 @@ export default function App() {
 
               {/* Facet Filters */}
               <div className="space-y-1.5">
-                <div className="grid grid-cols-2 gap-1.5 sm:flex sm:flex-wrap sm:items-center sm:gap-2">
+                <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
                   {/* Reading Status Filter */}
                   <select
                     value={statusFilter}
                     onChange={(e) => setStatusFilter(e.target.value)}
-                    className="w-full sm:w-auto text-xs py-1.5 px-2.5 rounded-lg border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark text-ink dark:text-ink-dark focus:outline-none focus:border-accent truncate cursor-pointer min-h-[36px]"
+                    className="flex-1 sm:flex-initial sm:w-auto text-xs py-1.5 px-2.5 rounded-lg border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark text-ink dark:text-ink-dark focus:outline-none focus:border-accent truncate cursor-pointer min-h-[36px]"
                     title="Filter by Reading Status"
                   >
                     <option value="ALL">All Status</option>
@@ -642,15 +642,49 @@ export default function App() {
                   </select>
 
                   {/* Genre Filter Popover with Multi-Select Checkboxes */}
-                  <GenreFilterPopover allGenres={allGenres} books={books} />
+                  <div className="flex-1 sm:flex-initial min-w-0 sm:w-auto">
+                    <GenreFilterPopover allGenres={allGenres} books={books} />
+                  </div>
 
-                  {/* Shelf Sort Selector */}
-                  <div className="relative inline-flex items-center w-full sm:w-auto">
+                  {/* Shelf Sort Selector - Icon Only Button */}
+                  <div className="relative shrink-0">
+                    <div
+                      className={`h-9 w-9 rounded-lg border flex items-center justify-center transition-colors ${
+                        sortBy !== 'default'
+                          ? 'border-accent bg-accent/10 text-accent dark:text-accent-dark'
+                          : 'border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark text-ink-secondary hover:text-ink'
+                      }`}
+                      title={
+                        sortBy === 'default'
+                          ? 'Sort Bookshelf'
+                          : `Sorted: ${
+                              sortBy === 'title_asc'
+                                ? 'Title (A → Z)'
+                                : sortBy === 'title_desc'
+                                ? 'Title (Z → A)'
+                                : sortBy === 'author_asc'
+                                ? 'Author (A → Z)'
+                                : sortBy === 'recent'
+                                ? 'Recently Added'
+                                : sortBy === 'rating_desc'
+                                ? 'Rating'
+                                : sortBy === 'pub_year_desc'
+                                ? 'Year (Newest)'
+                                : 'Year (Oldest)'
+                            }`
+                      }
+                    >
+                      <ArrowUpDown size={14} />
+                      {sortBy !== 'default' && (
+                        <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-accent" />
+                      )}
+                    </div>
                     <select
                       value={sortBy}
                       onChange={(e) => setSortBy(e.target.value as any)}
-                      className="w-full sm:w-auto text-xs py-1.5 pl-2.5 pr-7 rounded-lg border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark text-ink dark:text-ink-dark focus:outline-none focus:border-accent truncate cursor-pointer min-h-[36px] appearance-none"
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                       title="Sort Bookshelf"
+                      aria-label="Sort Bookshelf"
                     >
                       <option value="default">Default Order</option>
                       <option value="title_asc">Title (A → Z)</option>
@@ -661,7 +695,6 @@ export default function App() {
                       <option value="pub_year_desc">Year (Newest First)</option>
                       <option value="pub_year_asc">Year (Oldest First)</option>
                     </select>
-                    <ArrowUpDown size={12} className="absolute right-2.5 pointer-events-none text-ink-muted" />
                   </div>
 
                   {(search || statusFilter !== 'ALL' || genreFilter !== 'ALL' || selectedGenres.length > 0 || conditionFilter !== 'ALL' || sortBy !== 'default') && (
@@ -674,7 +707,7 @@ export default function App() {
                         setConditionFilter('ALL');
                         setSortBy('default');
                       }}
-                      className="col-span-2 sm:col-auto px-2 py-1 text-2xs text-ink-muted hover:text-accent underline transition-colors self-center cursor-pointer"
+                      className="shrink-0 px-2 py-1 text-2xs text-ink-muted hover:text-accent underline transition-colors self-center cursor-pointer whitespace-nowrap"
                     >
                       Reset filters
                     </button>
