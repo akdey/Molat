@@ -262,29 +262,31 @@ export const WhatsAppReminderModal: React.FC<WhatsAppReminderModalProps> = ({
               ))}
             </div>
 
-            {/* AI Custom Prompt Bar (Optional Instructions) */}
-            <form onSubmit={handleCustomAiGenerate} className="flex items-center gap-1.5">
-              <input
-                type="text"
-                value={customPrompt}
-                onChange={(e) => setCustomPrompt(e.target.value)}
-                placeholder="Custom instruction (e.g. mention book club, offer to swap...)"
-                className="flex-1 px-3 py-1.5 rounded-xl border border-rule dark:border-rule-dark bg-surface-raised dark:bg-surface-dark-raised text-xs text-ink dark:text-ink-dark focus:outline-none focus:border-accent h-9"
-              />
-              <button
-                type="submit"
-                disabled={isGenerating}
-                className="h-9 px-3 rounded-xl bg-surface dark:bg-surface-dark border border-rule dark:border-rule-dark hover:border-accent/40 text-ink text-xs font-medium flex items-center gap-1.5 transition-colors cursor-pointer shrink-0"
-                title="Polish message with AI"
-              >
-                {isGenerating ? (
-                  <RefreshCw size={13} className="animate-spin text-accent" />
-                ) : (
-                  <Sparkles size={13} className="text-accent" />
-                )}
-                <span className="hidden sm:inline">Refine</span>
-              </button>
-            </form>
+            {/* AI Custom Prompt Bar: Only visible when Gemini Nano (window.ai) is actively supported */}
+            {aiStatus.supported && aiStatus.state === 'readily' && (
+              <form onSubmit={handleCustomAiGenerate} className="flex items-center gap-1.5">
+                <input
+                  type="text"
+                  value={customPrompt}
+                  onChange={(e) => setCustomPrompt(e.target.value)}
+                  placeholder="Custom instruction for Gemini Nano..."
+                  className="flex-1 px-3 py-1.5 rounded-xl border border-rule dark:border-rule-dark bg-surface-raised dark:bg-surface-dark-raised text-xs text-ink dark:text-ink-dark focus:outline-none focus:border-accent h-9"
+                />
+                <button
+                  type="submit"
+                  disabled={isGenerating}
+                  className="h-9 px-3 rounded-xl bg-surface dark:bg-surface-dark border border-rule dark:border-rule-dark hover:border-accent/40 text-ink text-xs font-medium flex items-center gap-1.5 transition-colors cursor-pointer shrink-0"
+                  title="Polish message with Gemini Nano"
+                >
+                  {isGenerating ? (
+                    <RefreshCw size={13} className="animate-spin text-accent" />
+                  ) : (
+                    <Sparkles size={13} className="text-accent" />
+                  )}
+                  <span className="hidden sm:inline">Refine</span>
+                </button>
+              </form>
+            )}
 
             {/* Editable Message Preview Card */}
             <div className="space-y-1.5">
