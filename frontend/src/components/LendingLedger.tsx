@@ -11,10 +11,12 @@ import {
   Clock,
   Plus,
   RefreshCw,
+  Sparkles,
 } from 'lucide-react';
 import type { LendingRecord } from '../types/book';
 import { useLibraryStore } from '../store/useLibraryStore';
 import { BookCover } from './BookCover';
+import { WhatsAppReminderModal } from './WhatsAppReminderModal';
 
 export const LendingLedger: React.FC = () => {
   const {
@@ -27,6 +29,7 @@ export const LendingLedger: React.FC = () => {
 
   const [activeSubTab, setActiveSubTab] = useState<'active' | 'returned'>('active');
   const [returningId, setReturningId] = useState<string | null>(null);
+  const [reminderRecord, setReminderRecord] = useState<LendingRecord | null>(null);
 
   const activeRecords = lendingRecords.filter((r) => r.status === 'ACTIVE');
   const returnedRecords = lendingRecords.filter((r) => r.status === 'RETURNED');
@@ -263,12 +266,12 @@ export const LendingLedger: React.FC = () => {
                     {record.borrower_contact && (
                       <button
                         type="button"
-                        onClick={() => openWhatsAppReminder(record)}
-                        className="flex-1 py-1.5 px-2.5 rounded-xl border border-emerald-600/30 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 text-xs font-medium flex items-center justify-center gap-1.5 transition-colors"
-                        title="Send gentle WhatsApp reminder message"
+                        onClick={() => setReminderRecord(record)}
+                        className="flex-1 py-1.5 px-2.5 rounded-xl border border-emerald-600/30 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 text-xs font-medium flex items-center justify-center gap-1.5 transition-colors cursor-pointer active:scale-98"
+                        title="Draft reminder with AI tones and send via WhatsApp"
                       >
                         <MessageCircle size={14} className="text-emerald-600 dark:text-emerald-400" />
-                        <span>WhatsApp Ping</span>
+                        <span>AI WhatsApp Ping</span>
                       </button>
                     )}
 
@@ -340,6 +343,12 @@ export const LendingLedger: React.FC = () => {
           )}
         </>
       )}
+
+      {/* AI WhatsApp Follow-Up Composer Modal */}
+      <WhatsAppReminderModal
+        record={reminderRecord}
+        onClose={() => setReminderRecord(null)}
+      />
     </div>
   );
 };

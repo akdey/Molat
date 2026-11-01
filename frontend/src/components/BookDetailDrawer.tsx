@@ -21,10 +21,11 @@ import {
   RotateCcw,
   Phone,
 } from 'lucide-react';
-import type { Book, ReadingStatus, BookCondition, ReadingLog } from '../types/book';
+import type { Book, ReadingStatus, BookCondition, ReadingLog, LendingRecord } from '../types/book';
 import { useLibraryStore } from '../store/useLibraryStore';
 import { BookCover } from './BookCover';
 import { CoverPickerModal } from './CoverPickerModal';
+import { WhatsAppReminderModal } from './WhatsAppReminderModal';
 import { fetchReadingLogs } from '../api/client';
 
 // In-memory synopsis cache so previously fetched blurbs load with 0ms delay
@@ -146,6 +147,7 @@ export const BookDetailDrawer: React.FC = () => {
   const [saveSuccess, setSaveSuccess] = useState<boolean>(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [coverModalOpen, setCoverModalOpen] = useState<boolean>(false);
+  const [reminderRecord, setReminderRecord] = useState<LendingRecord | null>(null);
 
   useEffect(() => {
     if (selectedBook) {
@@ -426,11 +428,12 @@ export const BookDetailDrawer: React.FC = () => {
                                 {activeLend.borrower_contact && (
                                   <button
                                     type="button"
-                                    onClick={openWhatsApp}
-                                    className="flex-1 py-1 px-2 rounded-lg border border-emerald-600/30 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 text-3xs font-medium flex items-center justify-center gap-1 transition-colors"
+                                    onClick={() => setReminderRecord(activeLend)}
+                                    className="flex-1 py-1 px-2 rounded-lg border border-emerald-600/30 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 text-3xs font-medium flex items-center justify-center gap-1 transition-colors cursor-pointer active:scale-98"
+                                    title="Open AI WhatsApp Reminder composer"
                                   >
                                     <MessageCircle size={12} className="text-emerald-600 dark:text-emerald-400" />
-                                    <span>WhatsApp Ping</span>
+                                    <span>AI WhatsApp Ping</span>
                                   </button>
                                 )}
                                 <button
@@ -814,6 +817,12 @@ export const BookDetailDrawer: React.FC = () => {
           }}
         />
       )}
+
+      {/* AI WhatsApp Follow-Up Composer Modal */}
+      <WhatsAppReminderModal
+        record={reminderRecord}
+        onClose={() => setReminderRecord(null)}
+      />
     </>
   );
 };
