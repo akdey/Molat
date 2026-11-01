@@ -493,9 +493,8 @@ export const BookDetailDrawer: React.FC = () => {
                             About the Work
                           </span>
                           <p
-                            className={`font-serif text-xs text-ink-secondary dark:text-ink-dark-secondary italic leading-relaxed whitespace-pre-wrap ${
-                              !expandedSynopsis ? 'line-clamp-5' : ''
-                            }`}
+                            className={`font-serif text-xs text-ink-secondary dark:text-ink-dark-secondary italic leading-relaxed whitespace-pre-wrap ${!expandedSynopsis ? 'line-clamp-5' : ''
+                              }`}
                           >
                             "{synopsis}"
                           </p>
@@ -515,288 +514,288 @@ export const BookDetailDrawer: React.FC = () => {
                     {/* Right Column (Col 7): Status/Location, Volume Ledger, History */}
                     <div className="md:col-span-7 lg:col-span-8 space-y-5">
                       {/* 4. STATUS, SHELF LOCATION & NOTES (EDITABLE IN-PLACE) */}
-                <div className="p-4 rounded-xl border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark space-y-3 shadow-2xs">
-                  <div className="flex items-center justify-between">
-                    <h3 className="font-serif text-xs font-medium uppercase tracking-wider text-ink-muted">
-                      Status & Shelf Placement
-                    </h3>
-                    {!isEditing && (
-                      <button
-                        type="button"
-                        onClick={() => setIsEditing(true)}
-                        className="flex items-center gap-1 px-2 py-0.5 rounded-lg text-2xs font-medium text-ink-secondary hover:text-ink hover:bg-surface-raised transition-colors"
-                      >
-                        <Edit3 size={11} />
-                        <span>Edit</span>
-                      </button>
-                    )}
-                  </div>
-
-                  {!isEditing ? (
-                    <div className="space-y-2.5 text-xs">
-                      {/* Simple Clean Status & Shelf Location Grid */}
-                      <div className="grid grid-cols-2 gap-3 p-3 rounded-xl bg-surface-raised/70 dark:bg-surface-dark-raised/70 border border-rule/40 dark:border-rule-dark/40">
-                        <div className="space-y-1">
-                          <span className="text-3xs uppercase tracking-wider text-ink-muted block font-medium">
-                            Reading Status
-                          </span>
-                          <div className="flex items-center gap-1.5 pt-0.5">
-                            <span
-                              className={`w-2 h-2 rounded-full shrink-0 ${
-                                status === 'READING'
-                                  ? 'bg-accent animate-pulse'
-                                  : status === 'COMPLETED'
-                                  ? 'bg-emerald-600'
-                                  : status === 'PAUSED'
-                                  ? 'bg-purple-500'
-                                  : status === 'ABANDONED'
-                                  ? 'bg-rose-500'
-                                  : 'bg-ink-muted/60'
-                              }`}
-                            />
-                            <span className="font-serif text-xs font-medium text-ink dark:text-ink-dark">
-                              {status === 'READING'
-                                ? 'Currently Reading'
-                                : status === 'COMPLETED'
-                                ? 'Completed'
-                                : status === 'PAUSED'
-                                ? 'Paused'
-                                : status === 'ABANDONED'
-                                ? 'Abandoned'
-                                : 'To Be Read'}
-                            </span>
-                          </div>
+                      <div className="p-4 rounded-xl border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark space-y-3 shadow-2xs">
+                        <div className="flex items-center justify-between">
+                          <h3 className="font-serif text-xs font-medium uppercase tracking-wider text-ink-muted">
+                            Status & Shelf Placement
+                          </h3>
+                          {!isEditing && (
+                            <button
+                              type="button"
+                              onClick={() => setIsEditing(true)}
+                              className="flex items-center gap-1 px-2 py-0.5 rounded-lg text-2xs font-medium text-ink-secondary hover:text-ink hover:bg-surface-raised transition-colors"
+                            >
+                              <Edit3 size={11} />
+                              <span>Edit</span>
+                            </button>
+                          )}
                         </div>
 
-                        <div className="space-y-1">
-                          <span className="text-3xs uppercase tracking-wider text-ink-muted block font-medium flex items-center gap-1">
-                            <MapPin size={11} className="text-accent shrink-0" />
-                            Shelf Location
-                          </span>
-                          <span className="font-serif text-xs font-medium text-ink dark:text-ink-dark truncate block pt-0.5">
-                            {location || 'Home Shelf'}
-                          </span>
+                        {!isEditing ? (
+                          <div className="space-y-2.5 text-xs">
+                            {/* Simple Clean Status & Shelf Location Grid */}
+                            <div className="grid grid-cols-2 gap-3 p-3 rounded-xl bg-surface-raised/70 dark:bg-surface-dark-raised/70 border border-rule/40 dark:border-rule-dark/40">
+                              <div className="space-y-1">
+                                <span className="text-3xs uppercase tracking-wider text-ink-muted block font-medium">
+                                  Reading Status
+                                </span>
+                                <div className="flex items-center gap-1.5 pt-0.5">
+                                  <span
+                                    className={`w-2 h-2 rounded-full shrink-0 ${status === 'READING'
+                                        ? 'bg-accent animate-pulse'
+                                        : status === 'COMPLETED'
+                                          ? 'bg-emerald-600'
+                                          : status === 'PAUSED'
+                                            ? 'bg-purple-500'
+                                            : status === 'ABANDONED'
+                                              ? 'bg-rose-500'
+                                              : 'bg-ink-muted/60'
+                                      }`}
+                                  />
+                                  <span className="font-serif text-xs font-medium text-ink dark:text-ink-dark">
+                                    {status === 'READING'
+                                      ? 'Currently Reading'
+                                      : status === 'COMPLETED'
+                                        ? 'Completed'
+                                        : status === 'PAUSED'
+                                          ? 'Paused'
+                                          : status === 'ABANDONED'
+                                            ? 'Abandoned'
+                                            : 'To Be Read'}
+                                  </span>
+                                </div>
+                              </div>
+
+                              <div className="space-y-1">
+                                <span className="text-3xs uppercase tracking-wider text-ink-muted block font-medium flex items-center gap-1">
+                                  <MapPin size={11} className="text-accent shrink-0" />
+                                  Shelf Location
+                                </span>
+                                <span className="font-serif text-xs font-medium text-ink dark:text-ink-dark truncate block pt-0.5">
+                                  {location || 'Home Shelf'}
+                                </span>
+                              </div>
+                            </div>
+
+                            {notes && (
+                              <div className="pt-2 border-t border-rule/40 dark:border-rule-dark/40 text-xs">
+                                <span className="text-3xs uppercase tracking-wider font-medium text-ink-muted block mb-0.5">
+                                  Inscription / Personal Notes
+                                </span>
+                                <p className="text-xs text-ink-secondary dark:text-ink-dark-secondary italic whitespace-pre-wrap">
+                                  "{notes}"
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          /* Inline Edit Form */
+                          <div className="space-y-3 pt-1">
+                            {/* Top Row: Reading Status & Shelf Location side-by-side */}
+                            <div className="grid grid-cols-2 gap-2.5">
+                              <div className="space-y-1">
+                                <label className="text-3xs uppercase tracking-wider font-medium text-ink-muted">
+                                  Reading Status
+                                </label>
+                                <select
+                                  value={status}
+                                  onChange={(e) => setStatus(e.target.value as ReadingStatus)}
+                                  className="w-full px-2.5 py-1.5 rounded-lg border border-rule dark:border-rule-dark bg-surface-raised dark:bg-surface-dark-raised text-xs text-ink dark:text-ink-dark focus:outline-none focus:border-accent"
+                                >
+                                  <option value="UNREAD">UNREAD</option>
+                                  <option value="READING">READING</option>
+                                  <option value="COMPLETED">COMPLETED</option>
+                                  <option value="PAUSED">PAUSED</option>
+                                  <option value="ABANDONED">ABANDONED</option>
+                                </select>
+                              </div>
+
+                              <div className="space-y-1">
+                                <label className="text-3xs uppercase tracking-wider font-medium text-ink-muted flex items-center gap-1">
+                                  <MapPin size={11} className="text-accent" />
+                                  Shelf Location
+                                </label>
+                                <input
+                                  type="text"
+                                  value={location}
+                                  onChange={(e) => setLocation(e.target.value)}
+                                  placeholder="e.g. Home Shelf, Top Rack"
+                                  className="w-full px-2.5 py-1.5 rounded-lg border border-rule dark:border-rule-dark bg-surface-raised dark:bg-surface-dark-raised text-xs text-ink dark:text-ink-dark focus:outline-none focus:border-accent"
+                                />
+                              </div>
+                            </div>
+
+                            <div className="space-y-1">
+                              <label className="text-3xs uppercase tracking-wider font-medium text-ink-muted">
+                                Physical Condition
+                              </label>
+                              <select
+                                value={condition}
+                                onChange={(e) => setCondition(e.target.value as BookCondition)}
+                                className="w-full px-2.5 py-1.5 rounded-lg border border-rule dark:border-rule-dark bg-surface-raised dark:bg-surface-dark-raised text-xs text-ink dark:text-ink-dark focus:outline-none focus:border-accent"
+                              >
+                                <option value="New">New</option>
+                                <option value="Good">Good</option>
+                                <option value="Fair">Fair</option>
+                                <option value="Damaged">Damaged</option>
+                              </select>
+                            </div>
+
+                            <div className="space-y-1">
+                              <label className="text-3xs uppercase tracking-wider font-medium text-ink-muted">
+                                Notes / Inscription
+                              </label>
+                              <textarea
+                                rows={2}
+                                value={notes}
+                                onChange={(e) => setNotes(e.target.value)}
+                                placeholder="Ownership inscription, notes, or quotes..."
+                                className="w-full px-2.5 py-1.5 rounded-lg border border-rule dark:border-rule-dark bg-surface-raised dark:bg-surface-dark-raised text-xs text-ink dark:text-ink-dark focus:outline-none focus:border-accent resize-none"
+                              />
+                            </div>
+
+                            <div className="flex items-center justify-end gap-2 pt-1">
+                              <button
+                                type="button"
+                                onClick={handleCancel}
+                                className="px-3 py-1.5 rounded-lg border border-rule dark:border-rule-dark text-xs font-medium text-ink-secondary hover:text-ink transition-colors"
+                              >
+                                Cancel
+                              </button>
+                              <button
+                                type="button"
+                                onClick={handleSave}
+                                disabled={saving}
+                                className="px-4 py-1.5 rounded-lg bg-accent text-white hover:bg-accent-hover text-xs font-medium transition-colors flex items-center gap-1.5 shadow-xs"
+                              >
+                                {saving ? (
+                                  <>
+                                    <RefreshCw size={12} className="animate-spin text-white" />
+                                    <span>Saving...</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <Check size={13} />
+                                    <span>Save Changes</span>
+                                  </>
+                                )}
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* 5. VOLUME & EDITION DETAILS (PHYSICAL CONDITION DISPLAYED ONCE HERE) */}
+                      <div className="p-4 rounded-xl border border-rule dark:border-rule-dark bg-surface-raised dark:bg-surface-dark-raised space-y-2.5 text-xs shadow-2xs">
+                        <h3 className="font-serif text-xs font-medium uppercase tracking-wider text-ink-muted">
+                          Volume & Edition Details
+                        </h3>
+
+                        <div className="divide-y divide-rule/50 dark:divide-rule-dark/50 space-y-2">
+                          <div className="flex justify-between items-center pt-1">
+                            <span className="text-ink-muted">Publisher</span>
+                            <span className="font-medium text-ink dark:text-ink-dark">
+                              {selectedBook.publisher || 'Unspecified'}
+                            </span>
+                          </div>
+
+                          <div className="flex justify-between items-center pt-2">
+                            <span className="text-ink-muted">Publication Year</span>
+                            <span className="font-mono text-ink dark:text-ink-dark">
+                              {selectedBook.publication_year || '—'}
+                            </span>
+                          </div>
+
+                          <div className="flex justify-between items-center pt-2">
+                            <span className="text-ink-muted">Language</span>
+                            <span className="text-ink dark:text-ink-dark">
+                              {selectedBook.language || 'English'}
+                            </span>
+                          </div>
+
+                          {/* Physical Condition shown ONCE cleanly in the edition ledger */}
+                          <div className="flex justify-between items-center pt-2">
+                            <span className="text-ink-muted">Physical Condition</span>
+                            <span className="font-medium text-ink dark:text-ink-dark">
+                              {condition || 'Good'}
+                            </span>
+                          </div>
+
+                          {selectedBook.rp !== undefined && selectedBook.rp > 0 && (
+                            <div className="flex justify-between items-center pt-2">
+                              <span className="text-ink-muted">Retail Price (MRP)</span>
+                              <span className="font-mono font-medium text-ink dark:text-ink-dark">
+                                ₹{selectedBook.rp.toLocaleString('en-IN')}
+                              </span>
+                            </div>
+                          )}
+
+                          {selectedBook.purchase_price !== undefined && selectedBook.purchase_price > 0 && (
+                            <div className="flex justify-between items-center pt-2">
+                              <span className="text-ink-muted">Acquisition Cost</span>
+                              <span className="font-mono text-ink-secondary dark:text-ink-dark-secondary">
+                                ₹{selectedBook.purchase_price.toLocaleString('en-IN')}
+                              </span>
+                            </div>
+                          )}
+
+                          <div className="flex justify-between items-center pt-2">
+                            <span className="text-ink-muted">Acquired Date</span>
+                            <span className="font-mono text-ink dark:text-ink-dark">
+                              {selectedBook.purchase_date || '—'}
+                            </span>
+                          </div>
+
+                          {(selectedBook.isbn_13 || selectedBook.isbn_10) && (
+                            <div className="flex justify-between items-center pt-2">
+                              <span className="text-ink-muted">ISBN (13 / 10)</span>
+                              <span className="font-mono text-ink dark:text-ink-dark text-3xs">
+                                {[selectedBook.isbn_13, selectedBook.isbn_10].filter(Boolean).join(' • ')}
+                              </span>
+                            </div>
+                          )}
                         </div>
                       </div>
 
-                      {notes && (
-                        <div className="pt-2 border-t border-rule/40 dark:border-rule-dark/40 text-xs">
-                          <span className="text-3xs uppercase tracking-wider font-medium text-ink-muted block mb-0.5">
-                            Inscription / Personal Notes
-                          </span>
-                          <p className="text-xs text-ink-secondary dark:text-ink-dark-secondary italic whitespace-pre-wrap">
-                            "{notes}"
+                      {/* 6. PAST READING SESSIONS */}
+                      <div className="space-y-2.5">
+                        <h3 className="font-serif text-sm font-medium text-ink dark:text-ink-dark flex items-center gap-1.5">
+                          <Clock size={14} className="text-accent" />
+                          <span>Session History ({logs.length})</span>
+                        </h3>
+
+                        {loadingLogs ? (
+                          <p className="text-2xs text-ink-muted italic">Loading sessions...</p>
+                        ) : logs.length === 0 ? (
+                          <p className="text-2xs text-ink-muted italic p-3 rounded-xl border border-rule/50 bg-surface/50 text-center">
+                            No reading sessions recorded for this volume yet.
                           </p>
-                        </div>
-                      )}
-                    </div>
-                  ) : (
-                    /* Inline Edit Form */
-                    <div className="space-y-3 pt-1">
-                      {/* Top Row: Reading Status & Shelf Location side-by-side */}
-                      <div className="grid grid-cols-2 gap-2.5">
-                        <div className="space-y-1">
-                          <label className="text-3xs uppercase tracking-wider font-medium text-ink-muted">
-                            Reading Status
-                          </label>
-                          <select
-                            value={status}
-                            onChange={(e) => setStatus(e.target.value as ReadingStatus)}
-                            className="w-full px-2.5 py-1.5 rounded-lg border border-rule dark:border-rule-dark bg-surface-raised dark:bg-surface-dark-raised text-xs text-ink dark:text-ink-dark focus:outline-none focus:border-accent"
-                          >
-                            <option value="UNREAD">UNREAD</option>
-                            <option value="READING">READING</option>
-                            <option value="COMPLETED">COMPLETED</option>
-                            <option value="PAUSED">PAUSED</option>
-                            <option value="ABANDONED">ABANDONED</option>
-                          </select>
-                        </div>
-
-                        <div className="space-y-1">
-                          <label className="text-3xs uppercase tracking-wider font-medium text-ink-muted flex items-center gap-1">
-                            <MapPin size={11} className="text-accent" />
-                            Shelf Location
-                          </label>
-                          <input
-                            type="text"
-                            value={location}
-                            onChange={(e) => setLocation(e.target.value)}
-                            placeholder="e.g. Home Shelf, Top Rack"
-                            className="w-full px-2.5 py-1.5 rounded-lg border border-rule dark:border-rule-dark bg-surface-raised dark:bg-surface-dark-raised text-xs text-ink dark:text-ink-dark focus:outline-none focus:border-accent"
-                          />
-                        </div>
-                      </div>
-
-                      <div className="space-y-1">
-                        <label className="text-3xs uppercase tracking-wider font-medium text-ink-muted">
-                          Physical Condition
-                        </label>
-                        <select
-                          value={condition}
-                          onChange={(e) => setCondition(e.target.value as BookCondition)}
-                          className="w-full px-2.5 py-1.5 rounded-lg border border-rule dark:border-rule-dark bg-surface-raised dark:bg-surface-dark-raised text-xs text-ink dark:text-ink-dark focus:outline-none focus:border-accent"
-                        >
-                          <option value="New">New</option>
-                          <option value="Good">Good</option>
-                          <option value="Fair">Fair</option>
-                          <option value="Damaged">Damaged</option>
-                        </select>
-                      </div>
-
-                      <div className="space-y-1">
-                        <label className="text-3xs uppercase tracking-wider font-medium text-ink-muted">
-                          Notes / Inscription
-                        </label>
-                        <textarea
-                          rows={2}
-                          value={notes}
-                          onChange={(e) => setNotes(e.target.value)}
-                          placeholder="Ownership inscription, notes, or quotes..."
-                          className="w-full px-2.5 py-1.5 rounded-lg border border-rule dark:border-rule-dark bg-surface-raised dark:bg-surface-dark-raised text-xs text-ink dark:text-ink-dark focus:outline-none focus:border-accent resize-none"
-                        />
-                      </div>
-
-                      <div className="flex items-center justify-end gap-2 pt-1">
-                        <button
-                          type="button"
-                          onClick={handleCancel}
-                          className="px-3 py-1.5 rounded-lg border border-rule dark:border-rule-dark text-xs font-medium text-ink-secondary hover:text-ink transition-colors"
-                        >
-                          Cancel
-                        </button>
-                        <button
-                          type="button"
-                          onClick={handleSave}
-                          disabled={saving}
-                          className="px-4 py-1.5 rounded-lg bg-accent text-white hover:bg-accent-hover text-xs font-medium transition-colors flex items-center gap-1.5 shadow-xs"
-                        >
-                          {saving ? (
-                            <>
-                              <RefreshCw size={12} className="animate-spin text-white" />
-                              <span>Saving...</span>
-                            </>
-                          ) : (
-                            <>
-                              <Check size={13} />
-                              <span>Save Changes</span>
-                            </>
-                          )}
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* 5. VOLUME & EDITION DETAILS (PHYSICAL CONDITION DISPLAYED ONCE HERE) */}
-                <div className="p-4 rounded-xl border border-rule dark:border-rule-dark bg-surface-raised dark:bg-surface-dark-raised space-y-2.5 text-xs shadow-2xs">
-                  <h3 className="font-serif text-xs font-medium uppercase tracking-wider text-ink-muted">
-                    Volume & Edition Details
-                  </h3>
-
-                  <div className="divide-y divide-rule/50 dark:divide-rule-dark/50 space-y-2">
-                    <div className="flex justify-between items-center pt-1">
-                      <span className="text-ink-muted">Publisher</span>
-                      <span className="font-medium text-ink dark:text-ink-dark">
-                        {selectedBook.publisher || 'Unspecified'}
-                      </span>
-                    </div>
-
-                    <div className="flex justify-between items-center pt-2">
-                      <span className="text-ink-muted">Publication Year</span>
-                      <span className="font-mono text-ink dark:text-ink-dark">
-                        {selectedBook.publication_year || '—'}
-                      </span>
-                    </div>
-
-                    <div className="flex justify-between items-center pt-2">
-                      <span className="text-ink-muted">Language</span>
-                      <span className="text-ink dark:text-ink-dark">
-                        {selectedBook.language || 'English'}
-                      </span>
-                    </div>
-
-                    {/* Physical Condition shown ONCE cleanly in the edition ledger */}
-                    <div className="flex justify-between items-center pt-2">
-                      <span className="text-ink-muted">Physical Condition</span>
-                      <span className="font-medium text-ink dark:text-ink-dark">
-                        {condition || 'Good'}
-                      </span>
-                    </div>
-
-                    {selectedBook.rp !== undefined && selectedBook.rp > 0 && (
-                      <div className="flex justify-between items-center pt-2">
-                        <span className="text-ink-muted">Retail Price (MRP)</span>
-                        <span className="font-mono font-medium text-ink dark:text-ink-dark">
-                          ₹{selectedBook.rp.toLocaleString('en-IN')}
-                        </span>
-                      </div>
-                    )}
-
-                    {selectedBook.purchase_price !== undefined && selectedBook.purchase_price > 0 && (
-                      <div className="flex justify-between items-center pt-2">
-                        <span className="text-ink-muted">Acquisition Cost</span>
-                        <span className="font-mono text-ink-secondary dark:text-ink-dark-secondary">
-                          ₹{selectedBook.purchase_price.toLocaleString('en-IN')}
-                        </span>
-                      </div>
-                    )}
-
-                    <div className="flex justify-between items-center pt-2">
-                      <span className="text-ink-muted">Acquired Date</span>
-                      <span className="font-mono text-ink dark:text-ink-dark">
-                        {selectedBook.purchase_date || '—'}
-                      </span>
-                    </div>
-
-                    {(selectedBook.isbn_13 || selectedBook.isbn_10) && (
-                      <div className="flex justify-between items-center pt-2">
-                        <span className="text-ink-muted">ISBN (13 / 10)</span>
-                        <span className="font-mono text-ink dark:text-ink-dark text-3xs">
-                          {[selectedBook.isbn_13, selectedBook.isbn_10].filter(Boolean).join(' • ')}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* 6. PAST READING SESSIONS */}
-                <div className="space-y-2.5">
-                  <h3 className="font-serif text-sm font-medium text-ink dark:text-ink-dark flex items-center gap-1.5">
-                    <Clock size={14} className="text-accent" />
-                    <span>Session History ({logs.length})</span>
-                  </h3>
-
-                  {loadingLogs ? (
-                    <p className="text-2xs text-ink-muted italic">Loading sessions...</p>
-                  ) : logs.length === 0 ? (
-                    <p className="text-2xs text-ink-muted italic p-3 rounded-xl border border-rule/50 bg-surface/50 text-center">
-                      No reading sessions recorded for this volume yet.
-                    </p>
-                  ) : (
-                    <div className="space-y-2 max-h-48 overflow-y-auto">
-                      {logs.map((log) => (
-                        <div
-                          key={log.log_id}
-                          className="p-3 rounded-xl border border-rule/60 dark:border-rule-dark/60 bg-surface dark:bg-surface-dark space-y-1 text-xs"
-                        >
-                          <div className="flex items-center justify-between">
-                            <span className="font-mono text-2xs text-ink-muted">
-                              {log.session_date}
-                            </span>
-                            <span className="font-mono text-accent dark:text-accent-dark font-medium">
-                              +{log.pages_read} pages ({log.duration_minutes}m)
-                            </span>
+                        ) : (
+                          <div className="space-y-2 max-h-48 overflow-y-auto">
+                            {logs.map((log) => (
+                              <div
+                                key={log.log_id}
+                                className="p-3 rounded-xl border border-rule/60 dark:border-rule-dark/60 bg-surface dark:bg-surface-dark space-y-1 text-xs"
+                              >
+                                <div className="flex items-center justify-between">
+                                  <span className="font-mono text-2xs text-ink-muted">
+                                    {log.session_date}
+                                  </span>
+                                  <span className="font-mono text-accent dark:text-accent-dark font-medium">
+                                    +{log.pages_read} pages
+                                    {/* ({log.duration_minutes}m) */}
+                                  </span>
+                                </div>
+                                {log.session_note && (
+                                  <p className="text-2xs text-ink-secondary dark:text-ink-dark-secondary italic">
+                                    "{log.session_note}"
+                                  </p>
+                                )}
+                              </div>
+                            ))}
                           </div>
-                          {log.session_note && (
-                            <p className="text-2xs text-ink-secondary dark:text-ink-dark-secondary italic">
-                              "{log.session_note}"
-                            </p>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
