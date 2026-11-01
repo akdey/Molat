@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, Handshake, Check, AlertCircle, RefreshCw, Calendar, User, Phone, FileText } from 'lucide-react';
+import { X, Handshake, Check, AlertCircle, RefreshCw, Calendar, User, Phone, FileText, BookUser } from 'lucide-react';
 import { useLibraryStore } from '../store/useLibraryStore';
 
 export const LendBookDrawer: React.FC = () => {
@@ -12,6 +12,7 @@ export const LendBookDrawer: React.FC = () => {
     closeLendModal,
     lendBookRecord,
     setKeyModalOpen,
+    addToast,
   } = useLibraryStore();
 
   const [selectedBookId, setSelectedBookId] = useState<string>('');
@@ -48,6 +49,37 @@ export const LendBookDrawer: React.FC = () => {
       }
     }
   }, [lendingModalOpen, lendingModalBook, books]);
+
+  const handlePickContact = async () => {
+    try {
+      if ('contacts' in navigator && 'select' in (navigator as any).contacts) {
+        const props = ['name', 'tel'];
+        const contacts = await (navigator as any).contacts.select(props, { multiple: false });
+        if (contacts && contacts.length > 0) {
+          const contact = contacts[0];
+          const pickedName = Array.isArray(contact.name) ? contact.name[0] : (contact.name || '');
+          const pickedTel = Array.isArray(contact.tel) ? contact.tel[0] : (contact.tel || '');
+
+          if (pickedName) {
+            setBorrowerName(pickedName);
+          }
+          if (pickedTel) {
+            setBorrowerContact(pickedTel);
+          }
+          addToast(`Imported ${pickedName || 'contact'} from phonebook!`, 'success');
+        }
+      } else {
+        addToast(
+          'Contact picker is supported on mobile devices (Android / Chrome). On other devices, please enter details manually.',
+          'info'
+        );
+      }
+    } catch (err: any) {
+      if (err?.name !== 'AbortError' && err?.name !== 'SecurityError') {
+        console.warn('Contact picker error:', err);
+      }
+    }
+  };
 
   const applyDuePreset = (days: number | null) => {
     if (days === null) {
@@ -178,38 +210,67 @@ export const LendBookDrawer: React.FC = () => {
                 </select>
               </div>
 
-              {/* Borrower Name */}
-              <div className="space-y-1">
-                <label className="text-3xs uppercase tracking-wider font-medium text-ink-muted flex items-center gap-1">
-                  <User size={11} className="text-accent" />
-                  Borrower's Name *
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={borrowerName}
-                  onChange={(e) => setBorrowerName(e.target.value)}
-                  placeholder="e.g. Rahul Sharma"
-                  className="w-full px-3 py-2 rounded-xl border border-rule dark:border-rule-dark bg-surface-raised dark:bg-surface-dark-raised text-xs text-ink dark:text-ink-dark focus:outline-none focus:border-accent"
-                />
-              </div>
+              {/* Borrower Details Section with Contact Picker */}
+              <div className="space-y-3 pt-1">
+                <div className="flex items-center justify-between">
+                  <span className="text-3xs uppercase tracking-wider font-semibold text-ink-muted flex items-center gap-1">
+                    <User size={12} className="text-accent" />
+                    Borrower Details
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handlePickContact}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-accent/30 dark:border-accent-dark/30 bg-accent/10 dark:bg-accent/20 hover:bg-accent/20 text-accent dark:text-accent-dark text-3xs font-medium transition-all active:scale-95 cursor-pointer shadow-2xs"
+                    title="Import name & phone from device contacts"
+                  >
+                    <BookUser size={13} />
+                    <span>Choose from Contacts</span>
+                  </button>
+                </div>
 
-              {/* Borrower Contact (Phone / Handle) */}
-              <div className="space-y-1">
-                <label className="text-3xs uppercase tracking-wider font-medium text-ink-muted flex items-center gap-1">
-                  <Phone size={11} className="text-accent" />
-                  Borrower Contact / WhatsApp Number (Optional)
-                </label>
-                <input
-                  type="text"
-                  value={borrowerContact}
-                  onChange={(e) => setBorrowerContact(e.target.value)}
-                  placeholder="e.g. +91 98765 43210 or email"
-                  className="w-full px-3 py-2 rounded-xl border border-rule dark:border-rule-dark bg-surface-raised dark:bg-surface-dark-raised text-xs text-ink dark:text-ink-dark focus:outline-none focus:border-accent"
-                />
-                <p className="text-3xs text-ink-muted">
-                  Adding a phone number enables 1-click WhatsApp follow-up reminders.
-                </p>
+                {/* Borrower Name */}
+                <div className="space-y-1">
+                  <label className="text-3xs uppercase tracking-wider font-medium text-ink-muted">
+                    Borrower's Name *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={borrowerName}
+                    onChange={(e) => setBorrowerName(e.target.value)}
+                    placeholder="e.g. Rahul Sharma"
+                    className="w-full px-3 py-2 rounded-xl border border-rule dark:border-rule-dark bg-surface-raised dark:bg-surface-dark-raised text-xs text-ink dark:text-ink-dark focus:outline-none focus:border-accent"
+                  />
+                </div>
+
+                {/* Borrower Contact (Phone / Handle) */}
+                <div className="space-y-1">
+                  <label className="text-3xs uppercase tracking-wider font-medium text-ink-muted flex items-center gap-1">
+                    <Phone size={11} className="text-accent" />
+                    Borrower Contact / WhatsApp Number (Optional)
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={borrowerContact}
+                      onChange={(e) => setBorrowerContact(e.target.value)}
+                      placeholder="e.g. +91 98765 43210"
+                      className="w-full pl-3 pr-10 py-2 rounded-xl border border-rule dark:border-rule-dark bg-surface-raised dark:bg-surface-dark-raised text-xs text-ink dark:text-ink-dark focus:outline-none focus:border-accent"
+                    />
+                    <button
+                      type="button"
+                      onClick={handlePickContact}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-lg text-ink-muted hover:text-accent hover:bg-surface transition-colors cursor-pointer"
+                      title="Select from device phonebook"
+                      aria-label="Pick contact from phonebook"
+                    >
+                      <BookUser size={15} />
+                    </button>
+                  </div>
+                  <p className="text-3xs text-ink-muted">
+                    Pick from phonebook or type manually. Enables 1-click WhatsApp follow-up reminders.
+                  </p>
+                </div>
               </div>
 
               {/* Dates Row: Lent Date & Due Date */}
