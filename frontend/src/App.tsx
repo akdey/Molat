@@ -24,6 +24,7 @@ import {
   PieChart,
   X,
   Handshake,
+  ArrowUpDown,
 } from 'lucide-react';
 
 import { StreakBanner } from './components/StreakBanner';
@@ -56,6 +57,8 @@ export default function App() {
     setActiveTab,
     viewMode,
     setViewMode,
+    sortBy,
+    setSortBy,
     search,
     setSearch,
     statusFilter,
@@ -162,6 +165,34 @@ export default function App() {
       (b.location && b.location.toLowerCase().includes(q))
     );
   });
+
+  // Sort filtered books based on user selected criteria
+  const sortedBooks = React.useMemo(() => {
+    const list = [...filteredBooks];
+    switch (sortBy) {
+      case 'title_asc':
+        return list.sort((a, b) => a.title.localeCompare(b.title));
+      case 'title_desc':
+        return list.sort((a, b) => b.title.localeCompare(a.title));
+      case 'author_asc':
+        return list.sort((a, b) => (a.authors || '').localeCompare(b.authors || ''));
+      case 'recent':
+        return list.sort((a, b) => {
+          const keyA = a.created_at || a.book_id;
+          const keyB = b.created_at || b.book_id;
+          return keyB.localeCompare(keyA, undefined, { numeric: true });
+        });
+      case 'rating_desc':
+        return list.sort((a, b) => (b.rating || 0) - (a.rating || 0));
+      case 'pub_year_desc':
+        return list.sort((a, b) => (b.publication_year || 0) - (a.publication_year || 0));
+      case 'pub_year_asc':
+        return list.sort((a, b) => (a.publication_year || 9999) - (b.publication_year || 9999));
+      case 'default':
+      default:
+        return list;
+    }
+  }, [filteredBooks, sortBy]);
 
   const readingBooks = books.filter((b) => b.reading_status === 'READING');
 
@@ -613,7 +644,27 @@ export default function App() {
                   {/* Genre Filter Popover with Multi-Select Checkboxes */}
                   <GenreFilterPopover allGenres={allGenres} books={books} />
 
-                  {(search || statusFilter !== 'ALL' || genreFilter !== 'ALL' || selectedGenres.length > 0 || conditionFilter !== 'ALL') && (
+                  {/* Shelf Sort Selector */}
+                  <div className="relative inline-flex items-center w-full sm:w-auto">
+                    <select
+                      value={sortBy}
+                      onChange={(e) => setSortBy(e.target.value as any)}
+                      className="w-full sm:w-auto text-xs py-1.5 pl-2.5 pr-7 rounded-lg border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark text-ink dark:text-ink-dark focus:outline-none focus:border-accent truncate cursor-pointer min-h-[36px] appearance-none"
+                      title="Sort Bookshelf"
+                    >
+                      <option value="default">Default Order</option>
+                      <option value="title_asc">Title (A → Z)</option>
+                      <option value="title_desc">Title (Z → A)</option>
+                      <option value="author_asc">Author (A → Z)</option>
+                      <option value="recent">Recently Added</option>
+                      <option value="rating_desc">Rating (Highest First)</option>
+                      <option value="pub_year_desc">Year (Newest First)</option>
+                      <option value="pub_year_asc">Year (Oldest First)</option>
+                    </select>
+                    <ArrowUpDown size={12} className="absolute right-2.5 pointer-events-none text-ink-muted" />
+                  </div>
+
+                  {(search || statusFilter !== 'ALL' || genreFilter !== 'ALL' || selectedGenres.length > 0 || conditionFilter !== 'ALL' || sortBy !== 'default') && (
                     <button
                       onClick={() => {
                         setSearch('');
@@ -621,6 +672,7 @@ export default function App() {
                         setGenreFilter('ALL');
                         clearSelectedGenres();
                         setConditionFilter('ALL');
+                        setSortBy('default');
                       }}
                       className="col-span-2 sm:col-auto px-2 py-1 text-2xs text-ink-muted hover:text-accent underline transition-colors self-center cursor-pointer"
                     >
@@ -690,6 +742,7 @@ export default function App() {
                     setStatusFilter('ALL');
                     setGenreFilter('ALL');
                     setConditionFilter('ALL');
+                    setSortBy('default');
                   }}
                   className="text-xs text-accent underline"
                 >
@@ -697,9 +750,9 @@ export default function App() {
                 </button>
               </div>
             ) : viewMode === 'spine' ? (
-              <SpineView books={filteredBooks} />
+              <SpineView books={sortedBooks} />
             ) : viewMode === 'table' ? (
-              <FinancialTable books={filteredBooks} portfolio={portfolio} />
+              <FinancialTable books={sortedBooks} portfolio={portfolio} />
             ) : (
               /* Cover Grid View across 6 viewports:
                  Small Mobile: 2-col (gap-2.5)
@@ -710,7 +763,7 @@ export default function App() {
                  Wide Desktop: 7-col
               */
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-2.5 sm:gap-3.5">
-                {filteredBooks.map((book) => (
+                {sortedBooks.map((book) => (
                   <motion.article
                     key={book.book_id}
                     onClick={() => setSelectedBook(book)}

@@ -24,7 +24,17 @@ import {
   loginUser,
 } from '../api/client';
 
-export interface Toast {
+export type ShelfSortOption =
+  | 'default'
+  | 'title_asc'
+  | 'title_desc'
+  | 'author_asc'
+  | 'recent'
+  | 'rating_desc'
+  | 'pub_year_desc'
+  | 'pub_year_asc';
+
+interface Toast {
   id: string;
   message: string;
   type: 'success' | 'error' | 'info';
@@ -43,6 +53,7 @@ interface LibraryState {
   // Navigation & View Mode
   activeTab: 'home' | 'shelf' | 'tracker' | 'wishlist' | 'maintenance' | 'insights' | 'lending';
   viewMode: 'grid' | 'spine' | 'table';
+  sortBy: ShelfSortOption;
   
   // Filters & Search
   search: string;
@@ -70,6 +81,7 @@ interface LibraryState {
   // Setters & Actions
   setActiveTab: (tab: 'home' | 'shelf' | 'tracker' | 'wishlist' | 'maintenance' | 'insights' | 'lending') => void;
   setViewMode: (mode: 'grid' | 'spine' | 'table') => void;
+  setSortBy: (sortBy: ShelfSortOption) => void;
   setSearch: (search: string) => void;
   setStatusFilter: (status: string) => void;
   setGenreFilter: (genre: string) => void;
@@ -117,6 +129,7 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
   
   activeTab: 'home',
   viewMode: 'grid',
+  sortBy: 'default',
   
   search: '',
   statusFilter: 'ALL',
@@ -140,6 +153,7 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
 
   setActiveTab: (tab) => set({ activeTab: tab }),
   setViewMode: (mode) => set({ viewMode: mode }),
+  setSortBy: (sortBy) => set({ sortBy }),
   setSearch: (search) => set({ search }),
   setStatusFilter: (statusFilter) => set({ statusFilter }),
   setGenreFilter: (genreFilter) => set({ genreFilter }),
