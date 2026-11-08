@@ -74,19 +74,19 @@ function getIntensityLabel(intensity: number): string {
   }
 }
 
-// Warm Literary Amber palette (Candlelight, parchment, and burnished gold)
+// GitHub canonical green scale (high contrast against light wheatish cream & dark canvas)
 export function getIntensityClass(intensity: number): string {
   switch (intensity) {
     case 1:
-      return 'bg-[#fef3c7] dark:bg-[#451a03] border border-[#fde68a]/60 dark:border-[#78350f]/60';
+      return 'bg-[#9be9a8] dark:bg-[#0e4429] border border-[#7bc96f]/40 dark:border-[#006d32]/30';
     case 2:
-      return 'bg-[#fcd34d] dark:bg-[#78350f] border border-[#f59e0b]/50 dark:border-[#b45309]/50';
+      return 'bg-[#40c463] dark:bg-[#006d32] border border-[#30a14e]/40 dark:border-[#26a641]/30';
     case 3:
-      return 'bg-[#f59e0b] dark:bg-[#b45309] border border-[#d97706]/60 dark:border-[#d97706]/50';
+      return 'bg-[#30a14e] dark:bg-[#26a641] border border-[#216e39]/40 dark:border-[#39d353]/30';
     case 4:
-      return 'bg-[#b45309] dark:bg-[#f59e0b] border border-[#78350f] dark:border-[#fcd34d]';
+      return 'bg-[#216e39] dark:bg-[#39d353] border border-[#1b5e20]/40 dark:border-[#56d364]/40';
     default:
-      return 'bg-[#f1ede6] dark:bg-[#1a1816] border border-[#e4ded5] dark:border-[#2d2822]/60';
+      return 'bg-[#ebedf0] dark:bg-[#161b22] border border-black/5 dark:border-[#21262d]/70';
   }
 }
 
@@ -690,7 +690,7 @@ export const HeatmapScreen: React.FC = () => {
             />
           </button>
 
-          {/* Clean Less -> More Warm Amber Legend */}
+          {/* GitHub Classic Green Legend */}
           <div className="flex items-center gap-1.5 self-end sm:self-auto font-sans">
             <span className="text-3xs">Less</span>
             {[0, 1, 2, 3, 4].map((lvl) => (
