@@ -1,7 +1,8 @@
 import React from 'react';
-import { BookOpen, Clock, Calendar, ChevronRight, Bookmark } from 'lucide-react';
+import { BookOpen, Clock, Calendar, ChevronRight, Bookmark, Smartphone, ExternalLink } from 'lucide-react';
 import { useLibraryStore } from '../store/useLibraryStore';
 import { BookCover } from './BookCover';
+import { extractEcopyUrl } from './BookDetailDrawer';
 
 export const ActiveReadingCard: React.FC = () => {
   const { books, streakSummary, openQuickLog, setSelectedBook } = useLibraryStore();
@@ -11,6 +12,9 @@ export const ActiveReadingCard: React.FC = () => {
 
   const primaryBook = activeBooks[0];
   const velocity = streakSummary?.reading_velocity_pages_per_day || 0;
+  const attachedEcopy = extractEcopyUrl(primaryBook.notes);
+  const cleanIsbn = (primaryBook.isbn_13 || primaryBook.isbn_10 || '').replace(/[^0-9X]/gi, '');
+  const ecopyHref = attachedEcopy || (cleanIsbn ? `https://openlibrary.org/isbn/${cleanIsbn}` : null);
 
   return (
     <section aria-label="Currently Reading" className="space-y-2.5">
@@ -87,13 +91,28 @@ export const ActiveReadingCard: React.FC = () => {
                 </span>
               </div>
 
-              <button
-                onClick={() => openQuickLog(primaryBook)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface dark:bg-surface-dark border border-rule dark:border-rule-dark hover:bg-rule/40 text-xs font-medium text-ink dark:text-ink-dark transition-colors"
-              >
-                <span>+ Log Pages</span>
-                <ChevronRight size={13} />
-              </button>
+              <div className="flex items-center gap-1.5">
+                {ecopyHref && (
+                  <a
+                    href={ecopyHref}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark hover:border-accent/40 text-xs font-medium text-ink dark:text-ink-dark transition-colors cursor-pointer"
+                    title="Read digital e-copy on the go"
+                  >
+                    <Smartphone size={13} className="text-accent" />
+                    <span>E-Copy</span>
+                  </a>
+                )}
+
+                <button
+                  onClick={() => openQuickLog(primaryBook)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface dark:bg-surface-dark border border-rule dark:border-rule-dark hover:bg-rule/40 text-xs font-medium text-ink dark:text-ink-dark transition-colors cursor-pointer"
+                >
+                  <span>+ Log Pages</span>
+                  <ChevronRight size={13} />
+                </button>
+              </div>
             </div>
           </div>
         </div>

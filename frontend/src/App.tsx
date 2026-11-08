@@ -25,6 +25,7 @@ import {
   X,
   Handshake,
   ArrowUpDown,
+  Dices,
 } from 'lucide-react';
 
 import { StreakBanner } from './components/StreakBanner';
@@ -44,6 +45,7 @@ import { LibraryInsights } from './components/LibraryInsights';
 import { HomeDashboard } from './components/HomeDashboard';
 import { LendBookDrawer } from './components/LendBookDrawer';
 import { LendingLedger } from './components/LendingLedger';
+import { PickNextReadModal } from './components/PickNextReadModal';
 
 export default function App() {
   const {
@@ -74,6 +76,9 @@ export default function App() {
     openQuickLog,
     openLendModal,
     lendingRecords,
+    pickNextModalOpen,
+    setPickNextModalOpen,
+    updateBookDetails,
     setScannerOpen,
     setKeyModalOpen,
     loadAllData,
@@ -402,6 +407,17 @@ export default function App() {
                     <button
                       onClick={() => {
                         setHeaderMenuOpen(false);
+                        setPickNextModalOpen(true);
+                      }}
+                      className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-surface dark:hover:bg-surface-dark text-xs font-medium transition-colors text-left"
+                    >
+                      <Dices size={14} className="text-accent dark:text-accent-dark" />
+                      <span>Pick My Next Read</span>
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        setHeaderMenuOpen(false);
                         setScannerOpen(true);
                       }}
                       className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-surface dark:hover:bg-surface-dark text-xs font-medium transition-colors text-left"
@@ -621,6 +637,16 @@ export default function App() {
                     </button>
                   ))}
                 </div>
+
+                {/* Pick Next Read Button */}
+                <button
+                  onClick={() => setPickNextModalOpen(true)}
+                  className="shrink-0 flex items-center gap-1.5 px-2.5 sm:px-3 h-10 rounded-xl border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark hover:bg-surface-raised dark:hover:bg-surface-dark-raised text-xs font-medium text-ink transition-colors cursor-pointer active:scale-95 shadow-2xs"
+                  title="Pick My Next Read from Unread Stack"
+                >
+                  <Dices size={15} className="text-accent" />
+                  <span className="hidden sm:inline">Pick Next</span>
+                </button>
               </div>
 
               {/* Facet Filters */}
@@ -1050,6 +1076,20 @@ export default function App() {
       <BarcodeScannerModal />
       <LendBookDrawer />
       <KeySettingsModal />
+      <PickNextReadModal
+        isOpen={pickNextModalOpen}
+        onClose={() => setPickNextModalOpen(false)}
+        books={books}
+        onStartReading={async (book) => {
+          try {
+            await updateBookDetails(book.book_id, { reading_status: 'READING' });
+            openQuickLog(book);
+          } catch (err) {
+            console.error('Failed to transition book to reading:', err);
+          }
+        }}
+        onOpenDetails={(book) => setSelectedBook(book)}
+      />
       <ToastContainer />
     </div>
   );

@@ -15,6 +15,8 @@ import {
   ShieldCheck,
   Handshake,
   Shuffle,
+  Dices,
+  Sparkles,
 } from 'lucide-react';
 import type { Book, StreakSummary } from '../types/book';
 import { BookCover } from './BookCover';
@@ -38,7 +40,7 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({
   const activeBooks = books.filter((b) => b.reading_status === 'READING');
   const primaryBook = activeBooks[0];
 
-  const { lendingRecords } = useLibraryStore();
+  const { lendingRecords, setPickNextModalOpen } = useLibraryStore();
   const activeLentCount = lendingRecords.filter((r) => r.status === 'ACTIVE').length;
   const overdueLentCount = lendingRecords.filter((r) => r.status === 'ACTIVE' && r.is_overdue).length;
 
@@ -263,6 +265,35 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({
           </div>
         </div>
       </section>
+
+      {/* 2.5 TBR SERENDIPITY / PICK MY NEXT READ */}
+      {unreadBooks > 0 && (
+        <section
+          aria-label="Pick Next Read"
+          className="p-3.5 sm:p-4 rounded-2xl border border-accent/25 dark:border-accent-dark/30 bg-accent-subtle/50 dark:bg-accent-dark-subtle/20 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-accent text-white flex items-center justify-center shrink-0 shadow-xs">
+              <Dices size={20} />
+            </div>
+            <div>
+              <h3 className="font-serif text-sm sm:text-base font-medium text-ink dark:text-ink-dark">
+                Ready for your next read?
+              </h3>
+              <p className="text-3xs text-ink-muted">
+                You have {unreadBooks} unread volume{unreadBooks === 1 ? '' : 's'} waiting on your shelves.
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => setPickNextModalOpen(true)}
+            className="px-3.5 py-2 rounded-xl bg-accent hover:bg-accent-hover text-white text-xs font-medium flex items-center justify-center gap-1.5 shadow-xs transition-all active:scale-98 self-start sm:self-auto shrink-0 cursor-pointer"
+          >
+            <Sparkles size={13} />
+            <span>Pick Next Read</span>
+          </button>
+        </section>
+      )}
 
       {/* 3. FROM YOUR BOOKSHELF (SPOTLIGHT GLANCE) */}
       {spotlightBooks.length > 0 && (

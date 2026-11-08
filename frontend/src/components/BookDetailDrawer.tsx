@@ -20,6 +20,10 @@ import {
   MessageCircle,
   RotateCcw,
   Phone,
+  Globe,
+  ExternalLink,
+  Smartphone,
+  BookOpenCheck,
 } from 'lucide-react';
 import type { Book, ReadingStatus, BookCondition, ReadingLog, LendingRecord } from '../types/book';
 import { useLibraryStore } from '../store/useLibraryStore';
@@ -30,6 +34,19 @@ import { fetchReadingLogs } from '../api/client';
 
 // In-memory synopsis cache so previously fetched blurbs load with 0ms delay
 const synopsisCache = new Map<string, string>();
+
+export function extractEcopyUrl(notesText?: string): string | null {
+  if (!notesText) return null;
+  const taggedMatch = notesText.match(/\[(?:ecopy|ebook|drive|pdf):\s*(https?:\/\/[^\s\]]+)\]/i);
+  if (taggedMatch) return taggedMatch[1];
+  const genericMatch = notesText.match(/https?:\/\/[^\s]+/i);
+  return genericMatch ? genericMatch[0] : null;
+}
+
+export function cleanNotesExcludingEcopy(notesText?: string): string {
+  if (!notesText) return '';
+  return notesText.replace(/\[(?:ecopy|ebook|drive|pdf):\s*https?:\/\/[^\s\]]+\]/gi, '').trim();
+}
 
 async function fetchDynamicSynopsis(
   isbn?: string,
@@ -134,6 +151,7 @@ export const BookDetailDrawer: React.FC = () => {
   const [condition, setCondition] = useState<BookCondition>('Good');
   const [location, setLocation] = useState<string>('Home Shelf');
   const [notes, setNotes] = useState<string>('');
+  const [ecopyUrl, setEcopyUrl] = useState<string>('');
   const [isEditing, setIsEditing] = useState<boolean>(false);
 
   const [synopsis, setSynopsis] = useState<string | null>(null);
@@ -154,7 +172,8 @@ export const BookDetailDrawer: React.FC = () => {
       setStatus(selectedBook.reading_status);
       setCondition(selectedBook.condition);
       setLocation(selectedBook.location || 'Home Shelf');
-      setNotes(selectedBook.notes || '');
+      setNotes(cleanNotesExcludingEcopy(selectedBook.notes));
+      setEcopyUrl(extractEcopyUrl(selectedBook.notes) || '');
       setIsEditing(false);
       setSaveSuccess(false);
       setErrorMsg(null);
@@ -202,7 +221,8 @@ export const BookDetailDrawer: React.FC = () => {
     setStatus(selectedBook.reading_status);
     setCondition(selectedBook.condition);
     setLocation(selectedBook.location || 'Home Shelf');
-    setNotes(selectedBook.notes || '');
+    setNotes(cleanNotesExcludingEcopy(selectedBook.notes));
+    setEcopyUrl(extractEcopyUrl(selectedBook.notes) || '');
     setIsEditing(false);
   };
 
@@ -211,11 +231,21 @@ export const BookDetailDrawer: React.FC = () => {
     setSaving(true);
     setErrorMsg(null);
     try {
+      let combinedNotes = notes.trim();
+      if (ecopyUrl.trim()) {
+        const cleaned = cleanNotesExcludingEcopy(combinedNotes);
+        combinedNotes = cleaned
+          ? `${cleaned}\n[ecopy: ${ecopyUrl.trim()}]`
+          : `[ecopy: ${ecopyUrl.trim()}]`;
+      } else {
+        combinedNotes = cleanNotesExcludingEcopy(combinedNotes);
+      }
+
       await updateBookDetails(selectedBook.book_id, {
         reading_status: status,
         condition,
         location: location.trim() || undefined,
-        notes: notes.trim() || undefined,
+        notes: combinedNotes || undefined,
       });
       setSaveSuccess(true);
       setIsEditing(false);
@@ -477,7 +507,95 @@ export const BookDetailDrawer: React.FC = () => {
                         );
                       })()}
 
-                      {/* 3. DYNAMIC SYNOPSIS / ABOUT THE BOOK (Approach A - Zero Sheet Bloat) */}
+                      {/* 3. DIGITAL READING & TRAVEL E-COPY */}
+                      {(() => {
+                        const cleanIsbn = (selectedBook.isbn_13 || selectedBook.isbn_10 || '').replace(/[^0-9X]/gi, '');
+                        const attachedUrl = extractEcopyUrl(selectedBook.notes);
+
+                        return (
+                          <div className="p-3.5 rounded-xl border border-rule/70 dark:border-rule-dark/70 bg-surface dark:bg-surface-dark space-y-2.5 shadow-2xs">
+                            <div className="flex items-center justify-between">
+                              <span className="text-3xs uppercase tracking-wider text-ink-muted font-medium flex items-center gap-1.5">
+                                <Smartphone size={12} className="text-accent dark:text-accent-dark" />
+                                <span>Travel E-Copy & Digital Reading</span>
+                              </span>
+                              <span className="text-3xs text-ink-muted">Read on the go</span>
+                            </div>
+
+                            {/* Attached Personal Cloud Copy (Drive, PDF, Kindle) */}
+                            {attachedUrl ? (
+                              <a
+                                href={attachedUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="w-full py-2 px-3 rounded-xl bg-accent/10 dark:bg-accent/20 border border-accent/30 text-accent dark:text-accent-dark hover:bg-accent/20 text-xs font-medium flex items-center justify-between transition-colors cursor-pointer group"
+                              >
+                                <span className="flex items-center gap-2 truncate">
+                                  <ExternalLink size={13} className="shrink-0 group-hover:scale-110 transition-transform" />
+                                  <span className="truncate">Open Attached E-Book / Drive Copy</span>
+                                </span>
+                                <span className="text-3xs px-1.5 py-0.5 rounded bg-accent/20 dark:bg-accent/30 font-semibold uppercase shrink-0">
+                                  Cloud
+                                </span>
+                              </a>
+                            ) : null}
+
+                            {/* Auto-Discovered Digital Readers */}
+                            <div className="grid grid-cols-2 gap-1.5">
+                              {cleanIsbn ? (
+                                <a
+                                  href={`https://openlibrary.org/isbn/${cleanIsbn}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="py-1.5 px-2.5 rounded-lg border border-rule dark:border-rule-dark bg-surface-raised dark:bg-surface-dark-raised hover:border-accent/40 text-ink text-2xs font-medium flex items-center justify-between transition-colors group"
+                                  title="Borrow and read online via Open Library / Internet Archive"
+                                >
+                                  <span className="flex items-center gap-1.5 truncate">
+                                    <Globe size={11} className="text-accent shrink-0" />
+                                    <span className="truncate">Open Library</span>
+                                  </span>
+                                  <ExternalLink size={10} className="text-ink-muted shrink-0 group-hover:text-accent" />
+                                </a>
+                              ) : null}
+
+                              {cleanIsbn ? (
+                                <a
+                                  href={`https://books.google.com/books?vid=ISBN${cleanIsbn}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="py-1.5 px-2.5 rounded-lg border border-rule dark:border-rule-dark bg-surface-raised dark:bg-surface-dark-raised hover:border-accent/40 text-ink text-2xs font-medium flex items-center justify-between transition-colors group"
+                                  title="Google Books digital excerpt & preview"
+                                >
+                                  <span className="flex items-center gap-1.5 truncate">
+                                    <BookOpenCheck size={11} className="text-accent shrink-0" />
+                                    <span className="truncate">Google Books</span>
+                                  </span>
+                                  <ExternalLink size={10} className="text-ink-muted shrink-0 group-hover:text-accent" />
+                                </a>
+                              ) : (
+                                <a
+                                  href={`https://www.gutenberg.org/ebooks/search/?query=${encodeURIComponent(selectedBook.title)}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="py-1.5 px-2.5 rounded-lg border border-rule dark:border-rule-dark bg-surface-raised dark:bg-surface-dark-raised hover:border-accent/40 text-ink text-2xs font-medium flex items-center justify-between transition-colors col-span-2 group"
+                                >
+                                  <span className="flex items-center gap-1.5 truncate">
+                                    <Globe size={11} className="text-accent shrink-0" />
+                                    <span className="truncate">Search Free on Gutenberg</span>
+                                  </span>
+                                  <ExternalLink size={10} className="text-ink-muted shrink-0 group-hover:text-accent" />
+                                </a>
+                              )}
+                            </div>
+
+                            <p className="text-3xs text-ink-muted">
+                              Away from your physical shelf? Read online and log pages to keep your streak.
+                            </p>
+                          </div>
+                        );
+                      })()}
+
+                      {/* 4. DYNAMIC SYNOPSIS / ABOUT THE BOOK (Approach A - Zero Sheet Bloat) */}
                       {loadingSynopsis ? (
                         <div className="p-4 rounded-xl border border-rule/50 dark:border-rule-dark/50 bg-surface/50 dark:bg-surface-dark/50 space-y-2 animate-pulse">
                           <div className="h-3 w-28 bg-rule/60 rounded" />
@@ -577,13 +695,13 @@ export const BookDetailDrawer: React.FC = () => {
                               </div>
                             </div>
 
-                            {notes && (
+                            {cleanNotesExcludingEcopy(notes) && (
                               <div className="pt-2 border-t border-rule/40 dark:border-rule-dark/40 text-xs">
                                 <span className="text-3xs uppercase tracking-wider font-medium text-ink-muted block mb-0.5">
                                   Inscription / Personal Notes
                                 </span>
                                 <p className="text-xs text-ink-secondary dark:text-ink-dark-secondary italic whitespace-pre-wrap">
-                                  "{notes}"
+                                  "{cleanNotesExcludingEcopy(notes)}"
                                 </p>
                               </div>
                             )}
@@ -639,6 +757,21 @@ export const BookDetailDrawer: React.FC = () => {
                                 <option value="Fair">Fair</option>
                                 <option value="Damaged">Damaged</option>
                               </select>
+                            </div>
+
+                            {/* E-Copy / Cloud Reader URL Input */}
+                            <div className="space-y-1">
+                              <label className="text-3xs uppercase tracking-wider font-medium text-ink-muted flex items-center gap-1">
+                                <Smartphone size={11} className="text-accent" />
+                                <span>Attach E-Copy Link (Google Drive, PDF, Kindle)</span>
+                              </label>
+                              <input
+                                type="url"
+                                value={ecopyUrl}
+                                onChange={(e) => setEcopyUrl(e.target.value)}
+                                placeholder="https://drive.google.com/... or personal cloud link"
+                                className="w-full px-2.5 py-1.5 rounded-lg border border-rule dark:border-rule-dark bg-surface-raised dark:bg-surface-dark-raised text-xs text-ink dark:text-ink-dark focus:outline-none focus:border-accent font-mono text-2xs"
+                              />
                             </div>
 
                             <div className="space-y-1">
