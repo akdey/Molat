@@ -1024,7 +1024,7 @@ export default function App() {
       {/* Thumb-Zone Sticky Mobile Bottom Navigation Bar (h-16, pb-[env(safe-area-inset-bottom)], <768px) */}
       <nav
         aria-label="Mobile Navigation"
-        className="md:hidden fixed bottom-0 left-0 right-0 z-40 h-16 bg-canvas/95 dark:bg-canvas-dark/95 border-t border-rule dark:border-rule-dark backdrop-blur-md pb-[env(safe-area-inset-bottom)] flex items-center justify-around px-2"
+        className="md:hidden fixed bottom-0 left-0 right-0 z-50 h-16 bg-canvas/95 dark:bg-canvas-dark/95 border-t border-rule dark:border-rule-dark backdrop-blur-md pb-[env(safe-area-inset-bottom)] flex items-center justify-around px-2"
       >
         {/* 1. Home */}
         <button

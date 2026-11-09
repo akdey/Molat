@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Mic,
@@ -356,31 +357,33 @@ export const HoldToSpeakAssistant: React.FC<HoldToSpeakAssistantProps> = ({
       </div>
 
       {/* 2. ATMOSPHERIC SEAMLESS OVERLAY (FADES UP FROM BOTTOM BAR, NO BOX OR MODAL POPUP) */}
-      <AnimatePresence>
-        {overlayOpen && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.28, ease: 'easeOut' }}
-            className="fixed inset-x-0 bottom-0 top-0 z-40 flex flex-col justify-end pb-20 select-none overflow-hidden"
-            onClick={closeOverlay}
-          >
-            {/* Atmospheric Gradient Wash: Deep rich obsidian/espresso at bottom, fading smoothly up to transparent */}
-            <div className="absolute inset-x-0 bottom-0 h-[75vh] bg-gradient-to-t from-[#0e0d0c]/98 via-[#181614]/85 via-[#181614]/40 to-transparent backdrop-blur-[6px] pointer-events-none" />
+      {typeof document !== 'undefined' &&
+        createPortal(
+          <AnimatePresence>
+            {overlayOpen && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.28, ease: 'easeOut' }}
+                className="fixed inset-0 z-40 flex flex-col justify-end pb-24 select-none overflow-hidden"
+                onClick={closeOverlay}
+              >
+                {/* Atmospheric Gradient Wash: Deep rich obsidian/espresso at bottom, fading smoothly up to transparent */}
+                <div className="absolute inset-0 bg-gradient-to-t from-[#0e0d0c]/98 via-[#181614]/85 via-[#181614]/40 to-transparent pointer-events-none" />
 
-            {/* Radiant Color Pulse at Horizon */}
-            <div className="absolute inset-x-0 bottom-0 h-48 bg-gradient-to-t from-accent/25 via-violet-600/15 to-transparent blur-3xl pointer-events-none" />
+                {/* Radiant Color Pulse at Horizon */}
+                <div className="absolute inset-x-0 bottom-0 h-56 bg-gradient-to-t from-accent/25 via-violet-600/15 to-transparent blur-3xl pointer-events-none" />
 
-            {/* Seamless Content Stream floating on the gradient */}
-            <motion.div
-              initial={{ y: 25, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              exit={{ y: 20, opacity: 0 }}
-              transition={{ type: 'spring', damping: 28, stiffness: 320 }}
-              className="relative z-10 w-full max-w-lg mx-auto px-5 py-3 flex flex-col space-y-4"
-              onClick={(e) => e.stopPropagation()}
-            >
+                {/* Seamless Content Stream floating on the gradient */}
+                <motion.div
+                  initial={{ y: 25, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  exit={{ y: 20, opacity: 0 }}
+                  transition={{ type: 'spring', damping: 28, stiffness: 320 }}
+                  className="relative z-10 w-full max-w-lg mx-auto px-5 py-3 flex flex-col space-y-4"
+                  onClick={(e) => e.stopPropagation()}
+                >
               {/* Top Controls: Floating Pill with Title, TTS Mute & Close */}
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 dark:bg-white/5 border border-white/15 backdrop-blur-md">
@@ -564,7 +567,9 @@ export const HoldToSpeakAssistant: React.FC<HoldToSpeakAssistantProps> = ({
             </motion.div>
           </motion.div>
         )}
-      </AnimatePresence>
+      </AnimatePresence>,
+      document.body
+    )}
     </>
   );
 };
