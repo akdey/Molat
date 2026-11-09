@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import {
@@ -51,6 +51,28 @@ export const HoldToSpeakAssistant: React.FC<HoldToSpeakAssistantProps> = ({
   const silenceTimeoutRef = useRef<any>(null);
   const latestTranscriptRef = useRef<string>('');
   const isTouchActiveRef = useRef<boolean>(false);
+
+  // Dynamic suggestion chips based on real library books
+  const dynamicSuggestions = useMemo(() => {
+    const list: string[] = [];
+    const activeBook = books.find((b) => b.reading_status === 'READING');
+    if (activeBook) {
+      list.push(`Log reading for ${activeBook.title} from 20 to 50`);
+    } else if (books.length > 0) {
+      list.push(`Log reading for ${books[0].title} from 1 to 30`);
+    }
+
+    const bookWithLocation = books.find((b) => b.location && b.reading_status !== 'COMPLETED') || books[0];
+    if (bookWithLocation) {
+      list.push(`Where is ${bookWithLocation.title}?`);
+    } else {
+      list.push('Where is Dune?');
+    }
+
+    list.push("What's my streak?");
+    list.push('What should I read next?');
+    return list;
+  }, [books]);
 
   // Haptic feedback (Samsung S21 FE)
   const triggerHaptic = (pattern: number | number[]) => {
