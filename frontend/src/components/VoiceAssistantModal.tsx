@@ -441,3 +441,4 @@ export const VoiceAssistantModal: React.FC = () => {
     </AnimatePresence>
   );
 };
+
