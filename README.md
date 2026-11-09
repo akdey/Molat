@@ -29,6 +29,19 @@ Whether cataloguing a multi-hundred volume collection, scanning new arrivals at 
 
 ## ✨ Features
 
+### 🎙️ 100% On-Device AI Voice Assistant (Hold-to-Talk)
+- **Hold-to-Talk Siri-Style Gesture**: Press and hold the elevated center `+` button from anywhere in the app to activate the ambient AI assistant with tactile haptic feedback.
+- **Zero Cloud & Zero Cost (0ms Latency)**: Runs 100% locally on your device using the browser's hardware-accelerated Web Speech API and an in-memory fuzzy title matching engine. Zero audio or transcripts sent to external servers.
+- **Hands-Free Reading Log Submissions**: Say *"Log reading for The Fourth Protocol from page 45 to 80"* or *"Read 35 pages of Atomic Habits"*—automatically matches the volume, calculates pages read, updates the Google Sheets ledger, and advances your streak.
+- **Physical Shelf Locator**: Say *"Where is Dune?"* to immediately locate the exact room and shelf rack without browsing menus.
+- **Atmospheric Gradient Overlay**: Rises smoothly as an organic, borderless dark-to-fade veil with dancing equalizer bars, real-time transcript streaming, a *"What Molat Understood"* confirmation card, and interactive suggestion chips.
+- **Native Spoken Audio Feedback**: Confirms actions aloud using your device's built-in text-to-speech engine (`speechSynthesis`).
+
+### 🎲 "Pick My Next Read" (TBR Randomizer)
+- **Zero Decision Fatigue**: Algorithmic selection tool that picks your next book from your unread shelf.
+- **1-Click Reading Transition**: Start reading the chosen volume with a single click, transitioning its status to `READING` and opening today's progress ledger.
+- **Multi-Point Access**: Available from the top navigation menu, the Bookshelf screen, or by asking the Voice Assistant (*"What should I read next?"*).
+
 ### 📱 Progressive Web App (PWA) with Offline Capabilities
 - **Installable Native App Experience**: Install Molat directly to your iOS or Android home screen or desktop with a single tap.
 - **Offline Caching**: Built with Workbox service workers to precache core assets and jacket images (`CacheFirst` for book jackets, `StaleWhileRevalidate` for library APIs).
@@ -266,7 +279,8 @@ Molat is packaged with a custom web manifest and Workbox service worker:
 
 | Layer | Technologies |
 |---|---|
-| **Frontend** | React 18, Vite 5, TypeScript 5.5, Tailwind CSS 3, Zustand, Lucide Icons |
+| **Frontend** | React 18, Vite 5, TypeScript 5.5, Tailwind CSS 3, Zustand, Motion (Framer), Lucide Icons |
+| **Voice & Audio** | Native Web Speech API (`webkitSpeechRecognition`), Web SpeechSynthesis, Local Fuzzy NLP |
 | **PWA & Camera** | `vite-plugin-pwa`, Workbox, `html5-qrcode` (rear environment camera) |
 | **Backend API** | FastAPI, Pydantic v2, Python 3.11, `httpx`, `cachetools`, `anyio` |
 | **Database** | Google Sheets via Google Apps Script (Serverless JSON Web App) |
