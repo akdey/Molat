@@ -37,7 +37,10 @@ export const HoldToSpeakAssistant: React.FC<HoldToSpeakAssistantProps> = ({
     submitReadingLog,
     setSelectedBook,
     addToast,
+    theme,
   } = useLibraryStore();
+
+  const isDark = theme === 'dark';
 
   const [overlayOpen, setOverlayOpen] = useState<boolean>(false);
   const [isListening, setIsListening] = useState<boolean>(false);
@@ -446,20 +449,37 @@ export const HoldToSpeakAssistant: React.FC<HoldToSpeakAssistantProps> = ({
                 onClick={closeOverlay}
               >
                 {/* Full-Screen Ambient Dim */}
-                <div className="absolute inset-0 bg-slate-950/45 backdrop-blur-[7px] pointer-events-none" />
-
-                {/* Atmospheric Dark-to-Fade Gradient: Pure Deep Midnight Obsidian at bottom, fading smoothly up */}
                 <div
-                  className="absolute inset-0 pointer-events-none"
+                  className={`absolute inset-0 pointer-events-none transition-colors duration-300 ${
+                    isDark ? 'bg-slate-950/45 backdrop-blur-[7px]' : 'bg-slate-900/12 backdrop-blur-[6px]'
+                  }`}
+                />
+
+                {/* Atmospheric Dark/Light-to-Fade Gradient: Theme-aware soft ice-blue in light mode, deep obsidian in dark */}
+                <div
+                  className="absolute inset-0 pointer-events-none transition-all duration-300"
                   style={{
-                    background:
-                      'linear-gradient(to top, rgba(10, 14, 26, 0.98) 0%, rgba(13, 19, 36, 0.93) 38%, rgba(15, 23, 42, 0.72) 68%, rgba(15, 23, 42, 0.18) 88%, transparent 100%)',
+                    background: isDark
+                      ? 'linear-gradient(to top, rgba(10, 14, 26, 0.98) 0%, rgba(13, 19, 36, 0.93) 38%, rgba(15, 23, 42, 0.72) 68%, rgba(15, 23, 42, 0.18) 88%, transparent 100%)'
+                      : 'linear-gradient(to top, rgba(235, 243, 255, 0.98) 0%, rgba(240, 246, 255, 0.93) 38%, rgba(244, 248, 255, 0.75) 68%, rgba(248, 250, 255, 0.20) 88%, transparent 100%)',
                   }}
                 />
 
                 {/* Radiant Chromatic Aurora Pulse at Horizon */}
-                <div className="absolute inset-x-0 bottom-0 h-64 bg-gradient-to-t from-indigo-500/25 via-cyan-500/10 to-transparent blur-3xl pointer-events-none" />
-                <div className="absolute -bottom-10 left-1/2 -translate-x-1/2 w-80 h-36 bg-gradient-to-tr from-cyan-400/20 via-indigo-500/25 to-fuchsia-500/20 blur-2xl rounded-full pointer-events-none" />
+                <div
+                  className={`absolute inset-x-0 bottom-0 h-64 blur-3xl pointer-events-none transition-all duration-300 ${
+                    isDark
+                      ? 'bg-gradient-to-t from-indigo-500/25 via-cyan-500/10 to-transparent'
+                      : 'bg-gradient-to-t from-sky-400/25 via-indigo-300/15 to-transparent'
+                  }`}
+                />
+                <div
+                  className={`absolute -bottom-10 left-1/2 -translate-x-1/2 w-80 h-36 blur-2xl rounded-full pointer-events-none transition-all duration-300 ${
+                    isDark
+                      ? 'bg-gradient-to-tr from-cyan-400/20 via-indigo-500/25 to-fuchsia-500/20'
+                      : 'bg-gradient-to-tr from-sky-400/30 via-indigo-400/20 to-pink-400/15'
+                  }`}
+                />
 
                 {/* Seamless Content Stream floating on the gradient */}
                 <motion.div
@@ -472,10 +492,24 @@ export const HoldToSpeakAssistant: React.FC<HoldToSpeakAssistantProps> = ({
                 >
               {/* Top Controls: Floating Frosted Pill with Title, TTS Mute & Close */}
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/[0.08] hover:bg-white/[0.12] border border-white/15 backdrop-blur-xl shadow-lg">
-                  <span className={`w-2 h-2 rounded-full ${isListening ? 'bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.8)] animate-pulse' : 'bg-emerald-400'}`} />
-                  <span className="text-[11px] font-semibold text-white/90 flex items-center gap-1.5 font-sans tracking-wide">
-                    <Sparkles size={12} className="text-cyan-300" />
+                <div
+                  className={`flex items-center gap-2 px-3.5 py-1.5 rounded-full backdrop-blur-xl transition-colors ${
+                    isDark
+                      ? 'bg-white/[0.08] hover:bg-white/[0.12] border border-white/15 text-white/90 shadow-lg'
+                      : 'bg-white/80 hover:bg-white border border-sky-200/80 text-slate-800 shadow-sm'
+                  }`}
+                >
+                  <span
+                    className={`w-2 h-2 rounded-full ${
+                      isListening
+                        ? isDark
+                          ? 'bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.8)] animate-pulse'
+                          : 'bg-sky-500 shadow-[0_0_8px_rgba(14,165,233,0.8)] animate-pulse'
+                        : 'bg-emerald-500'
+                    }`}
+                  />
+                  <span className="text-[11px] font-semibold flex items-center gap-1.5 font-sans tracking-wide">
+                    <Sparkles size={12} className={isDark ? 'text-cyan-300' : 'text-sky-600'} />
                     <span>Molat Voice</span>
                   </span>
                 </div>
@@ -483,10 +517,14 @@ export const HoldToSpeakAssistant: React.FC<HoldToSpeakAssistantProps> = ({
                 <div className="flex items-center gap-1.5">
                   <button
                     onClick={() => setTtsMuted(!ttsMuted)}
-                    className={`p-1.5 rounded-full border text-xs transition-colors cursor-pointer shadow-md backdrop-blur-xl ${
+                    className={`p-1.5 rounded-full border text-xs transition-colors cursor-pointer shadow-sm backdrop-blur-xl ${
                       !ttsMuted
-                        ? 'border-cyan-400/40 bg-cyan-500/20 text-cyan-200'
-                        : 'border-white/15 bg-white/10 text-white/50 hover:text-white/80'
+                        ? isDark
+                          ? 'border-cyan-400/40 bg-cyan-500/20 text-cyan-200'
+                          : 'border-sky-400/60 bg-sky-100 text-sky-700'
+                        : isDark
+                        ? 'border-white/15 bg-white/10 text-white/50 hover:text-white/80'
+                        : 'border-slate-200 bg-white/70 text-slate-400 hover:text-slate-700'
                     }`}
                     title={ttsMuted ? 'Muted' : 'Spoken Feedback Active'}
                   >
@@ -495,7 +533,11 @@ export const HoldToSpeakAssistant: React.FC<HoldToSpeakAssistantProps> = ({
 
                   <button
                     onClick={closeOverlay}
-                    className="p-1.5 rounded-full bg-white/10 hover:bg-white/20 border border-white/15 text-white/80 hover:text-white transition-colors shadow-md backdrop-blur-xl"
+                    className={`p-1.5 rounded-full border transition-colors shadow-sm backdrop-blur-xl ${
+                      isDark
+                        ? 'bg-white/10 hover:bg-white/20 border-white/15 text-white/80 hover:text-white shadow-md'
+                        : 'bg-white/80 hover:bg-white border-sky-200/80 text-slate-600 hover:text-slate-900'
+                    }`}
                   >
                     <X size={14} />
                   </button>
@@ -517,24 +559,40 @@ export const HoldToSpeakAssistant: React.FC<HoldToSpeakAssistantProps> = ({
                         duration: 0.5 + idx * 0.08,
                         ease: 'easeInOut',
                       }}
-                      className="w-1 bg-gradient-to-t from-cyan-400 via-indigo-300 to-violet-300 rounded-full h-5 origin-bottom shadow-[0_0_6px_rgba(56,189,248,0.4)]"
+                      className={`w-1 rounded-full h-5 origin-bottom ${
+                        isDark
+                          ? 'bg-gradient-to-t from-cyan-400 via-indigo-300 to-violet-300 shadow-[0_0_6px_rgba(56,189,248,0.4)]'
+                          : 'bg-gradient-to-t from-sky-500 via-indigo-500 to-purple-500 shadow-[0_0_6px_rgba(14,165,233,0.35)]'
+                      }`}
                     />
                   ))}
                 </div>
 
                 <div className="min-h-[52px] flex items-center justify-center px-2">
                   {liveTranscript ? (
-                    <p className="font-serif text-lg sm:text-xl font-medium text-white italic tracking-tight leading-relaxed drop-shadow-md">
+                    <p
+                      className={`font-serif text-lg sm:text-xl font-medium italic tracking-tight leading-relaxed ${
+                        isDark ? 'text-white drop-shadow-md' : 'text-slate-900 drop-shadow-xs'
+                      }`}
+                    >
                       &ldquo;{liveTranscript}&rdquo;
                     </p>
                   ) : isListening ? (
-                    <p className="text-xs sm:text-sm text-cyan-100/80 font-serif italic animate-pulse">
+                    <p
+                      className={`text-xs sm:text-sm font-serif italic animate-pulse ${
+                        isDark ? 'text-cyan-100/80' : 'text-sky-900/80'
+                      }`}
+                    >
                       Listening... Speak book title, page range, or question
                     </p>
                   ) : (
                     <button
                       onClick={startListening}
-                      className="text-xs text-cyan-200 hover:text-white flex items-center gap-1.5 font-medium px-3.5 py-1 rounded-full bg-white/10 hover:bg-white/15 border border-white/15 backdrop-blur-md transition-all shadow-sm cursor-pointer"
+                      className={`text-xs flex items-center gap-1.5 font-medium px-3.5 py-1 rounded-full border backdrop-blur-md transition-all shadow-xs cursor-pointer ${
+                        isDark
+                          ? 'text-cyan-200 hover:text-white bg-white/10 hover:bg-white/15 border-white/15'
+                          : 'text-sky-700 hover:text-sky-900 bg-white/80 hover:bg-white border-sky-200/80'
+                      }`}
                     >
                       <RotateCcw size={12} />
                       <span>Tap to speak again</span>
@@ -548,14 +606,28 @@ export const HoldToSpeakAssistant: React.FC<HoldToSpeakAssistantProps> = ({
                 <motion.div
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="w-full p-3.5 rounded-2xl bg-white/[0.08] border border-white/15 backdrop-blur-2xl shadow-xl space-y-2.5"
+                  className={`w-full p-3.5 rounded-2xl border backdrop-blur-2xl shadow-xl space-y-2.5 ${
+                    isDark
+                      ? 'bg-white/[0.08] border-white/15 text-white'
+                      : 'bg-white/90 border-sky-200/80 text-slate-900 shadow-sky-950/5'
+                  }`}
                 >
                   <div className="flex items-center justify-between">
-                    <span className="text-[10px] uppercase tracking-wider font-bold text-cyan-300 flex items-center gap-1">
-                      <CheckCircle2 size={13} className="text-cyan-400" />
+                    <span
+                      className={`text-[10px] uppercase tracking-wider font-bold flex items-center gap-1 ${
+                        isDark ? 'text-cyan-300' : 'text-sky-700'
+                      }`}
+                    >
+                      <CheckCircle2 size={13} className={isDark ? 'text-cyan-400' : 'text-sky-600'} />
                       <span>What Molat Understood</span>
                     </span>
-                    <span className="px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider bg-indigo-500/25 border border-indigo-400/30 text-indigo-200">
+                    <span
+                      className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider ${
+                        isDark
+                          ? 'bg-indigo-500/25 border border-indigo-400/30 text-indigo-200'
+                          : 'bg-sky-100 border border-sky-200 text-sky-800'
+                      }`}
+                    >
                       {understoodResult.intent.replace('_', ' ')}
                     </span>
                   </div>
@@ -577,29 +649,47 @@ export const HoldToSpeakAssistant: React.FC<HoldToSpeakAssistantProps> = ({
                         />
                       </div>
                     ) : (
-                      <div className="w-10 h-10 rounded-xl bg-white/10 border border-white/15 text-cyan-300 flex items-center justify-center shrink-0">
+                      <div
+                        className={`w-10 h-10 rounded-xl border flex items-center justify-center shrink-0 ${
+                          isDark
+                            ? 'bg-white/10 border-white/15 text-cyan-300'
+                            : 'bg-sky-50 border-sky-200/80 text-sky-700'
+                        }`}
+                      >
                         {understoodResult.intent === 'CHECK_STREAK' ? (
-                          <Flame size={20} className="text-orange-400" />
+                          <Flame size={20} className="text-orange-500" />
                         ) : understoodResult.intent === 'LOCATE_BOOK' ? (
-                          <MapPin size={20} className="text-sky-400" />
+                          <MapPin size={20} className="text-sky-600" />
                         ) : (
-                          <CheckCircle2 size={20} className="text-emerald-400" />
+                          <CheckCircle2 size={20} className="text-emerald-500" />
                         )}
                       </div>
                     )}
 
                     <div className="flex-1 min-w-0 text-left">
-                      <h4 className="font-serif text-sm font-semibold text-white truncate drop-shadow-sm">
+                      <h4
+                        className={`font-serif text-sm font-semibold truncate ${
+                          isDark ? 'text-white drop-shadow-sm' : 'text-slate-900'
+                        }`}
+                      >
                         {understoodResult.cardTitle}
                       </h4>
-                      <p className="text-xs text-white/80 mt-0.5 leading-snug">
+                      <p
+                        className={`text-xs mt-0.5 leading-snug ${
+                          isDark ? 'text-white/80' : 'text-slate-600'
+                        }`}
+                      >
                         {understoodResult.cardDetail}
                       </p>
                     </div>
                   </div>
 
                   {/* Actions */}
-                  <div className="flex items-center justify-end gap-2 pt-1 border-t border-white/10">
+                  <div
+                    className={`flex items-center justify-end gap-2 pt-1 border-t ${
+                      isDark ? 'border-white/10' : 'border-slate-200/60'
+                    }`}
+                  >
                     {understoodResult.matchedBook && (
                       <button
                         type="button"
@@ -607,7 +697,11 @@ export const HoldToSpeakAssistant: React.FC<HoldToSpeakAssistantProps> = ({
                           setSelectedBook(understoodResult.matchedBook!);
                           closeOverlay();
                         }}
-                        className="px-3 py-1 rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 text-xs font-medium text-white transition-colors flex items-center gap-1.5"
+                        className={`px-3 py-1 rounded-xl border text-xs font-medium transition-colors flex items-center gap-1.5 ${
+                          isDark
+                            ? 'bg-white/10 hover:bg-white/20 border-white/20 text-white'
+                            : 'bg-slate-100 hover:bg-slate-200 border-slate-200 text-slate-700'
+                        }`}
                       >
                         <span>View Book Details</span>
                         <ArrowRight size={11} />
@@ -616,7 +710,7 @@ export const HoldToSpeakAssistant: React.FC<HoldToSpeakAssistantProps> = ({
                     <button
                       type="button"
                       onClick={closeOverlay}
-                      className="px-3.5 py-1 rounded-xl bg-gradient-to-r from-indigo-500 via-purple-500 to-cyan-500 hover:brightness-110 text-white text-xs font-semibold transition-all shadow-md active:scale-95"
+                      className="px-3.5 py-1 rounded-xl bg-gradient-to-r from-sky-600 to-indigo-600 hover:brightness-105 text-white text-xs font-semibold transition-all shadow-md active:scale-95"
                     >
                       {isSubmitting ? 'Logging...' : 'Done'}
                     </button>
@@ -626,7 +720,11 @@ export const HoldToSpeakAssistant: React.FC<HoldToSpeakAssistantProps> = ({
 
               {/* 3. SUGGESTIONS (CRISP FROSTED GLASS PILLS) */}
               <div className="w-full flex flex-col items-center space-y-2.5 pt-1">
-                <span className="text-[10px] uppercase tracking-widest font-semibold text-slate-300/80 drop-shadow">
+                <span
+                  className={`text-[10px] uppercase tracking-widest font-semibold ${
+                    isDark ? 'text-slate-300/80 drop-shadow' : 'text-sky-900/70 font-bold'
+                  }`}
+                >
                   Try saying or tapping:
                 </span>
                 <div className="flex flex-wrap justify-center gap-2 max-w-md">
@@ -638,7 +736,11 @@ export const HoldToSpeakAssistant: React.FC<HoldToSpeakAssistantProps> = ({
                         setLiveTranscript(phrase);
                         handleExecuteCommand(phrase);
                       }}
-                      className="px-3.5 py-1.5 rounded-full bg-white/[0.08] hover:bg-white/[0.16] active:scale-95 border border-white/[0.15] hover:border-white/30 text-white/95 text-xs font-normal tracking-wide backdrop-blur-xl transition-all shadow-[0_4px_16px_rgba(0,0,0,0.25)] text-left"
+                      className={`px-3.5 py-1.5 rounded-full border text-xs font-normal tracking-wide backdrop-blur-xl transition-all text-left active:scale-95 ${
+                        isDark
+                          ? 'bg-white/[0.08] hover:bg-white/[0.16] border-white/[0.15] hover:border-white/30 text-white/95 shadow-[0_4px_16px_rgba(0,0,0,0.25)]'
+                          : 'bg-white/80 hover:bg-white border-sky-200/80 hover:border-sky-300 text-slate-800 shadow-xs hover:shadow-sm'
+                      }`}
                     >
                       &ldquo;{phrase}&rdquo;
                     </button>
