@@ -387,9 +387,6 @@ export const HoldToSpeakAssistant: React.FC<HoldToSpeakAssistantProps> = ({
     };
   }, []);
 
-  // Dynamic content height detection: increases atmosphere coverage when content expands
-  const isContentExpanded = Boolean(understoodResult || (liveTranscript && liveTranscript.length > 45));
-
   return (
     <>
       {/* 1. THE ELEVATED CENTER BUTTON (TURNS TO MIC ON HOLD/OPEN, REST OF BOTTOM BAR STAYS UNTOUCHED) */}
@@ -453,7 +450,7 @@ export const HoldToSpeakAssistant: React.FC<HoldToSpeakAssistantProps> = ({
         </button>
       </div>
 
-      {/* 2. ATMOSPHERIC SEAMLESS OVERLAY (DYNAMIC HEIGHT BASED ON CONTENT) */}
+      {/* 2. ATMOSPHERIC SEAMLESS OVERLAY (SEAMLESS BOTTOM FADE) */}
       {typeof document !== 'undefined' &&
         createPortal(
           <AnimatePresence>
@@ -466,46 +463,26 @@ export const HoldToSpeakAssistant: React.FC<HoldToSpeakAssistantProps> = ({
                 className="fixed inset-0 z-40 flex flex-col justify-end pb-24 select-none overflow-hidden"
                 onClick={closeOverlay}
               >
-                {/* Full-Screen Ambient Dim with dynamic upper fade */}
+                {/* Full-Screen Ambient Dim */}
                 <div
                   className={`absolute inset-0 pointer-events-none transition-colors duration-300 ${
-                    isDark
-                      ? isContentExpanded
-                        ? 'bg-slate-950/50 backdrop-blur-[8px]'
-                        : 'bg-slate-950/40 backdrop-blur-[6px]'
-                      : isContentExpanded
-                      ? 'bg-slate-900/15 backdrop-blur-[7px]'
-                      : 'bg-slate-900/10 backdrop-blur-[5px]'
+                    isDark ? 'bg-slate-950/45 backdrop-blur-[7px]' : 'bg-slate-900/12 backdrop-blur-[6px]'
                   }`}
-                  style={{
-                    WebkitMaskImage: isContentExpanded
-                      ? 'linear-gradient(to top, black 0%, black 72%, rgba(0,0,0,0.5) 88%, transparent 100%)'
-                      : 'linear-gradient(to top, black 0%, black 42%, rgba(0,0,0,0.4) 68%, transparent 88%)',
-                    maskImage: isContentExpanded
-                      ? 'linear-gradient(to top, black 0%, black 72%, rgba(0,0,0,0.5) 88%, transparent 100%)'
-                      : 'linear-gradient(to top, black 0%, black 42%, rgba(0,0,0,0.4) 68%, transparent 88%)',
-                  }}
                 />
 
-                {/* Atmospheric Dark/Light-to-Fade Gradient: dynamically scales based on content height */}
+                {/* Atmospheric Dark/Light-to-Fade Gradient: Rising seamlessly from bottom */}
                 <div
-                  className="absolute inset-0 pointer-events-none transition-all duration-300 ease-out"
+                  className="absolute inset-0 pointer-events-none transition-all duration-300"
                   style={{
-                    background: isContentExpanded
-                      ? isDark
-                        ? 'linear-gradient(to top, rgba(10, 14, 26, 0.99) 0%, rgba(10, 14, 26, 0.96) 55%, rgba(12, 17, 32, 0.88) 75%, rgba(14, 21, 38, 0.5) 90%, rgba(15, 23, 42, 0.15) 97%, transparent 100%)'
-                        : 'linear-gradient(to top, rgba(235, 243, 255, 0.99) 0%, rgba(235, 243, 255, 0.96) 55%, rgba(238, 245, 255, 0.88) 75%, rgba(242, 247, 255, 0.5) 90%, rgba(246, 250, 255, 0.15) 97%, transparent 100%)'
-                      : isDark
-                      ? 'linear-gradient(to top, rgba(10, 14, 26, 0.98) 0%, rgba(12, 17, 32, 0.92) 28%, rgba(14, 21, 38, 0.62) 50%, rgba(15, 23, 42, 0.26) 68%, rgba(15, 23, 42, 0.06) 82%, transparent 94%)'
-                      : 'linear-gradient(to top, rgba(235, 243, 255, 0.98) 0%, rgba(238, 245, 255, 0.92) 28%, rgba(242, 247, 255, 0.62) 50%, rgba(246, 250, 255, 0.26) 68%, rgba(248, 251, 255, 0.06) 82%, transparent 94%)',
+                    background: isDark
+                      ? 'linear-gradient(to top, rgba(10, 14, 26, 0.98) 0%, rgba(13, 19, 36, 0.93) 38%, rgba(15, 23, 42, 0.72) 68%, rgba(15, 23, 42, 0.18) 88%, transparent 100%)'
+                      : 'linear-gradient(to top, rgba(235, 243, 255, 0.98) 0%, rgba(240, 246, 255, 0.93) 38%, rgba(244, 248, 255, 0.75) 68%, rgba(248, 250, 255, 0.20) 88%, transparent 100%)',
                   }}
                 />
 
                 {/* Radiant Chromatic Aurora Pulse at Horizon */}
                 <div
-                  className={`absolute inset-x-0 bottom-0 blur-3xl pointer-events-none transition-all duration-300 ${
-                    isContentExpanded ? 'h-80' : 'h-64'
-                  } ${
+                  className={`absolute inset-x-0 bottom-0 h-64 blur-3xl pointer-events-none transition-all duration-300 ${
                     isDark
                       ? 'bg-gradient-to-t from-indigo-500/25 via-cyan-500/10 to-transparent'
                       : 'bg-gradient-to-t from-sky-400/25 via-indigo-300/15 to-transparent'
@@ -525,7 +502,7 @@ export const HoldToSpeakAssistant: React.FC<HoldToSpeakAssistantProps> = ({
                   animate={{ y: 0, opacity: 1 }}
                   exit={{ y: 20, opacity: 0 }}
                   transition={{ type: 'spring', damping: 28, stiffness: 320 }}
-                  className="relative z-10 w-full max-w-lg mx-auto px-5 py-3 flex flex-col space-y-3.5 max-h-[82vh] overflow-y-auto no-scrollbar"
+                  className="relative z-10 w-full max-w-lg mx-auto px-5 py-3 flex flex-col space-y-3.5"
                   onClick={(e) => e.stopPropagation()}
                 >
                   {/* Equalizer Waveform + Molat Voice & Speaker directly below it */}
@@ -748,37 +725,35 @@ export const HoldToSpeakAssistant: React.FC<HoldToSpeakAssistantProps> = ({
                     </motion.div>
                   )}
 
-                  {/* Suggestion Chips: shown while listening or idle, smoothly hidden when recognized action card appears */}
-                  {!understoodResult && (
-                    <div className="w-full flex flex-col items-center space-y-2 pt-0.5">
-                      <span
-                        className={`text-[10px] uppercase tracking-widest font-semibold ${
-                          isDark ? 'text-slate-300/80 drop-shadow' : 'text-sky-900/70 font-bold'
-                        }`}
-                      >
-                        Try saying or tapping:
-                      </span>
-                      <div className="flex flex-wrap justify-center gap-2 max-w-md">
-                        {dynamicSuggestions.map((phrase, idx) => (
-                          <button
-                            key={idx}
-                            type="button"
-                            onClick={() => {
-                              setLiveTranscript(phrase);
-                              handleExecuteCommand(phrase);
-                            }}
-                            className={`px-3.5 py-1.5 rounded-full border text-xs font-normal tracking-wide backdrop-blur-xl transition-all text-left active:scale-95 ${
-                              isDark
-                                ? 'bg-white/[0.08] hover:bg-white/[0.16] border-white/[0.15] hover:border-white/30 text-white/95 shadow-[0_4px_16px_rgba(0,0,0,0.25)]'
-                                : 'bg-white/80 hover:bg-white border-sky-200/80 hover:border-sky-300 text-slate-800 shadow-xs hover:shadow-sm'
-                            }`}
-                          >
-                            &ldquo;{phrase}&rdquo;
-                          </button>
-                        ))}
-                      </div>
+                  {/* Suggestion Chips */}
+                  <div className="w-full flex flex-col items-center space-y-2 pt-0.5">
+                    <span
+                      className={`text-[10px] uppercase tracking-widest font-semibold ${
+                        isDark ? 'text-slate-300/80 drop-shadow' : 'text-sky-900/70 font-bold'
+                      }`}
+                    >
+                      Try saying or tapping:
+                    </span>
+                    <div className="flex flex-wrap justify-center gap-2 max-w-md">
+                      {dynamicSuggestions.map((phrase, idx) => (
+                        <button
+                          key={idx}
+                          type="button"
+                          onClick={() => {
+                            setLiveTranscript(phrase);
+                            handleExecuteCommand(phrase);
+                          }}
+                          className={`px-3.5 py-1.5 rounded-full border text-xs font-normal tracking-wide backdrop-blur-xl transition-all text-left active:scale-95 ${
+                            isDark
+                              ? 'bg-white/[0.08] hover:bg-white/[0.16] border-white/[0.15] hover:border-white/30 text-white/95 shadow-[0_4px_16px_rgba(0,0,0,0.25)]'
+                              : 'bg-white/80 hover:bg-white border-sky-200/80 hover:border-sky-300 text-slate-800 shadow-xs hover:shadow-sm'
+                          }`}
+                        >
+                          &ldquo;{phrase}&rdquo;
+                        </button>
+                      ))}
                     </div>
-                  )}
+                  </div>
                 </motion.div>
               </motion.div>
             )}
