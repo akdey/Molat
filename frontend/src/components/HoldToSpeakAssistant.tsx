@@ -369,11 +369,20 @@ export const HoldToSpeakAssistant: React.FC<HoldToSpeakAssistantProps> = ({
                 className="fixed inset-0 z-40 flex flex-col justify-end pb-24 select-none overflow-hidden"
                 onClick={closeOverlay}
               >
-                {/* Atmospheric Gradient Wash: Deep rich obsidian/espresso at bottom, fading smoothly up to transparent */}
-                <div className="absolute inset-0 bg-gradient-to-t from-[#0e0d0c]/98 via-[#181614]/85 via-[#181614]/40 to-transparent pointer-events-none" />
+                {/* Full-Screen Ambient Dim */}
+                <div className="absolute inset-0 bg-black/45 backdrop-blur-[6px] pointer-events-none" />
+
+                {/* Atmospheric Dark-to-Fade Gradient: Deep rich espresso at bottom, fading smoothly up */}
+                <div
+                  className="absolute inset-0 pointer-events-none"
+                  style={{
+                    background:
+                      'linear-gradient(to top, rgba(14, 12, 10, 0.98) 0%, rgba(20, 18, 16, 0.93) 45%, rgba(24, 22, 20, 0.70) 75%, rgba(24, 22, 20, 0.15) 92%, transparent 100%)',
+                  }}
+                />
 
                 {/* Radiant Color Pulse at Horizon */}
-                <div className="absolute inset-x-0 bottom-0 h-56 bg-gradient-to-t from-accent/25 via-violet-600/15 to-transparent blur-3xl pointer-events-none" />
+                <div className="absolute inset-x-0 bottom-0 h-56 bg-gradient-to-t from-orange-600/20 via-violet-600/15 to-transparent blur-3xl pointer-events-none" />
 
                 {/* Seamless Content Stream floating on the gradient */}
                 <motion.div
@@ -386,9 +395,9 @@ export const HoldToSpeakAssistant: React.FC<HoldToSpeakAssistantProps> = ({
                 >
               {/* Top Controls: Floating Pill with Title, TTS Mute & Close */}
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 dark:bg-white/5 border border-white/15 backdrop-blur-md">
+                <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-black/40 border border-white/25 backdrop-blur-md shadow-md">
                   <span className={`w-2 h-2 rounded-full ${isListening ? 'bg-amber-400 animate-ping' : 'bg-emerald-400'}`} />
-                  <span className="text-[11px] font-semibold text-white/90 flex items-center gap-1.5 font-sans">
+                  <span className="text-[11px] font-semibold text-white flex items-center gap-1.5 font-sans">
                     <Sparkles size={12} className="text-amber-300" />
                     <span>Molat Voice</span>
                   </span>
@@ -397,10 +406,10 @@ export const HoldToSpeakAssistant: React.FC<HoldToSpeakAssistantProps> = ({
                 <div className="flex items-center gap-1.5">
                   <button
                     onClick={() => setTtsMuted(!ttsMuted)}
-                    className={`p-1.5 rounded-full border text-xs transition-colors cursor-pointer ${
+                    className={`p-1.5 rounded-full border text-xs transition-colors cursor-pointer shadow-md ${
                       !ttsMuted
-                        ? 'border-accent/50 bg-accent/20 text-amber-300'
-                        : 'border-white/15 bg-white/5 text-white/50'
+                        ? 'border-amber-400/50 bg-amber-500/20 text-amber-300'
+                        : 'border-white/20 bg-black/40 text-white/50'
                     }`}
                     title={ttsMuted ? 'Muted' : 'Spoken Feedback Active'}
                   >
@@ -409,7 +418,7 @@ export const HoldToSpeakAssistant: React.FC<HoldToSpeakAssistantProps> = ({
 
                   <button
                     onClick={closeOverlay}
-                    className="p-1.5 rounded-full bg-white/10 hover:bg-white/20 border border-white/15 text-white/70 hover:text-white transition-colors"
+                    className="p-1.5 rounded-full bg-black/40 hover:bg-black/60 border border-white/20 text-white/80 hover:text-white transition-colors shadow-md"
                   >
                     <X size={14} />
                   </button>
@@ -538,12 +547,12 @@ export const HoldToSpeakAssistant: React.FC<HoldToSpeakAssistantProps> = ({
                 </motion.div>
               )}
 
-              {/* 3. SUGGESTIONS (DELICATE FROSTED PILLS FLOATING NATURALLY) */}
-              <div className="w-full flex flex-col items-center space-y-1.5 pt-1">
-                <span className="text-[10px] uppercase tracking-wider font-semibold text-white/60">
+              {/* 3. SUGGESTIONS (CRISP FROSTED PILLS WITH HIGH CONTRAST) */}
+              <div className="w-full flex flex-col items-center space-y-2 pt-1">
+                <span className="text-[11px] uppercase tracking-wider font-bold text-amber-300 drop-shadow">
                   Try saying or tapping:
                 </span>
-                <div className="flex flex-wrap justify-center gap-1.5 max-w-md">
+                <div className="flex flex-wrap justify-center gap-2 max-w-md">
                   {[
                     'Log reading for The Fourth Protocol from 45 to 80',
                     'Where is Dune?',
@@ -557,7 +566,7 @@ export const HoldToSpeakAssistant: React.FC<HoldToSpeakAssistantProps> = ({
                         setLiveTranscript(phrase);
                         handleExecuteCommand(phrase);
                       }}
-                      className="px-3 py-1 rounded-full bg-white/10 hover:bg-white/20 border border-white/15 text-white/90 hover:text-white text-xs font-medium backdrop-blur-md transition-all active:scale-95 text-left"
+                      className="px-3.5 py-1.5 rounded-full bg-white/20 hover:bg-white/30 border border-white/30 text-white text-xs font-semibold backdrop-blur-md transition-all shadow-md active:scale-95 text-left"
                     >
                       &ldquo;{phrase}&rdquo;
                     </button>
