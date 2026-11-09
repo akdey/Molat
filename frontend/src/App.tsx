@@ -48,6 +48,7 @@ import { LendBookDrawer } from './components/LendBookDrawer';
 import { LendingLedger } from './components/LendingLedger';
 import { PickNextReadModal } from './components/PickNextReadModal';
 import { VoiceAssistantModal } from './components/VoiceAssistantModal';
+import { HoldToSpeakAssistant } from './components/HoldToSpeakAssistant';
 
 export default function App() {
   const {
@@ -99,43 +100,6 @@ export default function App() {
 
   // Per-tab scroll position memory (native mobile & desktop standard)
   const scrollPositions = useRef<Record<string, number>>({});
-
-  // Long-press handler for elevated center + button (Siri-like Voice Assistant trigger)
-  const longPressTimerRef = useRef<any>(null);
-  const isLongPressRef = useRef<boolean>(false);
-
-  const handlePlusPressStart = () => {
-    isLongPressRef.current = false;
-    longPressTimerRef.current = setTimeout(() => {
-      isLongPressRef.current = true;
-      if (typeof navigator !== 'undefined' && navigator.vibrate) {
-        try {
-          navigator.vibrate(60);
-        } catch {
-          // ignore
-        }
-      }
-      setCenterMenuOpen(false);
-      setVoiceAssistantOpen(true);
-    }, 450);
-  };
-
-  const handlePlusPressEnd = () => {
-    if (longPressTimerRef.current) {
-      clearTimeout(longPressTimerRef.current);
-      longPressTimerRef.current = null;
-    }
-  };
-
-  const handlePlusClick = (e: React.MouseEvent) => {
-    if (isLongPressRef.current) {
-      e.preventDefault();
-      e.stopPropagation();
-      isLongPressRef.current = false;
-      return;
-    }
-    setCenterMenuOpen(!centerMenuOpen);
-  };
 
   const switchTab = (newTab: typeof activeTab) => {
     if (newTab === activeTab) {
@@ -1102,23 +1066,11 @@ export default function App() {
           <span className="text-3xs mt-1">Shelf</span>
         </button>
 
-        {/* 3. Center Elevated Action Button (+ Scan/Log & Hold for Voice Assistant) */}
-        <div className="relative -top-3">
-          <button
-            onClick={handlePlusClick}
-            onTouchStart={handlePlusPressStart}
-            onTouchEnd={handlePlusPressEnd}
-            onTouchCancel={handlePlusPressEnd}
-            onMouseDown={handlePlusPressStart}
-            onMouseUp={handlePlusPressEnd}
-            onMouseLeave={handlePlusPressEnd}
-            className="w-12 h-12 rounded-full bg-accent hover:bg-accent-hover text-white flex items-center justify-center shadow-lg shadow-accent/30 active:scale-95 transition-all select-none"
-            aria-label="Tap for actions, hold for voice assistant"
-            title="Tap for actions, hold for voice assistant"
-          >
-            <Plus size={22} className={`transition-transform duration-200 ${centerMenuOpen ? 'rotate-45' : ''}`} />
-          </button>
-        </div>
+        {/* 3. Center Elevated Action Button (Tap for Menu • Hold to Speak AI Assistant) */}
+        <HoldToSpeakAssistant
+          centerMenuOpen={centerMenuOpen}
+          setCenterMenuOpen={setCenterMenuOpen}
+        />
 
         {/* 4. Streak */}
         <button
