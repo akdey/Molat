@@ -450,7 +450,7 @@ export const HoldToSpeakAssistant: React.FC<HoldToSpeakAssistantProps> = ({
         </button>
       </div>
 
-      {/* 2. ATMOSPHERIC SEAMLESS OVERLAY (FULL PAGE GRADIENT & FADE) */}
+      {/* 2. ATMOSPHERIC SEAMLESS OVERLAY (SEAMLESS BOTTOM FADE) */}
       {typeof document !== 'undefined' &&
         createPortal(
           <AnimatePresence>
@@ -460,7 +460,7 @@ export const HoldToSpeakAssistant: React.FC<HoldToSpeakAssistantProps> = ({
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.28, ease: 'easeOut' }}
-                className="fixed inset-0 z-40 flex flex-col justify-between pt-5 sm:pt-7 pb-24 select-none overflow-hidden"
+                className="fixed inset-0 z-40 flex flex-col justify-end pb-24 select-none overflow-hidden"
                 onClick={closeOverlay}
               >
                 {/* Full-Screen Ambient Dim */}
@@ -470,19 +470,19 @@ export const HoldToSpeakAssistant: React.FC<HoldToSpeakAssistantProps> = ({
                   }`}
                 />
 
-                {/* Atmospheric Dark/Light-to-Fade Gradient: Spanning the full height with gentle top fade */}
+                {/* Atmospheric Dark/Light-to-Fade Gradient: Rising seamlessly from bottom */}
                 <div
                   className="absolute inset-0 pointer-events-none transition-all duration-300"
                   style={{
                     background: isDark
-                      ? 'linear-gradient(to top, rgba(10, 14, 26, 0.98) 0%, rgba(13, 19, 36, 0.94) 35%, rgba(15, 23, 42, 0.85) 65%, rgba(15, 23, 42, 0.65) 85%, rgba(15, 23, 42, 0.45) 100%)'
-                      : 'linear-gradient(to top, rgba(235, 243, 255, 0.98) 0%, rgba(240, 246, 255, 0.94) 35%, rgba(244, 248, 255, 0.85) 65%, rgba(248, 250, 255, 0.65) 85%, rgba(248, 250, 255, 0.45) 100%)',
+                      ? 'linear-gradient(to top, rgba(10, 14, 26, 0.98) 0%, rgba(13, 19, 36, 0.93) 38%, rgba(15, 23, 42, 0.72) 68%, rgba(15, 23, 42, 0.18) 88%, transparent 100%)'
+                      : 'linear-gradient(to top, rgba(235, 243, 255, 0.98) 0%, rgba(240, 246, 255, 0.93) 38%, rgba(244, 248, 255, 0.75) 68%, rgba(248, 250, 255, 0.20) 88%, transparent 100%)',
                   }}
                 />
 
                 {/* Radiant Chromatic Aurora Pulse at Horizon */}
                 <div
-                  className={`absolute inset-x-0 bottom-0 h-72 blur-3xl pointer-events-none transition-all duration-300 ${
+                  className={`absolute inset-x-0 bottom-0 h-64 blur-3xl pointer-events-none transition-all duration-300 ${
                     isDark
                       ? 'bg-gradient-to-t from-indigo-500/25 via-cyan-500/10 to-transparent'
                       : 'bg-gradient-to-t from-sky-400/25 via-indigo-300/15 to-transparent'
@@ -496,128 +496,116 @@ export const HoldToSpeakAssistant: React.FC<HoldToSpeakAssistantProps> = ({
                   }`}
                 />
 
-                {/* 1. TOP HEADER: Molat Voice, Speaker, Cross Icons at TOP LEFT */}
-                <div
-                  className="relative z-10 w-full max-w-lg mx-auto px-5 pt-1 flex items-center justify-start gap-2"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <div
-                    className={`flex items-center gap-2 px-3 py-1.5 rounded-full backdrop-blur-xl transition-colors ${
-                      isDark
-                        ? 'bg-white/[0.08] hover:bg-white/[0.12] border border-white/15 text-white/90 shadow-lg'
-                        : 'bg-white/80 hover:bg-white border border-sky-200/80 text-slate-800 shadow-sm'
-                    }`}
-                  >
-                    <span
-                      className={`w-2 h-2 rounded-full ${
-                        isListening
-                          ? isDark
-                            ? 'bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.8)] animate-pulse'
-                            : 'bg-sky-500 shadow-[0_0_8px_rgba(14,165,233,0.8)] animate-pulse'
-                          : 'bg-slate-400'
-                      }`}
-                    />
-                    <span className="text-[11px] font-semibold flex items-center gap-1.5 font-sans tracking-wide">
-                      <Sparkles size={12} className={isDark ? 'text-cyan-300' : 'text-sky-600'} />
-                      <span>Molat Voice</span>
-                    </span>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => setTtsMuted(!ttsMuted)}
-                    className={`p-1.5 rounded-full border text-xs transition-colors cursor-pointer shadow-sm backdrop-blur-xl ${
-                      !ttsMuted
-                        ? isDark
-                          ? 'border-cyan-400/40 bg-cyan-500/20 text-cyan-200'
-                          : 'border-sky-400/60 bg-sky-100 text-sky-700'
-                        : isDark
-                        ? 'border-white/15 bg-white/10 text-white/50 hover:text-white/80'
-                        : 'border-slate-200 bg-white/70 text-slate-400 hover:text-slate-700'
-                    }`}
-                    title={ttsMuted ? 'Muted' : 'Spoken Feedback Active'}
-                  >
-                    {!ttsMuted ? <Volume2 size={13} /> : <VolumeX size={13} />}
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={closeOverlay}
-                    className={`p-1.5 rounded-full border transition-colors shadow-sm backdrop-blur-xl cursor-pointer ${
-                      isDark
-                        ? 'bg-white/10 hover:bg-white/20 border-white/15 text-white/80 hover:text-white shadow-md'
-                        : 'bg-white/80 hover:bg-white border-sky-200/80 text-slate-600 hover:text-slate-900'
-                    }`}
-                    title="Close"
-                  >
-                    <X size={14} />
-                  </button>
-                </div>
-
-                {/* 2. MIDDLE CONTENT (Centered vertically): Equalizer, Transcript & Understood Card */}
+                {/* Seamless Content Stream floating on the gradient */}
                 <motion.div
-                  initial={{ y: 20, opacity: 0 }}
+                  initial={{ y: 25, opacity: 0 }}
                   animate={{ y: 0, opacity: 1 }}
-                  exit={{ y: 15, opacity: 0 }}
+                  exit={{ y: 20, opacity: 0 }}
                   transition={{ type: 'spring', damping: 28, stiffness: 320 }}
-                  className="relative z-10 w-full max-w-lg mx-auto px-5 my-auto flex flex-col items-center text-center space-y-4"
+                  className="relative z-10 w-full max-w-lg mx-auto px-5 py-3 flex flex-col space-y-3.5"
                   onClick={(e) => e.stopPropagation()}
                 >
-                  {/* Dancing Equalizer Waveform: Actively pulses when listening, freezes flat when stopped */}
-                  <div className="flex items-center gap-1 h-5">
-                    {[0.35, 0.9, 0.55, 1.0, 0.45, 0.8].map((mult, idx) => (
-                      <motion.span
-                        key={idx}
-                        animate={{
-                          scaleY: isListening
-                            ? (liveTranscript ? [0.25, mult * 1.8, 0.25] : [0.25, mult, 0.25])
-                            : 0.15,
-                        }}
-                        transition={{
-                          repeat: isListening ? Infinity : 0,
-                          duration: isListening ? 0.5 + idx * 0.08 : 0.2,
-                          ease: 'easeInOut',
-                        }}
-                        className={`w-1 rounded-full h-5 origin-bottom transition-colors ${
-                          isDark
-                            ? 'bg-gradient-to-t from-cyan-400 via-indigo-300 to-violet-300 shadow-[0_0_6px_rgba(56,189,248,0.4)]'
-                            : 'bg-gradient-to-t from-sky-500 via-indigo-500 to-purple-500 shadow-[0_0_6px_rgba(14,165,233,0.35)]'
-                        }`}
-                      />
-                    ))}
-                  </div>
+                  {/* Equalizer Waveform + Molat Voice & Speaker directly below it */}
+                  <div className="flex flex-col items-center text-center space-y-1.5 py-1">
+                    {/* Dancing Equalizer Waveform: Actively pulses when listening, freezes flat when stopped */}
+                    <div className="flex items-center gap-1 h-5">
+                      {[0.35, 0.9, 0.55, 1.0, 0.45, 0.8].map((mult, idx) => (
+                        <motion.span
+                          key={idx}
+                          animate={{
+                            scaleY: isListening
+                              ? (liveTranscript ? [0.25, mult * 1.8, 0.25] : [0.25, mult, 0.25])
+                              : 0.15,
+                          }}
+                          transition={{
+                            repeat: isListening ? Infinity : 0,
+                            duration: isListening ? 0.5 + idx * 0.08 : 0.2,
+                            ease: 'easeInOut',
+                          }}
+                          className={`w-1 rounded-full h-5 origin-bottom transition-colors ${
+                            isDark
+                              ? 'bg-gradient-to-t from-cyan-400 via-indigo-300 to-violet-300 shadow-[0_0_6px_rgba(56,189,248,0.4)]'
+                              : 'bg-gradient-to-t from-sky-500 via-indigo-500 to-purple-500 shadow-[0_0_6px_rgba(14,165,233,0.35)]'
+                          }`}
+                        />
+                      ))}
+                    </div>
 
-                  <div className="min-h-[56px] flex items-center justify-center px-2">
-                    {liveTranscript ? (
-                      <p
-                        className={`font-serif text-lg sm:text-2xl font-medium italic tracking-tight leading-relaxed ${
-                          isDark ? 'text-white drop-shadow-md' : 'text-slate-900 drop-shadow-xs'
+                    {/* Small "Molat Voice" pill & Speaker audio toggle beside it */}
+                    <div className="flex items-center justify-center gap-1.5 pt-0.5">
+                      <div
+                        className={`flex items-center gap-1.5 px-2.5 py-0.5 rounded-full backdrop-blur-md transition-colors ${
+                          isDark
+                            ? 'bg-white/[0.08] border border-white/15 text-white/90 shadow-sm'
+                            : 'bg-white/80 border border-sky-200/80 text-slate-800 shadow-xs'
                         }`}
                       >
-                        &ldquo;{liveTranscript}&rdquo;
-                      </p>
-                    ) : isListening ? (
-                      <p
-                        className={`text-xs sm:text-sm font-serif italic animate-pulse ${
-                          isDark ? 'text-cyan-100/80' : 'text-sky-900/80'
-                        }`}
-                      >
-                        Listening... Speak book title, page range, or question
-                      </p>
-                    ) : (
+                        <span
+                          className={`w-1.5 h-1.5 rounded-full ${
+                            isListening
+                              ? isDark
+                                ? 'bg-cyan-400 shadow-[0_0_6px_rgba(34,211,238,0.8)] animate-pulse'
+                                : 'bg-sky-500 shadow-[0_0_6px_rgba(14,165,233,0.8)] animate-pulse'
+                              : 'bg-slate-400'
+                          }`}
+                        />
+                        <span className="text-[10px] font-semibold flex items-center gap-1 font-sans tracking-wide">
+                          <Sparkles size={10} className={isDark ? 'text-cyan-300' : 'text-sky-600'} />
+                          <span>Molat Voice</span>
+                        </span>
+                      </div>
+
                       <button
                         type="button"
-                        onClick={startListening}
-                        className={`text-xs flex items-center gap-1.5 font-medium px-3.5 py-1 rounded-full border backdrop-blur-md transition-all shadow-xs cursor-pointer ${
-                          isDark
-                            ? 'text-cyan-200 hover:text-white bg-white/10 hover:bg-white/15 border-white/15'
-                            : 'text-sky-700 hover:text-sky-900 bg-white/80 hover:bg-white border-sky-200/80'
+                        onClick={() => setTtsMuted(!ttsMuted)}
+                        className={`p-1 rounded-full border text-xs transition-colors cursor-pointer shadow-xs backdrop-blur-md ${
+                          !ttsMuted
+                            ? isDark
+                              ? 'border-cyan-400/40 bg-cyan-500/20 text-cyan-200'
+                              : 'border-sky-400/60 bg-sky-100 text-sky-700'
+                            : isDark
+                            ? 'border-white/15 bg-white/10 text-white/50 hover:text-white/80'
+                            : 'border-slate-200 bg-white/70 text-slate-400 hover:text-slate-700'
                         }`}
+                        title={ttsMuted ? 'Muted' : 'Spoken Feedback Active'}
                       >
-                        <RotateCcw size={12} />
-                        <span>Tap to speak again</span>
+                        {!ttsMuted ? <Volume2 size={11} /> : <VolumeX size={11} />}
                       </button>
-                    )}
+                    </div>
+
+                    {/* Transcript & Retry Button */}
+                    <div className="min-h-[48px] flex items-center justify-center px-2 pt-0.5">
+                      {liveTranscript ? (
+                        <p
+                          className={`font-serif text-lg sm:text-xl font-medium italic tracking-tight leading-relaxed ${
+                            isDark ? 'text-white drop-shadow-md' : 'text-slate-900 drop-shadow-xs'
+                          }`}
+                        >
+                          &ldquo;{liveTranscript}&rdquo;
+                        </p>
+                      ) : isListening ? (
+                        <p
+                          className={`text-xs sm:text-sm font-serif italic animate-pulse ${
+                            isDark ? 'text-cyan-100/80' : 'text-sky-900/80'
+                          }`}
+                        >
+                          Listening... Speak book title, page range, or question
+                        </p>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={startListening}
+                          className={`text-xs flex items-center gap-1.5 font-medium px-3.5 py-1 rounded-full border backdrop-blur-md transition-all shadow-xs cursor-pointer ${
+                            isDark
+                              ? 'text-cyan-200 hover:text-white bg-white/10 hover:bg-white/15 border-white/15'
+                              : 'text-sky-700 hover:text-sky-900 bg-white/80 hover:bg-white border-sky-200/80'
+                          }`}
+                        >
+                          <RotateCcw size={12} />
+                          <span>Tap to speak again</span>
+                        </button>
+                      )}
+                    </div>
                   </div>
 
                   {/* Understood Result Card */}
@@ -736,40 +724,37 @@ export const HoldToSpeakAssistant: React.FC<HoldToSpeakAssistantProps> = ({
                       </div>
                     </motion.div>
                   )}
-                </motion.div>
 
-                {/* 3. BOTTOM SUGGESTIONS: Anchored cleanly above bottom nav bar */}
-                <div
-                  className="relative z-10 w-full max-w-lg mx-auto px-5 flex flex-col items-center space-y-2.5 pb-2"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <span
-                    className={`text-[10px] uppercase tracking-widest font-semibold ${
-                      isDark ? 'text-slate-300/80 drop-shadow' : 'text-sky-900/70 font-bold'
-                    }`}
-                  >
-                    Try saying or tapping:
-                  </span>
-                  <div className="flex flex-wrap justify-center gap-2 max-w-md">
-                    {dynamicSuggestions.map((phrase, idx) => (
-                      <button
-                        key={idx}
-                        type="button"
-                        onClick={() => {
-                          setLiveTranscript(phrase);
-                          handleExecuteCommand(phrase);
-                        }}
-                        className={`px-3.5 py-1.5 rounded-full border text-xs font-normal tracking-wide backdrop-blur-xl transition-all text-left active:scale-95 ${
-                          isDark
-                            ? 'bg-white/[0.08] hover:bg-white/[0.16] border-white/[0.15] hover:border-white/30 text-white/95 shadow-[0_4px_16px_rgba(0,0,0,0.25)]'
-                            : 'bg-white/80 hover:bg-white border-sky-200/80 hover:border-sky-300 text-slate-800 shadow-xs hover:shadow-sm'
-                        }`}
-                      >
-                        &ldquo;{phrase}&rdquo;
-                      </button>
-                    ))}
+                  {/* Suggestion Chips */}
+                  <div className="w-full flex flex-col items-center space-y-2 pt-0.5">
+                    <span
+                      className={`text-[10px] uppercase tracking-widest font-semibold ${
+                        isDark ? 'text-slate-300/80 drop-shadow' : 'text-sky-900/70 font-bold'
+                      }`}
+                    >
+                      Try saying or tapping:
+                    </span>
+                    <div className="flex flex-wrap justify-center gap-2 max-w-md">
+                      {dynamicSuggestions.map((phrase, idx) => (
+                        <button
+                          key={idx}
+                          type="button"
+                          onClick={() => {
+                            setLiveTranscript(phrase);
+                            handleExecuteCommand(phrase);
+                          }}
+                          className={`px-3.5 py-1.5 rounded-full border text-xs font-normal tracking-wide backdrop-blur-xl transition-all text-left active:scale-95 ${
+                            isDark
+                              ? 'bg-white/[0.08] hover:bg-white/[0.16] border-white/[0.15] hover:border-white/30 text-white/95 shadow-[0_4px_16px_rgba(0,0,0,0.25)]'
+                              : 'bg-white/80 hover:bg-white border-sky-200/80 hover:border-sky-300 text-slate-800 shadow-xs hover:shadow-sm'
+                          }`}
+                        >
+                          &ldquo;{phrase}&rdquo;
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                </div>
+                </motion.div>
               </motion.div>
             )}
           </AnimatePresence>,

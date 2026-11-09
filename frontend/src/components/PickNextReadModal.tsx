@@ -87,6 +87,68 @@ export const PickNextReadModal: React.FC<PickNextReadModalProps> = ({
     return pool;
   }, [unreadPool, selectedGenre, selectedMood]);
 
+  // Audio synthesizer for crisp book shuffle / paper riffling sound
+  const playShuffleSound = () => {
+    if (typeof window === 'undefined') return;
+    try {
+      if (typeof navigator !== 'undefined' && navigator.vibrate) {
+        navigator.vibrate([15, 20, 15, 20, 25]);
+      }
+      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioCtx) return;
+      const ctx = new AudioCtx();
+      if (ctx.state === 'suspended') {
+        ctx.resume();
+      }
+      const now = ctx.currentTime;
+
+      // 5 rapid paper riffle clicks
+      for (let i = 0; i < 5; i++) {
+        const clickTime = now + i * 0.05;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        const filter = ctx.createBiquadFilter();
+
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(340 + Math.random() * 120, clickTime);
+        osc.frequency.exponentialRampToValueAtTime(120, clickTime + 0.04);
+
+        filter.type = 'bandpass';
+        filter.frequency.setValueAtTime(900 + i * 120, clickTime);
+        filter.Q.setValueAtTime(2.5, clickTime);
+
+        gain.gain.setValueAtTime(0.09, clickTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, clickTime + 0.04);
+
+        osc.connect(filter);
+        filter.connect(gain);
+        gain.connect(ctx.destination);
+
+        osc.start(clickTime);
+        osc.stop(clickTime + 0.045);
+      }
+
+      // Final settling paper thud
+      const thudTime = now + 0.26;
+      const thudOsc = ctx.createOscillator();
+      const thudGain = ctx.createGain();
+      thudOsc.type = 'sine';
+      thudOsc.frequency.setValueAtTime(160, thudTime);
+      thudOsc.frequency.exponentialRampToValueAtTime(55, thudTime + 0.08);
+
+      thudGain.gain.setValueAtTime(0.12, thudTime);
+      thudGain.gain.exponentialRampToValueAtTime(0.001, thudTime + 0.08);
+
+      thudOsc.connect(thudGain);
+      thudGain.connect(ctx.destination);
+
+      thudOsc.start(thudTime);
+      thudOsc.stop(thudTime + 0.09);
+    } catch {
+      // AudioContext unavailable or autoplay blocked
+    }
+  };
+
   // Function to draw a random book from candidates with tactile shuffle effect
   const drawRandomBook = (pool = filteredCandidates) => {
     if (pool.length === 0) {
@@ -94,6 +156,7 @@ export const PickNextReadModal: React.FC<PickNextReadModalProps> = ({
       return;
     }
 
+    playShuffleSound();
     setIsShuffling(true);
 
     // Rapid shuffle preview for 250ms
@@ -158,9 +221,6 @@ export const PickNextReadModal: React.FC<PickNextReadModalProps> = ({
               <div>
                 <h2 className="font-serif text-base sm:text-lg font-medium text-ink dark:text-ink-dark flex items-center gap-2">
                   <span>Pick My Next Read</span>
-                  <span className="text-4xs px-2 py-0.5 rounded-full bg-accent/10 dark:bg-accent/20 text-accent dark:text-accent-dark font-medium border border-accent/20">
-                    TBR Decider
-                  </span>
                 </h2>
                 <p className="text-3xs text-ink-muted">
                   {unreadPool.length} unread volume{unreadPool.length === 1 ? '' : 's'} waiting on your shelves
