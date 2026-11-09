@@ -26,6 +26,7 @@ import {
   Handshake,
   ArrowUpDown,
   Dices,
+  Mic,
 } from 'lucide-react';
 
 import { StreakBanner } from './components/StreakBanner';
@@ -46,6 +47,7 @@ import { HomeDashboard } from './components/HomeDashboard';
 import { LendBookDrawer } from './components/LendBookDrawer';
 import { LendingLedger } from './components/LendingLedger';
 import { PickNextReadModal } from './components/PickNextReadModal';
+import { VoiceAssistantModal } from './components/VoiceAssistantModal';
 
 export default function App() {
   const {
@@ -78,6 +80,7 @@ export default function App() {
     lendingRecords,
     pickNextModalOpen,
     setPickNextModalOpen,
+    setVoiceAssistantOpen,
     updateBookDetails,
     setScannerOpen,
     setKeyModalOpen,
@@ -96,6 +99,43 @@ export default function App() {
 
   // Per-tab scroll position memory (native mobile & desktop standard)
   const scrollPositions = useRef<Record<string, number>>({});
+
+  // Long-press handler for elevated center + button (Siri-like Voice Assistant trigger)
+  const longPressTimerRef = useRef<any>(null);
+  const isLongPressRef = useRef<boolean>(false);
+
+  const handlePlusPressStart = () => {
+    isLongPressRef.current = false;
+    longPressTimerRef.current = setTimeout(() => {
+      isLongPressRef.current = true;
+      if (typeof navigator !== 'undefined' && navigator.vibrate) {
+        try {
+          navigator.vibrate(60);
+        } catch {
+          // ignore
+        }
+      }
+      setCenterMenuOpen(false);
+      setVoiceAssistantOpen(true);
+    }, 450);
+  };
+
+  const handlePlusPressEnd = () => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+  };
+
+  const handlePlusClick = (e: React.MouseEvent) => {
+    if (isLongPressRef.current) {
+      e.preventDefault();
+      e.stopPropagation();
+      isLongPressRef.current = false;
+      return;
+    }
+    setCenterMenuOpen(!centerMenuOpen);
+  };
 
   const switchTab = (newTab: typeof activeTab) => {
     if (newTab === activeTab) {
@@ -324,6 +364,16 @@ export default function App() {
                 size={16}
                 className={loading || refreshing ? 'animate-spin text-accent dark:text-accent-dark' : ''}
               />
+            </button>
+
+            {/* Voice Assistant Trigger */}
+            <button
+              onClick={() => setVoiceAssistantOpen(true)}
+              className="p-2 rounded-xl text-accent hover:bg-accent/10 border border-transparent hover:border-accent/30 transition-colors"
+              title="Molat Voice Assistant"
+              aria-label="Open Voice Assistant"
+            >
+              <Mic size={16} />
             </button>
 
             {/* Desktop Only: Theme Toggle */}
@@ -946,7 +996,27 @@ export default function App() {
                 </button>
               </div>
 
-              {/* 1. Log Reading Session */}
+              {/* 1. Voice Assistant */}
+              <button
+                onClick={() => {
+                  setCenterMenuOpen(false);
+                  setVoiceAssistantOpen(true);
+                }}
+                className="w-full flex items-center gap-3 p-3 rounded-2xl bg-accent/10 dark:bg-accent/20 border border-accent/30 text-xs font-medium text-ink dark:text-ink-dark text-left transition-colors hover:bg-accent/20 active:scale-[0.99]"
+              >
+                <div className="w-9 h-9 rounded-xl bg-accent text-white flex items-center justify-center shrink-0 shadow-xs">
+                  <Sparkles size={18} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="font-semibold text-accent dark:text-accent-dark flex items-center gap-1.5">
+                    <span>Voice Assistant</span>
+                    <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-accent/20 text-accent font-semibold uppercase">Hold +</span>
+                  </div>
+                  <div className="text-3xs text-ink-muted truncate">Log pages, find shelf location, check streak</div>
+                </div>
+              </button>
+
+              {/* 2. Log Reading Session */}
               <button
                 onClick={() => {
                   setCenterMenuOpen(false);
@@ -1032,12 +1102,19 @@ export default function App() {
           <span className="text-3xs mt-1">Shelf</span>
         </button>
 
-        {/* 3. Center Elevated Action Button (+ Scan/Log) */}
+        {/* 3. Center Elevated Action Button (+ Scan/Log & Hold for Voice Assistant) */}
         <div className="relative -top-3">
           <button
-            onClick={() => setCenterMenuOpen(!centerMenuOpen)}
-            className="w-12 h-12 rounded-full bg-accent hover:bg-accent-hover text-white flex items-center justify-center shadow-lg shadow-accent/30 active:scale-95 transition-all"
-            aria-label="Create or scan"
+            onClick={handlePlusClick}
+            onTouchStart={handlePlusPressStart}
+            onTouchEnd={handlePlusPressEnd}
+            onTouchCancel={handlePlusPressEnd}
+            onMouseDown={handlePlusPressStart}
+            onMouseUp={handlePlusPressEnd}
+            onMouseLeave={handlePlusPressEnd}
+            className="w-12 h-12 rounded-full bg-accent hover:bg-accent-hover text-white flex items-center justify-center shadow-lg shadow-accent/30 active:scale-95 transition-all select-none"
+            aria-label="Tap for actions, hold for voice assistant"
+            title="Tap for actions, hold for voice assistant"
           >
             <Plus size={22} className={`transition-transform duration-200 ${centerMenuOpen ? 'rotate-45' : ''}`} />
           </button>
@@ -1090,6 +1167,7 @@ export default function App() {
         }}
         onOpenDetails={(book) => setSelectedBook(book)}
       />
+      <VoiceAssistantModal />
       <ToastContainer />
     </div>
   );

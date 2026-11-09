@@ -72,6 +72,7 @@ interface LibraryState {
   lendingModalBook: Book | null;
   lendingRecords: LendingRecord[];
   pickNextModalOpen: boolean;
+  voiceAssistantOpen: boolean;
   
   // Auth & Settings
   authToken: string | null;
@@ -98,6 +99,7 @@ interface LibraryState {
   openLendModal: (book?: Book) => void;
   closeLendModal: () => void;
   setPickNextModalOpen: (open: boolean) => void;
+  setVoiceAssistantOpen: (open: boolean) => void;
   setLibraryKey: (key: string) => void;
   loginOwner: (username: string, password: string) => Promise<void>;
   logoutOwner: () => void;
@@ -148,6 +150,7 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
   lendingModalBook: null,
   lendingRecords: [],
   pickNextModalOpen: false,
+  voiceAssistantOpen: false,
   
   authToken: localStorage.getItem('molat_auth_token') || null,
   authUser: localStorage.getItem('molat_auth_user') || null,
@@ -185,6 +188,7 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
   }),
   closeLendModal: () => set({ lendingModalOpen: false, lendingModalBook: null }),
   setPickNextModalOpen: (pickNextModalOpen) => set({ pickNextModalOpen }),
+  setVoiceAssistantOpen: (voiceAssistantOpen) => set({ voiceAssistantOpen }),
 
   setLibraryKey: (key: string) => {
     localStorage.setItem('molat_library_key', key);
