@@ -158,7 +158,7 @@ export const PickNextReadModal: React.FC<PickNextReadModalProps> = ({
               <div>
                 <h2 className="font-serif text-base sm:text-lg font-medium text-ink dark:text-ink-dark flex items-center gap-2">
                   <span>Pick My Next Read</span>
-                  <span className="text-3xs px-2 py-0.5 rounded-full bg-accent/10 dark:bg-accent/20 text-accent dark:text-accent-dark font-medium border border-accent/20">
+                  <span className="text-4xs px-2 py-0.5 rounded-full bg-accent/10 dark:bg-accent/20 text-accent dark:text-accent-dark font-medium border border-accent/20">
                     TBR Decider
                   </span>
                 </h2>
@@ -187,11 +187,10 @@ export const PickNextReadModal: React.FC<PickNextReadModalProps> = ({
                 setSelectedMood('all');
                 setSelectedGenre('ALL');
               }}
-              className={`px-2.5 py-1 rounded-lg font-medium transition-colors cursor-pointer ${
-                selectedMood === 'all' && selectedGenre === 'ALL'
-                  ? 'bg-accent text-white shadow-xs'
-                  : 'bg-surface-raised dark:bg-surface-dark-raised text-ink-secondary hover:text-ink border border-rule dark:border-rule-dark'
-              }`}
+              className={`px-2.5 py-1 rounded-lg font-medium transition-colors cursor-pointer ${selectedMood === 'all' && selectedGenre === 'ALL'
+                ? 'bg-accent text-white shadow-xs'
+                : 'bg-surface-raised dark:bg-surface-dark-raised text-ink-secondary hover:text-ink border border-rule dark:border-rule-dark'
+                }`}
             >
               All Unread ({unreadPool.length})
             </button>
@@ -201,11 +200,10 @@ export const PickNextReadModal: React.FC<PickNextReadModalProps> = ({
                 setSelectedMood('fiction');
                 setSelectedGenre('ALL');
               }}
-              className={`px-2.5 py-1 rounded-lg font-medium transition-colors cursor-pointer ${
-                selectedMood === 'fiction'
-                  ? 'bg-accent text-white shadow-xs'
-                  : 'bg-surface-raised dark:bg-surface-dark-raised text-ink-secondary hover:text-ink border border-rule dark:border-rule-dark'
-              }`}
+              className={`px-2.5 py-1 rounded-lg font-medium transition-colors cursor-pointer ${selectedMood === 'fiction'
+                ? 'bg-accent text-white shadow-xs'
+                : 'bg-surface-raised dark:bg-surface-dark-raised text-ink-secondary hover:text-ink border border-rule dark:border-rule-dark'
+                }`}
             >
               Fiction
             </button>
@@ -215,11 +213,10 @@ export const PickNextReadModal: React.FC<PickNextReadModalProps> = ({
                 setSelectedMood('nonfiction');
                 setSelectedGenre('ALL');
               }}
-              className={`px-2.5 py-1 rounded-lg font-medium transition-colors cursor-pointer ${
-                selectedMood === 'nonfiction'
-                  ? 'bg-accent text-white shadow-xs'
-                  : 'bg-surface-raised dark:bg-surface-dark-raised text-ink-secondary hover:text-ink border border-rule dark:border-rule-dark'
-              }`}
+              className={`px-2.5 py-1 rounded-lg font-medium transition-colors cursor-pointer ${selectedMood === 'nonfiction'
+                ? 'bg-accent text-white shadow-xs'
+                : 'bg-surface-raised dark:bg-surface-dark-raised text-ink-secondary hover:text-ink border border-rule dark:border-rule-dark'
+                }`}
             >
               Non-Fiction
             </button>
