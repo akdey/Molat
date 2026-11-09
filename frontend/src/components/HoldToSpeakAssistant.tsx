@@ -576,12 +576,7 @@ export const HoldToSpeakAssistant: React.FC<HoldToSpeakAssistantProps> = ({
                   Try saying or tapping:
                 </span>
                 <div className="flex flex-wrap justify-center gap-2 max-w-md">
-                  {[
-                    'Log reading for The Fourth Protocol from 45 to 80',
-                    'Where is Dune?',
-                    "What's my streak?",
-                    'What should I read next?',
-                  ].map((phrase, idx) => (
+                  {dynamicSuggestions.map((phrase, idx) => (
                     <button
                       key={idx}
                       type="button"
