@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useLibraryStore } from '../store/useLibraryStore';
-import { CheckCircle2, AlertCircle, Info, X } from 'lucide-react';
+import { CheckCircle2, AlertCircle, Info, X, RotateCcw } from 'lucide-react';
 
 export const ToastContainer: React.FC = () => {
   const { toasts, removeToast } = useLibraryStore();
@@ -24,7 +24,7 @@ export const ToastContainer: React.FC = () => {
               animate={{ opacity: 1, x: 0, scale: 1 }}
               exit={{ opacity: 0, scale: 0.9, x: 20 }}
               transition={{ type: 'spring', damping: 24, stiffness: 340 }}
-              className={`pointer-events-auto flex items-start gap-2.5 p-3 rounded-xl border shadow-lg backdrop-blur-md text-xs font-medium transition-all ${
+              className={`pointer-events-auto flex items-center gap-2.5 p-3 rounded-xl border shadow-lg backdrop-blur-md text-xs font-medium transition-all ${
                 isSuccess
                   ? 'bg-emerald-50/95 dark:bg-emerald-950/90 border-emerald-300 dark:border-emerald-800 text-emerald-900 dark:text-emerald-200'
                   : isError
@@ -32,12 +32,26 @@ export const ToastContainer: React.FC = () => {
                   : 'bg-surface-raised/95 dark:bg-surface-dark-raised/95 border-rule dark:border-rule-dark text-ink dark:text-ink-dark'
               }`}
             >
-              <div className="shrink-0 mt-0.5">
+              <div className="shrink-0">
                 {isSuccess && <CheckCircle2 size={16} className="text-emerald-600 dark:text-emerald-400" />}
                 {isError && <AlertCircle size={16} className="text-red-600 dark:text-red-400" />}
                 {!isSuccess && !isError && <Info size={16} className="text-accent dark:text-accent-dark" />}
               </div>
               <div className="flex-1 leading-snug">{toast.message}</div>
+              {toast.action && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    toast.action?.onClick();
+                    removeToast(toast.id);
+                  }}
+                  className="shrink-0 px-2.5 py-1 rounded-lg bg-amber-500 hover:bg-amber-600 active:scale-95 text-white font-bold text-xs tracking-wide shadow-xs transition-all cursor-pointer flex items-center gap-1"
+                >
+                  <RotateCcw size={11} />
+                  <span>{toast.action.label}</span>
+                </button>
+              )}
               <button
                 onClick={() => removeToast(toast.id)}
                 className="shrink-0 p-0.5 rounded hover:bg-black/10 dark:hover:bg-white/10 text-ink-muted hover:text-ink dark:hover:text-ink-dark transition-colors"

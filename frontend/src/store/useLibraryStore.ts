@@ -34,10 +34,17 @@ export type ShelfSortOption =
   | 'pub_year_desc'
   | 'pub_year_asc';
 
-interface Toast {
+export interface ToastAction {
+  label: string;
+  onClick: () => void;
+}
+
+export interface Toast {
   id: string;
   message: string;
   type: 'success' | 'error' | 'info';
+  action?: ToastAction;
+  duration?: number;
 }
 
 interface LibraryState {
@@ -104,7 +111,13 @@ interface LibraryState {
   loginOwner: (username: string, password: string) => Promise<void>;
   logoutOwner: () => void;
   toggleTheme: () => void;
-  addToast: (message: string, type?: 'success' | 'error' | 'info') => void;
+  addToast: (
+    message: string,
+    type?: 'success' | 'error' | 'info',
+    action?: ToastAction,
+    duration?: number
+  ) => string;
+  updateToast: (id: string, updates: Partial<Toast>) => void;
   removeToast: (id: string) => void;
   
   // API Calls
@@ -196,14 +209,28 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
     get().addToast('API Key saved locally', 'info');
   },
 
-  addToast: (message: string, type: 'success' | 'error' | 'info' = 'info') => {
+  addToast: (
+    message: string,
+    type: 'success' | 'error' | 'info' = 'info',
+    action?: ToastAction,
+    duration: number = 4000
+  ) => {
     const id = `${Date.now()}-${Math.random().toString(36).substr(2, 5)}`;
     set((state) => ({
-      toasts: [...state.toasts.slice(-4), { id, message, type }],
+      toasts: [...state.toasts.slice(-4), { id, message, type, action, duration }],
     }));
-    setTimeout(() => {
-      get().removeToast(id);
-    }, 4000);
+    if (duration > 0) {
+      setTimeout(() => {
+        get().removeToast(id);
+      }, duration);
+    }
+    return id;
+  },
+
+  updateToast: (id: string, updates: Partial<Toast>) => {
+    set((state) => ({
+      toasts: state.toasts.map((t) => (t.id === id ? { ...t, ...updates } : t)),
+    }));
   },
 
   removeToast: (id: string) => {

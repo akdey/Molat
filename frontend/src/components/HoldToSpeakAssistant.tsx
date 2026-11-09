@@ -37,6 +37,8 @@ export const HoldToSpeakAssistant: React.FC<HoldToSpeakAssistantProps> = ({
     submitReadingLog,
     setSelectedBook,
     addToast,
+    updateToast,
+    removeToast,
     theme,
   } = useLibraryStore();
 
@@ -50,6 +52,7 @@ export const HoldToSpeakAssistant: React.FC<HoldToSpeakAssistantProps> = ({
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [activeBookLastEndPage, setActiveBookLastEndPage] = useState<number | null>(null);
   const [bookLastPages, setBookLastPages] = useState<Record<string, number>>({});
+  const [undoSecondsLeft, setUndoSecondsLeft] = useState<number | null>(null);
 
   const holdTimerRef = useRef<any>(null);
   const didTriggerHoldRef = useRef<boolean>(false);
@@ -58,6 +61,10 @@ export const HoldToSpeakAssistant: React.FC<HoldToSpeakAssistantProps> = ({
   const latestTranscriptRef = useRef<string>('');
   const isTouchActiveRef = useRef<boolean>(false);
   const hasExecutedRef = useRef<boolean>(false);
+  const undoTimerRef = useRef<any>(null);
+  const undoIntervalRef = useRef<any>(null);
+  const undoToastIdRef = useRef<string | null>(null);
+  const pendingLogRef = useRef<AssistantResult | null>(null);
 
   // Active book currently reading (or first book fallback)
   const activeBook = useMemo(
@@ -174,6 +181,74 @@ export const HoldToSpeakAssistant: React.FC<HoldToSpeakAssistantProps> = ({
     setUnderstoodResult(null);
   };
 
+  const commitPendingLog = async (logRes: AssistantResult) => {
+    if (!logRes.actionPayload?.bookId) return;
+    setIsSubmitting(true);
+    setUndoSecondsLeft(null);
+    pendingLogRef.current = null;
+    try {
+      await submitReadingLog({
+        book_id: logRes.actionPayload.bookId,
+        start_page: logRes.actionPayload.startPage ?? 0,
+        end_page: logRes.actionPayload.endPage ?? 0,
+        pages_read: logRes.actionPayload.pagesRead ?? 0,
+        duration_minutes: logRes.actionPayload.durationMinutes ?? 0,
+        session_note: logRes.actionPayload.sessionNote,
+        finished_book: logRes.actionPayload.finishedBook,
+        rating: logRes.actionPayload.rating,
+      });
+      if (logRes.actionPayload.endPage) {
+        setActiveBookLastEndPage(logRes.actionPayload.endPage);
+        setBookLastPages((prev) => ({
+          ...prev,
+          [logRes.actionPayload!.bookId!]: logRes.actionPayload!.endPage!,
+        }));
+      }
+      triggerHaptic([40, 60, 40]);
+      addToast(
+        `Logged ${logRes.actionPayload.pagesRead} pages for "${logRes.matchedBook?.title}"`,
+        'success'
+      );
+    } catch (err: any) {
+      console.error('Failed to auto-submit log:', err);
+      addToast('Session recognized, but authentication key is required.', 'error');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleUndo = () => {
+    if (undoTimerRef.current) {
+      clearTimeout(undoTimerRef.current);
+      undoTimerRef.current = null;
+    }
+    if (undoIntervalRef.current) {
+      clearInterval(undoIntervalRef.current);
+      undoIntervalRef.current = null;
+    }
+    if (undoToastIdRef.current) {
+      removeToast(undoToastIdRef.current);
+      undoToastIdRef.current = null;
+    }
+    const cancelledBookTitle = pendingLogRef.current?.matchedBook?.title || 'Reading Log';
+    setUndoSecondsLeft(null);
+    pendingLogRef.current = null;
+    setIsSubmitting(false);
+    triggerHaptic(30);
+    addToast('Cancelled saving reading log', 'info');
+    setUnderstoodResult((prev) =>
+      prev
+        ? {
+            ...prev,
+            cardTitle: `Cancelled: ${cancelledBookTitle}`,
+            cardDetail: 'Reading session was not saved to library.',
+            spokenReply: 'Reading session cancelled.',
+          }
+        : null
+    );
+    speakText('Cancelled');
+  };
+
   const handleExecuteCommand = async (commandText: string) => {
     if (hasExecutedRef.current) return;
     hasExecutedRef.current = true;
@@ -190,35 +265,57 @@ export const HoldToSpeakAssistant: React.FC<HoldToSpeakAssistantProps> = ({
 
     setUnderstoodResult(res);
 
-    // If intent is LOG_READING, submit reading log to Google Sheets!
+    // If intent is LOG_READING, set up 4-second Undo Buffer before executing raw network call!
     if (res.intent === 'LOG_READING' && res.actionPayload?.bookId) {
-      setIsSubmitting(true);
-      try {
-        await submitReadingLog({
-          book_id: res.actionPayload.bookId,
-          start_page: res.actionPayload.startPage ?? 0,
-          end_page: res.actionPayload.endPage ?? 0,
-          pages_read: res.actionPayload.pagesRead ?? 0,
-          duration_minutes: res.actionPayload.durationMinutes ?? 0,
-          session_note: res.actionPayload.sessionNote,
-          finished_book: res.actionPayload.finishedBook,
-          rating: res.actionPayload.rating,
-        });
-        if (res.actionPayload.endPage) {
-          setActiveBookLastEndPage(res.actionPayload.endPage);
-          setBookLastPages((prev) => ({
-            ...prev,
-            [res.actionPayload!.bookId!]: res.actionPayload!.endPage!,
-          }));
-        }
-        triggerHaptic([40, 60, 40]);
-        addToast(`Logged ${res.actionPayload.pagesRead} pages for "${res.matchedBook?.title}"`, 'success');
-      } catch (err: any) {
-        console.error('Failed to auto-submit log:', err);
-        addToast('Session recognized, but authentication key is required.', 'error');
-      } finally {
-        setIsSubmitting(false);
+      // If there was an earlier pending log, flush it first
+      if (pendingLogRef.current && undoTimerRef.current) {
+        clearTimeout(undoTimerRef.current);
+        if (undoIntervalRef.current) clearInterval(undoIntervalRef.current);
+        if (undoToastIdRef.current) removeToast(undoToastIdRef.current);
+        commitPendingLog(pendingLogRef.current);
       }
+
+      const pages =
+        res.actionPayload.pagesRead ||
+        Math.max(0, (res.actionPayload.endPage ?? 0) - (res.actionPayload.startPage ?? 0));
+
+      let seconds = 4;
+      setUndoSecondsLeft(seconds);
+      pendingLogRef.current = res;
+
+      const toastId = addToast(
+        `Saving ${pages} pages... (${seconds}s)`,
+        'info',
+        {
+          label: 'Undo',
+          onClick: handleUndo,
+        },
+        5000
+      );
+      undoToastIdRef.current = toastId;
+
+      undoIntervalRef.current = setInterval(() => {
+        seconds -= 1;
+        if (seconds > 0) {
+          setUndoSecondsLeft(seconds);
+          updateToast(toastId, {
+            message: `Saving ${pages} pages... (${seconds}s)`,
+          });
+        } else {
+          if (undoIntervalRef.current) {
+            clearInterval(undoIntervalRef.current);
+            undoIntervalRef.current = null;
+          }
+        }
+      }, 1000);
+
+      undoTimerRef.current = setTimeout(async () => {
+        if (undoToastIdRef.current) {
+          removeToast(undoToastIdRef.current);
+          undoToastIdRef.current = null;
+        }
+        await commitPendingLog(res);
+      }, 4000);
     }
 
     speakText(res.spokenReply);
@@ -383,6 +480,13 @@ export const HoldToSpeakAssistant: React.FC<HoldToSpeakAssistantProps> = ({
     return () => {
       if (holdTimerRef.current) clearTimeout(holdTimerRef.current);
       if (silenceTimeoutRef.current) clearTimeout(silenceTimeoutRef.current);
+      if (undoIntervalRef.current) clearInterval(undoIntervalRef.current);
+      if (undoTimerRef.current) {
+        clearTimeout(undoTimerRef.current);
+        if (pendingLogRef.current) {
+          commitPendingLog(pendingLogRef.current);
+        }
+      }
       stopListening();
     };
   }, []);
@@ -720,13 +824,24 @@ export const HoldToSpeakAssistant: React.FC<HoldToSpeakAssistantProps> = ({
                             <ArrowRight size={11} />
                           </button>
                         )}
-                        <button
-                          type="button"
-                          onClick={closeOverlay}
-                          className="px-3.5 py-1 rounded-xl bg-gradient-to-r from-sky-600 to-indigo-600 hover:brightness-105 text-white text-xs font-semibold transition-all shadow-md active:scale-95"
-                        >
-                          {isSubmitting ? 'Logging...' : 'Done'}
-                        </button>
+                        {undoSecondsLeft !== null ? (
+                          <button
+                            type="button"
+                            onClick={handleUndo}
+                            className="px-3.5 py-1 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold transition-all shadow-md active:scale-95 flex items-center gap-1.5 cursor-pointer"
+                          >
+                            <RotateCcw size={12} />
+                            <span>Undo ({undoSecondsLeft}s)</span>
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={closeOverlay}
+                            className="px-3.5 py-1 rounded-xl bg-gradient-to-r from-sky-600 to-indigo-600 hover:brightness-105 text-white text-xs font-semibold transition-all shadow-md active:scale-95 cursor-pointer"
+                          >
+                            {isSubmitting ? 'Logging...' : 'Done'}
+                          </button>
+                        )}
                       </div>
                     </motion.div>
                   )}
