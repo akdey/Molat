@@ -463,20 +463,26 @@ export const HoldToSpeakAssistant: React.FC<HoldToSpeakAssistantProps> = ({
                 className="fixed inset-0 z-40 flex flex-col justify-end pb-24 select-none overflow-hidden"
                 onClick={closeOverlay}
               >
-                {/* Full-Screen Ambient Dim */}
+                {/* Ambient Dim & Backdrop Blur (Covers bottom ~78%, leaves top ~22% completely clear) */}
                 <div
-                  className={`absolute inset-0 pointer-events-none transition-colors duration-300 ${
-                    isDark ? 'bg-slate-950/45 backdrop-blur-[7px]' : 'bg-slate-900/12 backdrop-blur-[6px]'
+                  className={`absolute inset-x-0 bottom-0 h-[78vh] pointer-events-none transition-colors duration-300 ${
+                    isDark ? 'bg-slate-950/50 backdrop-blur-[8px]' : 'bg-slate-900/12 backdrop-blur-[6px]'
                   }`}
+                  style={{
+                    WebkitMaskImage: 'linear-gradient(to top, black 0%, black 72%, transparent 100%)',
+                    maskImage: 'linear-gradient(to top, black 0%, black 72%, transparent 100%)',
+                  }}
                 />
 
-                {/* Atmospheric Dark/Light-to-Fade Gradient: Rising seamlessly from bottom */}
+                {/* Atmospheric Dark/Light-to-Fade Gradient: Rising seamlessly from bottom 78% */}
                 <div
-                  className="absolute inset-0 pointer-events-none transition-all duration-300"
+                  className="absolute inset-x-0 bottom-0 h-[78vh] pointer-events-none transition-all duration-300"
                   style={{
+                    WebkitMaskImage: 'linear-gradient(to top, black 0%, black 78%, transparent 100%)',
+                    maskImage: 'linear-gradient(to top, black 0%, black 78%, transparent 100%)',
                     background: isDark
-                      ? 'linear-gradient(to top, rgba(10, 14, 26, 0.98) 0%, rgba(13, 19, 36, 0.93) 38%, rgba(15, 23, 42, 0.72) 68%, rgba(15, 23, 42, 0.18) 88%, transparent 100%)'
-                      : 'linear-gradient(to top, rgba(235, 243, 255, 0.98) 0%, rgba(240, 246, 255, 0.93) 38%, rgba(244, 248, 255, 0.75) 68%, rgba(248, 250, 255, 0.20) 88%, transparent 100%)',
+                      ? 'linear-gradient(to top, rgba(10, 14, 26, 0.98) 0%, rgba(13, 19, 36, 0.94) 40%, rgba(15, 23, 42, 0.78) 70%, rgba(15, 23, 42, 0.25) 90%, transparent 100%)'
+                      : 'linear-gradient(to top, rgba(235, 243, 255, 0.98) 0%, rgba(240, 246, 255, 0.94) 40%, rgba(244, 248, 255, 0.80) 70%, rgba(248, 250, 255, 0.25) 90%, transparent 100%)',
                   }}
                 />
 
@@ -502,7 +508,7 @@ export const HoldToSpeakAssistant: React.FC<HoldToSpeakAssistantProps> = ({
                   animate={{ y: 0, opacity: 1 }}
                   exit={{ y: 20, opacity: 0 }}
                   transition={{ type: 'spring', damping: 28, stiffness: 320 }}
-                  className="relative z-10 w-full max-w-lg mx-auto px-5 py-3 flex flex-col space-y-3.5"
+                  className="relative z-10 w-full max-w-lg mx-auto px-5 py-3 flex flex-col space-y-3.5 max-h-[75vh] overflow-y-auto no-scrollbar"
                   onClick={(e) => e.stopPropagation()}
                 >
                   {/* Equalizer Waveform + Molat Voice & Speaker directly below it */}
