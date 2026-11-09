@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { useLibraryStore } from '../store/useLibraryStore';
 import { processVoiceAssistantCommand, AssistantResult } from '../utils/voiceAssistantEngine';
+import { fetchReadingLogs } from '../api/client';
 import { BookCover } from './BookCover';
 
 interface HoldToSpeakAssistantProps {
@@ -44,6 +45,7 @@ export const HoldToSpeakAssistant: React.FC<HoldToSpeakAssistantProps> = ({
   const [understoodResult, setUnderstoodResult] = useState<AssistantResult | null>(null);
   const [ttsMuted, setTtsMuted] = useState<boolean>(false);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [activeBookLastEndPage, setActiveBookLastEndPage] = useState<number | null>(null);
 
   const holdTimerRef = useRef<any>(null);
   const didTriggerHoldRef = useRef<boolean>(false);
@@ -52,14 +54,49 @@ export const HoldToSpeakAssistant: React.FC<HoldToSpeakAssistantProps> = ({
   const latestTranscriptRef = useRef<string>('');
   const isTouchActiveRef = useRef<boolean>(false);
 
-  // Dynamic suggestion chips based on real library books
+  // Active book currently reading (or first book fallback)
+  const activeBook = useMemo(
+    () => books.find((b) => b.reading_status === 'READING') || (books.length > 0 ? books[0] : null),
+    [books]
+  );
+
+  // Fetch highest end_page previously logged for the active book
+  useEffect(() => {
+    if (!activeBook?.book_id) {
+      setActiveBookLastEndPage(0);
+      return;
+    }
+    let isMounted = true;
+    fetchReadingLogs(activeBook.book_id)
+      .then((pastLogs) => {
+        if (!isMounted) return;
+        if (pastLogs && pastLogs.length > 0) {
+          const maxEnd = Math.max(...pastLogs.map((l) => l.end_page || 0));
+          if (maxEnd > 0) {
+            setActiveBookLastEndPage(maxEnd);
+            return;
+          }
+        }
+        setActiveBookLastEndPage(0);
+      })
+      .catch(() => {
+        if (isMounted) setActiveBookLastEndPage(0);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [activeBook?.book_id]);
+
+  // Dynamic suggestion chips based on real library books & last page read + 1
   const dynamicSuggestions = useMemo(() => {
     const list: string[] = [];
-    const activeBook = books.find((b) => b.reading_status === 'READING');
     if (activeBook) {
-      list.push(`Log reading for ${activeBook.title} from 20 to 50`);
-    } else if (books.length > 0) {
-      list.push(`Log reading for ${books[0].title} from 1 to 30`);
+      const lastEnd = activeBookLastEndPage ?? 0;
+      const startPage = lastEnd > 0 ? lastEnd + 1 : 1;
+      const goalPages = streakSummary?.daily_goal_pages || 20;
+      const endPage = startPage + goalPages;
+      list.push(`Log reading for ${activeBook.title} from ${startPage} to ${endPage}`);
     }
 
     const bookWithLocation = books.find((b) => b.location && b.reading_status !== 'COMPLETED') || books[0];
@@ -72,7 +109,7 @@ export const HoldToSpeakAssistant: React.FC<HoldToSpeakAssistantProps> = ({
     list.push("What's my streak?");
     list.push('What should I read next?');
     return list;
-  }, [books]);
+  }, [books, activeBook, activeBookLastEndPage, streakSummary]);
 
   // Haptic feedback (Samsung S21 FE)
   const triggerHaptic = (pattern: number | number[]) => {
@@ -149,6 +186,9 @@ export const HoldToSpeakAssistant: React.FC<HoldToSpeakAssistantProps> = ({
           finished_book: res.actionPayload.finishedBook,
           rating: res.actionPayload.rating,
         });
+        if (res.actionPayload.endPage) {
+          setActiveBookLastEndPage(res.actionPayload.endPage);
+        }
         triggerHaptic([40, 60, 40]);
         addToast(`Logged ${res.actionPayload.pagesRead} pages for "${res.matchedBook?.title}"`, 'success');
       } catch (err: any) {
