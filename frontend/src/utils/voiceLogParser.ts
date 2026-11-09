@@ -186,3 +186,4 @@ export function parseVoiceLogCommand(rawSpeech: string, currentStartPage: number
     summary: summaryParts.join(' • '),
   };
 }
+
