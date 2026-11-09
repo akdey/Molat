@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Mic,
+  MicOff,
   Plus,
   Sparkles,
   BookOpen,
@@ -10,6 +11,9 @@ import {
   CheckCircle2,
   X,
   Volume2,
+  VolumeX,
+  ArrowRight,
+  RotateCcw,
 } from 'lucide-react';
 import { useLibraryStore } from '../store/useLibraryStore';
 import { processVoiceAssistantCommand, AssistantResult } from '../utils/voiceAssistantEngine';
@@ -33,19 +37,21 @@ export const HoldToSpeakAssistant: React.FC<HoldToSpeakAssistantProps> = ({
     addToast,
   } = useLibraryStore();
 
-  const [isHolding, setIsHolding] = useState<boolean>(false);
+  const [overlayOpen, setOverlayOpen] = useState<boolean>(false);
+  const [isListening, setIsListening] = useState<boolean>(false);
   const [liveTranscript, setLiveTranscript] = useState<string>('');
-  const [result, setResult] = useState<AssistantResult | null>(null);
-  const [showResultCard, setShowResultCard] = useState<boolean>(false);
+  const [understoodResult, setUnderstoodResult] = useState<AssistantResult | null>(null);
+  const [ttsMuted, setTtsMuted] = useState<boolean>(false);
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
   const holdTimerRef = useRef<any>(null);
   const didTriggerHoldRef = useRef<boolean>(false);
   const recognitionRef = useRef<any>(null);
+  const silenceTimeoutRef = useRef<any>(null);
   const latestTranscriptRef = useRef<string>('');
-  const resultCardTimerRef = useRef<any>(null);
   const isTouchActiveRef = useRef<boolean>(false);
 
-  // Trigger tactile haptics on mobile (Samsung S21 FE)
+  // Haptic feedback (Samsung S21 FE)
   const triggerHaptic = (pattern: number | number[]) => {
     if (typeof navigator !== 'undefined' && navigator.vibrate) {
       try {
@@ -56,9 +62,9 @@ export const HoldToSpeakAssistant: React.FC<HoldToSpeakAssistantProps> = ({
     }
   };
 
-  // Optional voice response via native on-device Web SpeechSynthesis
+  // On-device text-to-speech
   const speakText = (text: string) => {
-    if (typeof window === 'undefined' || !window.speechSynthesis) return;
+    if (ttsMuted || typeof window === 'undefined' || !window.speechSynthesis) return;
     try {
       window.speechSynthesis.cancel();
       const utterance = new SpeechSynthesisUtterance(text);
@@ -70,60 +76,8 @@ export const HoldToSpeakAssistant: React.FC<HoldToSpeakAssistantProps> = ({
     }
   };
 
-  // Start continuous Web Speech recognition
-  const startSpeechRecognition = () => {
-    const SpeechRecognitionAPI =
-      typeof window !== 'undefined'
-        ? (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
-        : null;
-
-    if (!SpeechRecognitionAPI) {
-      addToast('Voice not supported in this browser. Please use Chrome or Samsung Internet.', 'error');
-      return;
-    }
-
-    setLiveTranscript('');
-    latestTranscriptRef.current = '';
-
-    try {
-      const recognition = new SpeechRecognitionAPI();
-      recognition.continuous = true;
-      recognition.interimResults = true;
-      recognition.lang = navigator.language || 'en-US';
-
-      recognition.onstart = () => {
-        setIsHolding(true);
-        triggerHaptic(50);
-      };
-
-      recognition.onresult = (event: any) => {
-        let transcript = '';
-        for (let i = 0; i < event.results.length; i++) {
-          transcript += event.results[i][0].transcript;
-        }
-        setLiveTranscript(transcript);
-        latestTranscriptRef.current = transcript;
-      };
-
-      recognition.onerror = (event: any) => {
-        console.warn('Speech recognition error:', event.error);
-        if (event.error === 'not-allowed') {
-          addToast('Microphone access denied. Please enable microphone permissions.', 'error');
-        }
-      };
-
-      recognition.onend = () => {
-        // Recognition completed
-      };
-
-      recognitionRef.current = recognition;
-      recognition.start();
-    } catch (err) {
-      console.error('Failed to start speech recognition:', err);
-    }
-  };
-
-  const stopSpeechRecognition = () => {
+  const stopListening = () => {
+    if (silenceTimeoutRef.current) clearTimeout(silenceTimeoutRef.current);
     if (recognitionRef.current) {
       try {
         recognitionRef.current.stop();
@@ -132,30 +86,35 @@ export const HoldToSpeakAssistant: React.FC<HoldToSpeakAssistantProps> = ({
       }
       recognitionRef.current = null;
     }
+    setIsListening(false);
   };
 
-  // Execute the voice command after finger is lifted
-  const handleExecution = async (spokenText: string) => {
-    if (!spokenText.trim()) return;
+  const closeOverlay = () => {
+    stopListening();
+    if (typeof window !== 'undefined' && window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+    }
+    setOverlayOpen(false);
+    setLiveTranscript('');
+    setUnderstoodResult(null);
+  };
+
+  const handleExecuteCommand = async (commandText: string) => {
+    stopListening();
+    if (!commandText.trim()) return;
 
     triggerHaptic(40);
-    const res = processVoiceAssistantCommand(spokenText, {
+    const res = processVoiceAssistantCommand(commandText, {
       books,
       lendingRecords,
       streakSummary,
     });
 
-    setResult(res);
-    setShowResultCard(true);
+    setUnderstoodResult(res);
 
-    // Auto-dismiss result card after 6 seconds
-    if (resultCardTimerRef.current) clearTimeout(resultCardTimerRef.current);
-    resultCardTimerRef.current = setTimeout(() => {
-      setShowResultCard(false);
-    }, 6000);
-
-    // Auto-submit reading log if intent is LOG_READING
+    // If intent is LOG_READING, submit reading log to Google Sheets!
     if (res.intent === 'LOG_READING' && res.actionPayload?.bookId) {
+      setIsSubmitting(true);
       try {
         await submitReadingLog({
           book_id: res.actionPayload.bookId,
@@ -167,28 +126,101 @@ export const HoldToSpeakAssistant: React.FC<HoldToSpeakAssistantProps> = ({
           finished_book: res.actionPayload.finishedBook,
           rating: res.actionPayload.rating,
         });
-        triggerHaptic([40, 50, 40]);
+        triggerHaptic([40, 60, 40]);
         addToast(`Logged ${res.actionPayload.pagesRead} pages for "${res.matchedBook?.title}"`, 'success');
       } catch (err: any) {
         console.error('Failed to auto-submit log:', err);
-        addToast('Action recognized, but login required to write to Sheets.', 'error');
+        addToast('Session recognized, but authentication key is required.', 'error');
+      } finally {
+        setIsSubmitting(false);
       }
     }
 
     speakText(res.spokenReply);
   };
 
-  // --- PRESS / HOLD GESTURE HANDLERS ---
+  const startListening = () => {
+    const SpeechRecognitionAPI =
+      typeof window !== 'undefined'
+        ? (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
+        : null;
+
+    if (!SpeechRecognitionAPI) {
+      addToast('Voice speech recognition not supported in this browser.', 'error');
+      return;
+    }
+
+    setOverlayOpen(true);
+    setLiveTranscript('');
+    latestTranscriptRef.current = '';
+    setUnderstoodResult(null);
+
+    try {
+      const recognition = new SpeechRecognitionAPI();
+      recognition.continuous = true;
+      recognition.interimResults = true;
+      recognition.lang = navigator.language || 'en-US';
+
+      recognition.onstart = () => {
+        setIsListening(true);
+        triggerHaptic(45);
+      };
+
+      recognition.onresult = (event: any) => {
+        let transcript = '';
+        for (let i = 0; i < event.results.length; i++) {
+          transcript += event.results[i][0].transcript;
+        }
+        setLiveTranscript(transcript);
+        latestTranscriptRef.current = transcript;
+
+        // Live preview of what it understands
+        const preview = processVoiceAssistantCommand(transcript, {
+          books,
+          lendingRecords,
+          streakSummary,
+        });
+        if (preview && preview.intent !== 'UNKNOWN') {
+          setUnderstoodResult(preview);
+        }
+
+        // Auto execute on natural pause of 1.6s
+        if (silenceTimeoutRef.current) clearTimeout(silenceTimeoutRef.current);
+        silenceTimeoutRef.current = setTimeout(() => {
+          if (transcript.trim()) {
+            handleExecuteCommand(transcript);
+          }
+        }, 1600);
+      };
+
+      recognition.onerror = (event: any) => {
+        console.warn('Speech recognition error:', event.error);
+        if (event.error === 'not-allowed') {
+          addToast('Microphone access denied. Please allow microphone permissions.', 'error');
+        }
+      };
+
+      recognition.onend = () => {
+        setIsListening(false);
+      };
+
+      recognitionRef.current = recognition;
+      recognition.start();
+    } catch (err) {
+      console.error('Speech recognition start failed:', err);
+      setIsListening(false);
+    }
+  };
+
+  // --- LONG PRESS GESTURE HANDLERS ---
   const handlePressStart = () => {
     didTriggerHoldRef.current = false;
     if (holdTimerRef.current) clearTimeout(holdTimerRef.current);
 
-    // 280ms threshold distinguishes a quick tap from a deliberate hold
     holdTimerRef.current = setTimeout(() => {
       didTriggerHoldRef.current = true;
       setCenterMenuOpen(false);
-      setShowResultCard(false);
-      startSpeechRecognition();
+      startListening();
     }, 280);
   };
 
@@ -199,32 +231,30 @@ export const HoldToSpeakAssistant: React.FC<HoldToSpeakAssistantProps> = ({
     }
 
     if (didTriggerHoldRef.current) {
-      // User held and is now releasing their finger!
-      setIsHolding(false);
-      stopSpeechRecognition();
+      // User held to talk; if they spoke, execute what was heard
       triggerHaptic(30);
-
-      // Give a tiny 120ms tick for the speech engine to flush the last syllable
-      setTimeout(() => {
-        const text = latestTranscriptRef.current;
-        if (text && text.trim()) {
-          handleExecution(text);
-        }
-      }, 120);
+      const spoken = latestTranscriptRef.current;
+      if (spoken && spoken.trim()) {
+        handleExecuteCommand(spoken);
+      }
     } else {
-      // Short tap: standard toggle of center actions menu
-      setCenterMenuOpen(!centerMenuOpen);
+      // Short tap:
+      if (overlayOpen) {
+        closeOverlay();
+      } else {
+        setCenterMenuOpen(!centerMenuOpen);
+      }
     }
   };
 
-  // Touch Events (Mobile - Samsung S21 FE)
+  // Touch handlers (Mobile)
   const onTouchStart = () => {
     isTouchActiveRef.current = true;
     handlePressStart();
   };
 
   const onTouchEnd = (e: React.TouchEvent) => {
-    e.preventDefault(); // Prevents simulated mouse click on mobile
+    e.preventDefault();
     handlePressEnd();
     setTimeout(() => {
       isTouchActiveRef.current = false;
@@ -233,12 +263,10 @@ export const HoldToSpeakAssistant: React.FC<HoldToSpeakAssistantProps> = ({
 
   const onTouchCancel = () => {
     if (holdTimerRef.current) clearTimeout(holdTimerRef.current);
-    setIsHolding(false);
-    stopSpeechRecognition();
     isTouchActiveRef.current = false;
   };
 
-  // Mouse Events (Desktop)
+  // Mouse handlers (Desktop)
   const onMouseDown = () => {
     if (isTouchActiveRef.current) return;
     handlePressStart();
@@ -251,9 +279,7 @@ export const HoldToSpeakAssistant: React.FC<HoldToSpeakAssistantProps> = ({
 
   const onMouseLeave = () => {
     if (isTouchActiveRef.current) return;
-    if (didTriggerHoldRef.current) {
-      handlePressEnd();
-    } else if (holdTimerRef.current) {
+    if (holdTimerRef.current) {
       clearTimeout(holdTimerRef.current);
     }
   };
@@ -261,108 +287,14 @@ export const HoldToSpeakAssistant: React.FC<HoldToSpeakAssistantProps> = ({
   useEffect(() => {
     return () => {
       if (holdTimerRef.current) clearTimeout(holdTimerRef.current);
-      if (resultCardTimerRef.current) clearTimeout(resultCardTimerRef.current);
-      stopSpeechRecognition();
+      if (silenceTimeoutRef.current) clearTimeout(silenceTimeoutRef.current);
+      stopListening();
     };
   }, []);
 
   return (
     <>
-      {/* 1. SCREEN-WIDE AI AMBIENT OVERLAY & GLOWING CHROMATIC BORDER */}
-      <AnimatePresence>
-        {isHolding && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.22 }}
-            className="fixed inset-0 z-40 pointer-events-none select-none overflow-hidden"
-          >
-            {/* Dark Cinematic Backdrop Blur */}
-            <div className="absolute inset-0 bg-black/40 backdrop-blur-xs" />
-
-            {/* Apple Intelligence-style Chromatic Neon Edge Glow (Top, Sides, Bottom) */}
-            <div className="absolute inset-0 border-[3px] border-transparent rounded-none pointer-events-none shadow-[inset_0_0_50px_rgba(139,92,246,0.35),inset_0_0_90px_rgba(244,63,94,0.25)]" />
-
-            {/* Pulsing Bottom Radial Aura originating right behind the plus button */}
-            <motion.div
-              animate={{
-                scale: [1, 1.25, 1],
-                opacity: [0.65, 0.95, 0.65],
-              }}
-              transition={{ repeat: Infinity, duration: 1.8, ease: 'easeInOut' }}
-              className="absolute bottom-6 left-1/2 -translate-x-1/2 w-80 h-80 rounded-full bg-gradient-to-t from-violet-600/40 via-fuchsia-500/30 to-amber-400/20 blur-3xl"
-            />
-
-            {/* Floating Suggestions Overlay (Above the HUD) */}
-            <motion.div
-              initial={{ opacity: 0, y: 15 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 10 }}
-              transition={{ duration: 0.2 }}
-              className="absolute bottom-40 left-0 right-0 px-4 flex flex-col items-center pointer-events-none space-y-2"
-            >
-              <span className="text-[11px] uppercase tracking-wider font-semibold text-white/80 drop-shadow flex items-center gap-1.5">
-                <Sparkles size={12} className="text-amber-300 animate-spin" />
-                <span>Speak naturally while holding</span>
-              </span>
-
-              <div className="flex flex-wrap justify-center gap-1.5 max-w-sm">
-                <span className="px-3 py-1 rounded-full bg-white/15 dark:bg-black/50 backdrop-blur-md border border-white/20 text-white text-xs font-medium shadow-lg">
-                  &ldquo;Log Fourth Protocol from 45 to 80&rdquo;
-                </span>
-                <span className="px-3 py-1 rounded-full bg-white/15 dark:bg-black/50 backdrop-blur-md border border-white/20 text-white text-xs font-medium shadow-lg">
-                  &ldquo;Where is Dune?&rdquo;
-                </span>
-                <span className="px-3 py-1 rounded-full bg-white/15 dark:bg-black/50 backdrop-blur-md border border-white/20 text-white text-xs font-medium shadow-lg">
-                  &ldquo;What is my streak?&rdquo;
-                </span>
-              </div>
-            </motion.div>
-
-            {/* Live Holographic Transcription HUD Pill */}
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9, y: 15 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.9, y: 10 }}
-              className="absolute bottom-24 left-4 right-4 sm:left-auto sm:right-auto sm:w-[420px] sm:-translate-x-1/2 sm:left-1/2 p-3.5 rounded-2xl bg-black/80 dark:bg-[#0d1117]/90 border border-white/25 dark:border-white/15 backdrop-blur-2xl shadow-2xl flex items-center gap-3"
-            >
-              {/* Dancing Equalizer Waveform Bars */}
-              <div className="flex items-center gap-0.5 h-6 px-1 shrink-0">
-                {[0.4, 0.9, 0.6, 1.0, 0.5, 0.8].map((mult, idx) => (
-                  <motion.span
-                    key={idx}
-                    animate={{
-                      scaleY: liveTranscript ? [0.3, mult * 1.5, 0.4] : [0.3, mult, 0.3],
-                    }}
-                    transition={{
-                      repeat: Infinity,
-                      duration: 0.5 + idx * 0.1,
-                      ease: 'easeInOut',
-                    }}
-                    className="w-1 bg-gradient-to-t from-accent via-fuchsia-400 to-sky-300 rounded-full h-5 origin-bottom"
-                  />
-                ))}
-              </div>
-
-              {/* Live Words */}
-              <div className="flex-1 min-w-0 text-left">
-                {liveTranscript ? (
-                  <p className="font-serif text-sm font-medium text-white italic truncate">
-                    &ldquo;{liveTranscript}&rdquo;
-                  </p>
-                ) : (
-                  <p className="text-xs text-white/70 animate-pulse font-sans">
-                    Listening to your voice... Release to execute.
-                  </p>
-                )}
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* 2. THE ELEVATED CENTER BUTTON (MORPHS FROM + TO PULSING MIC ON HOLD) */}
+      {/* 1. THE ELEVATED CENTER BUTTON (TURNS TO MIC ON HOLD/OPEN, REST OF BOTTOM BAR STAYS UNTOUCHED) */}
       <div className="relative -top-3 z-50">
         <button
           type="button"
@@ -373,34 +305,34 @@ export const HoldToSpeakAssistant: React.FC<HoldToSpeakAssistantProps> = ({
           onMouseUp={onMouseUp}
           onMouseLeave={onMouseLeave}
           className={`relative w-12 h-12 rounded-full flex items-center justify-center transition-all select-none cursor-pointer outline-none ${
-            isHolding
-              ? 'scale-125 bg-gradient-to-tr from-purple-600 via-pink-500 to-amber-500 shadow-[0_0_35px_rgba(217,70,239,0.7)] ring-4 ring-white/30'
+            overlayOpen || isListening
+              ? 'scale-110 bg-gradient-to-tr from-purple-600 via-pink-500 to-amber-500 shadow-[0_0_25px_rgba(217,70,239,0.55)] ring-2 ring-white/30'
               : 'bg-accent hover:bg-accent-hover text-white shadow-lg shadow-accent/30 active:scale-95'
           }`}
-          aria-label="Tap for menu, hold to speak voice assistant"
-          title="Tap for menu • Hold to speak voice assistant"
+          aria-label={overlayOpen ? 'Close Assistant' : 'Tap for menu • Hold for Voice Assistant'}
+          title={overlayOpen ? 'Close Voice Assistant' : 'Tap for menu • Hold to speak voice assistant'}
         >
-          {/* Subtle Rotating Conic Halo when holding */}
-          {isHolding && (
+          {/* Subtle spinning iridescent ring while listening */}
+          {(overlayOpen || isListening) && (
             <motion.div
               animate={{ rotate: 360 }}
-              transition={{ repeat: Infinity, duration: 2, ease: 'linear' }}
-              className="absolute -inset-1.5 rounded-full bg-gradient-to-r from-cyan-400 via-fuchsia-500 to-amber-400 opacity-80 blur-xs -z-10"
+              transition={{ repeat: Infinity, duration: 2.2, ease: 'linear' }}
+              className="absolute -inset-1 rounded-full bg-gradient-to-r from-cyan-400 via-fuchsia-500 to-amber-400 opacity-70 blur-xs -z-10"
             />
           )}
 
           {/* Morphing Icon: Plus <-> Mic */}
           <AnimatePresence mode="wait">
-            {isHolding ? (
+            {overlayOpen || isListening ? (
               <motion.div
                 key="mic"
-                initial={{ scale: 0.5, rotate: -45, opacity: 0 }}
-                animate={{ scale: 1.1, rotate: 0, opacity: 1 }}
-                exit={{ scale: 0.5, rotate: 45, opacity: 0 }}
-                transition={{ duration: 0.15 }}
+                initial={{ scale: 0.6, rotate: -45, opacity: 0 }}
+                animate={{ scale: 1, rotate: 0, opacity: 1 }}
+                exit={{ scale: 0.6, rotate: 45, opacity: 0 }}
+                transition={{ duration: 0.16 }}
                 className="text-white drop-shadow"
               >
-                <Mic size={22} className="animate-pulse" />
+                <Mic size={22} className={isListening ? 'animate-pulse text-white' : 'text-white'} />
               </motion.div>
             ) : (
               <motion.div
@@ -408,7 +340,7 @@ export const HoldToSpeakAssistant: React.FC<HoldToSpeakAssistantProps> = ({
                 initial={{ scale: 0.7, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 exit={{ scale: 0.7, opacity: 0 }}
-                transition={{ duration: 0.15 }}
+                transition={{ duration: 0.16 }}
                 className="text-white"
               >
                 <Plus
@@ -423,85 +355,229 @@ export const HoldToSpeakAssistant: React.FC<HoldToSpeakAssistantProps> = ({
         </button>
       </div>
 
-      {/* 3. DYNAMIC FLOATING RESULT ISLAND (APPEARS ON PAGE AFTER RELEASE) */}
+      {/* 2. THE AI ASSISTANT OVERLAY (FLOATING ABOVE BOTTOM BAR, SHOWING TRANSCRIPT, WHAT IT UNDERSTOOD, SUGGESTIONS & ACTIONS) */}
       <AnimatePresence>
-        {showResultCard && result && (
-          <motion.div
-            initial={{ opacity: 0, y: 30, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 20, scale: 0.95 }}
-            transition={{ type: 'spring', damping: 24, stiffness: 320 }}
-            className="fixed bottom-20 left-3 right-3 sm:left-auto sm:right-6 sm:w-96 z-50 p-3.5 rounded-2xl bg-canvas dark:bg-[#161b22] border border-rule dark:border-[#30363d] shadow-2xl flex flex-col space-y-2 backdrop-blur-xl"
-          >
-            <div className="flex items-start gap-3">
-              {result.matchedBook ? (
-                <div
-                  className="w-11 shrink-0 cursor-pointer"
-                  onClick={() => {
-                    setSelectedBook(result.matchedBook!);
-                    setShowResultCard(false);
-                  }}
-                >
-                  <BookCover
-                    title={result.matchedBook.title}
-                    authors={result.matchedBook.authors}
-                    coverUrl={result.matchedBook.cover_url}
-                    readingStatus={result.matchedBook.reading_status}
-                  />
-                </div>
-              ) : (
-                <div className="w-9 h-9 rounded-xl bg-accent/15 text-accent flex items-center justify-center shrink-0">
-                  {result.intent === 'CHECK_STREAK' ? (
-                    <Flame size={18} className="text-amber-500" />
-                  ) : result.intent === 'LOCATE_BOOK' ? (
-                    <MapPin size={18} className="text-sky-500" />
-                  ) : (
-                    <CheckCircle2 size={18} className="text-emerald-500" />
-                  )}
-                </div>
-              )}
+        {overlayOpen && (
+          <>
+            {/* Soft Ambient Backdrop Blur (leaves bottom bar untouched) */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={closeOverlay}
+              className="fixed inset-0 z-40 bg-black/40 backdrop-blur-xs"
+            />
 
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between">
-                  <span className="px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-accent/15 text-accent dark:text-accent-dark">
-                    {result.intent.replace('_', ' ')}
+            {/* Floating Glassmorphic AI Overlay Card */}
+            <motion.div
+              initial={{ opacity: 0, y: 35, scale: 0.94 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 25, scale: 0.94 }}
+              transition={{ type: 'spring', damping: 26, stiffness: 340 }}
+              className="fixed bottom-[74px] left-3 right-3 sm:left-auto sm:right-6 sm:w-[440px] z-50 p-4 rounded-3xl bg-canvas/95 dark:bg-[#0d1117]/95 border border-rule/80 dark:border-[#30363d] shadow-[0_20px_60px_rgba(0,0,0,0.35)] backdrop-blur-2xl flex flex-col space-y-3.5 max-h-[75vh] overflow-y-auto"
+              role="dialog"
+              aria-label="Voice Assistant"
+            >
+              {/* Overlay Top Bar: Header, Audio Mute Toggle & Close */}
+              <div className="flex items-center justify-between pb-1 border-b border-rule/50 dark:border-rule-dark/50">
+                <div className="flex items-center gap-2">
+                  <span className={`w-2 h-2 rounded-full ${isListening ? 'bg-accent animate-ping' : 'bg-emerald-500'}`} />
+                  <span className="font-serif text-xs font-semibold text-ink dark:text-ink-dark flex items-center gap-1.5">
+                    <Sparkles size={13} className="text-accent" />
+                    <span>Molat AI Assistant</span>
                   </span>
+                </div>
+
+                <div className="flex items-center gap-1">
                   <button
-                    onClick={() => setShowResultCard(false)}
-                    className="p-1 rounded-md text-ink-muted hover:text-ink transition-colors"
+                    onClick={() => setTtsMuted(!ttsMuted)}
+                    className={`p-1.5 rounded-lg border text-3xs transition-colors cursor-pointer ${
+                      !ttsMuted
+                        ? 'border-accent/40 bg-accent/10 text-accent'
+                        : 'border-rule dark:border-rule-dark text-ink-muted'
+                    }`}
+                    title={ttsMuted ? 'Voice Response Muted' : 'Voice Response Active'}
                   >
-                    <X size={14} />
+                    {!ttsMuted ? <Volume2 size={13} /> : <VolumeX size={13} />}
+                  </button>
+
+                  <button
+                    onClick={closeOverlay}
+                    className="p-1 rounded-lg text-ink-muted hover:text-ink dark:hover:text-ink-dark hover:bg-surface dark:hover:bg-surface-dark transition-colors"
+                  >
+                    <X size={15} />
                   </button>
                 </div>
-
-                <h4 className="font-serif text-xs font-semibold text-ink dark:text-ink-dark truncate mt-0.5">
-                  {result.cardTitle}
-                </h4>
-                <p className="text-[11px] text-ink-secondary dark:text-ink-dark-secondary mt-0.5 line-clamp-2">
-                  {result.cardDetail}
-                </p>
               </div>
-            </div>
 
-            {/* Quick Actions */}
-            {result.matchedBook && (
-              <div className="flex items-center justify-end gap-2 pt-1 border-t border-rule/50 dark:border-rule-dark/50">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSelectedBook(result.matchedBook!);
-                    setShowResultCard(false);
-                  }}
-                  className="px-2.5 py-1 rounded-lg text-xs font-medium text-accent hover:bg-accent/10 transition-colors"
+              {/* 1. TRANSCRIPT SECTION */}
+              <div className="p-3 rounded-2xl bg-surface/80 dark:bg-surface-dark/80 border border-rule dark:border-rule-dark/70 space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] uppercase tracking-wider font-semibold text-ink-muted flex items-center gap-1.5">
+                    {/* Dancing Equalizer Waveform */}
+                    <div className="flex items-center gap-0.5 h-3">
+                      {[0.4, 0.9, 0.6, 1.0, 0.5].map((mult, idx) => (
+                        <motion.span
+                          key={idx}
+                          animate={{
+                            scaleY: isListening ? (liveTranscript ? [0.3, mult * 1.6, 0.3] : [0.3, mult, 0.3]) : 0.3,
+                          }}
+                          transition={{
+                            repeat: Infinity,
+                            duration: 0.5 + idx * 0.1,
+                            ease: 'easeInOut',
+                          }}
+                          className="w-0.5 bg-accent rounded-full h-3 origin-bottom"
+                        />
+                      ))}
+                    </div>
+                    <span>Spoken Transcript</span>
+                  </span>
+
+                  {isListening ? (
+                    <span className="text-[10px] text-accent font-medium animate-pulse">
+                      Listening...
+                    </span>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={startListening}
+                      className="text-[10px] text-accent hover:underline flex items-center gap-1"
+                    >
+                      <RotateCcw size={10} />
+                      <span>Speak again</span>
+                    </button>
+                  )}
+                </div>
+
+                <div className="min-h-[38px] flex items-center">
+                  {liveTranscript ? (
+                    <p className="font-serif text-sm font-medium text-ink dark:text-ink-dark italic leading-relaxed">
+                      &ldquo;{liveTranscript}&rdquo;
+                    </p>
+                  ) : isListening ? (
+                    <p className="text-xs text-ink-muted italic font-serif">
+                      Listening... Say e.g. &ldquo;Log reading for The Fourth Protocol from 45 to 80&rdquo;
+                    </p>
+                  ) : (
+                    <p className="text-xs text-ink-muted">
+                      Tap the center mic or hold to speak.
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {/* 2. WHAT IT UNDERSTOOD (PARSED RESULT CARD) */}
+              {understoodResult && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.96 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="p-3 rounded-2xl bg-accent/5 dark:bg-accent/10 border border-accent/25 space-y-2 animate-in"
                 >
-                  View Book Details →
-                </button>
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] uppercase tracking-wider font-bold text-accent dark:text-accent-dark flex items-center gap-1">
+                      <CheckCircle2 size={12} />
+                      <span>What Molat Understood</span>
+                    </span>
+                    <span className="px-1.5 py-0.2 rounded text-[9px] font-semibold uppercase bg-accent/20 text-accent">
+                      {understoodResult.intent.replace('_', ' ')}
+                    </span>
+                  </div>
+
+                  <div className="flex items-start gap-3 pt-0.5">
+                    {understoodResult.matchedBook ? (
+                      <div
+                        className="w-11 shrink-0 cursor-pointer hover:scale-105 transition-transform"
+                        onClick={() => {
+                          setSelectedBook(understoodResult.matchedBook!);
+                          closeOverlay();
+                        }}
+                      >
+                        <BookCover
+                          title={understoodResult.matchedBook.title}
+                          authors={understoodResult.matchedBook.authors}
+                          coverUrl={understoodResult.matchedBook.cover_url}
+                          readingStatus={understoodResult.matchedBook.reading_status}
+                        />
+                      </div>
+                    ) : (
+                      <div className="w-9 h-9 rounded-xl bg-accent/15 text-accent flex items-center justify-center shrink-0">
+                        {understoodResult.intent === 'CHECK_STREAK' ? (
+                          <Flame size={18} className="text-amber-500" />
+                        ) : understoodResult.intent === 'LOCATE_BOOK' ? (
+                          <MapPin size={18} className="text-sky-500" />
+                        ) : (
+                          <CheckCircle2 size={18} className="text-emerald-500" />
+                        )}
+                      </div>
+                    )}
+
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-serif text-xs font-semibold text-ink dark:text-ink-dark truncate">
+                        {understoodResult.cardTitle}
+                      </h4>
+                      <p className="text-[11px] text-ink-secondary dark:text-ink-dark-secondary mt-0.5 leading-snug">
+                        {understoodResult.cardDetail}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* 3. ACTIONS SECTION */}
+                  <div className="flex items-center justify-end gap-2 pt-1 border-t border-accent/20">
+                    {understoodResult.matchedBook && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedBook(understoodResult.matchedBook!);
+                          closeOverlay();
+                        }}
+                        className="px-2.5 py-1 rounded-lg border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark text-xs font-medium text-ink hover:border-accent transition-colors flex items-center gap-1"
+                      >
+                        <span>View Book</span>
+                        <ArrowRight size={11} />
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={closeOverlay}
+                      className="px-3 py-1 rounded-lg bg-accent text-white text-xs font-medium hover:bg-accent-hover transition-colors shadow-2xs"
+                    >
+                      {isSubmitting ? 'Logging...' : 'Done'}
+                    </button>
+                  </div>
+                </motion.div>
+              )}
+
+              {/* 4. SUGGESTIONS SECTION */}
+              <div className="space-y-1.5 pt-0.5">
+                <span className="text-[10px] uppercase tracking-wider font-semibold text-ink-muted block">
+                  Suggestions to try:
+                </span>
+                <div className="flex flex-wrap gap-1.5">
+                  {[
+                    'Log reading for The Fourth Protocol from 45 to 80',
+                    'Where is Dune?',
+                    "What's my streak?",
+                    'What should I read next?',
+                  ].map((phrase, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => {
+                        setLiveTranscript(phrase);
+                        handleExecuteCommand(phrase);
+                      }}
+                      className="px-2.5 py-1 rounded-xl border border-rule dark:border-rule-dark bg-surface-raised dark:bg-surface-dark hover:border-accent hover:text-accent text-[11px] font-medium text-ink-secondary dark:text-ink-dark-secondary transition-colors cursor-pointer text-left active:scale-98"
+                    >
+                      &ldquo;{phrase}&rdquo;
+                    </button>
+                  ))}
+                </div>
               </div>
-            )}
-          </motion.div>
+            </motion.div>
+          </>
         )}
       </AnimatePresence>
     </>
   );
 };
-
