@@ -463,20 +463,24 @@ export const HoldToSpeakAssistant: React.FC<HoldToSpeakAssistantProps> = ({
                 className="fixed inset-0 z-40 flex flex-col justify-end pb-24 select-none overflow-hidden"
                 onClick={closeOverlay}
               >
-                {/* Full-Screen Ambient Dim */}
+                {/* Full-Screen Ambient Dim with gentle upper fade */}
                 <div
                   className={`absolute inset-0 pointer-events-none transition-colors duration-300 ${
-                    isDark ? 'bg-slate-950/45 backdrop-blur-[7px]' : 'bg-slate-900/12 backdrop-blur-[6px]'
+                    isDark ? 'bg-slate-950/40 backdrop-blur-[6px]' : 'bg-slate-900/10 backdrop-blur-[5px]'
                   }`}
+                  style={{
+                    WebkitMaskImage: 'linear-gradient(to top, black 0%, black 42%, rgba(0,0,0,0.4) 68%, transparent 88%)',
+                    maskImage: 'linear-gradient(to top, black 0%, black 42%, rgba(0,0,0,0.4) 68%, transparent 88%)',
+                  }}
                 />
 
-                {/* Atmospheric Dark/Light-to-Fade Gradient: Rising seamlessly from bottom */}
+                {/* Atmospheric Dark/Light-to-Fade Gradient: Softer, gradual dissolving upper fade */}
                 <div
                   className="absolute inset-0 pointer-events-none transition-all duration-300"
                   style={{
                     background: isDark
-                      ? 'linear-gradient(to top, rgba(10, 14, 26, 0.98) 0%, rgba(13, 19, 36, 0.93) 38%, rgba(15, 23, 42, 0.72) 68%, rgba(15, 23, 42, 0.18) 88%, transparent 100%)'
-                      : 'linear-gradient(to top, rgba(235, 243, 255, 0.98) 0%, rgba(240, 246, 255, 0.93) 38%, rgba(244, 248, 255, 0.75) 68%, rgba(248, 250, 255, 0.20) 88%, transparent 100%)',
+                      ? 'linear-gradient(to top, rgba(10, 14, 26, 0.98) 0%, rgba(12, 17, 32, 0.92) 28%, rgba(14, 21, 38, 0.62) 50%, rgba(15, 23, 42, 0.26) 68%, rgba(15, 23, 42, 0.06) 82%, transparent 94%)'
+                      : 'linear-gradient(to top, rgba(235, 243, 255, 0.98) 0%, rgba(238, 245, 255, 0.92) 28%, rgba(242, 247, 255, 0.62) 50%, rgba(246, 250, 255, 0.26) 68%, rgba(248, 251, 255, 0.06) 82%, transparent 94%)',
                   }}
                 />
 
