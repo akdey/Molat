@@ -144,6 +144,7 @@ export function processVoiceAssistantCommand(
     books: Book[];
     lendingRecords: LendingRecord[];
     streakSummary: StreakSummary | null;
+    bookLastPages?: Record<string, number>;
   }
 ): AssistantResult {
   const speech = rawSpeech.trim();
@@ -251,10 +252,22 @@ export function processVoiceAssistantCommand(
     }
   }
 
-  // 5. LOG READING SESSION (Default & Core: "Log reading for [Book] from page X to Y")
+  // 5. LOG READING SESSION (Default & Core: "Log reading for [Book] from page X to Y" or "Add 5 pages to [Book]")
   // First, fuzzy match the book from the library
   const matched = fuzzyMatchBook(speech, context.books);
-  const parsedRange = parseVoiceLogCommand(speech, 0);
+
+  // Determine current start page from matched book's last logged page or active reading book
+  let currentStart = 0;
+  if (matched?.book?.book_id && context.bookLastPages) {
+    currentStart = context.bookLastPages[matched.book.book_id] || 0;
+  } else {
+    const activeBook = context.books.find((b) => b.reading_status === 'READING');
+    if (activeBook?.book_id && context.bookLastPages) {
+      currentStart = context.bookLastPages[activeBook.book_id] || 0;
+    }
+  }
+
+  const parsedRange = parseVoiceLogCommand(speech, currentStart);
 
   if (matched && parsedRange) {
     const book = matched.book;

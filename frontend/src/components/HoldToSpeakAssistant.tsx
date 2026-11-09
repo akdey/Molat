@@ -49,6 +49,7 @@ export const HoldToSpeakAssistant: React.FC<HoldToSpeakAssistantProps> = ({
   const [ttsMuted, setTtsMuted] = useState<boolean>(false);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [activeBookLastEndPage, setActiveBookLastEndPage] = useState<number | null>(null);
+  const [bookLastPages, setBookLastPages] = useState<Record<string, number>>({});
 
   const holdTimerRef = useRef<any>(null);
   const didTriggerHoldRef = useRef<boolean>(false);
@@ -64,27 +65,35 @@ export const HoldToSpeakAssistant: React.FC<HoldToSpeakAssistantProps> = ({
     [books]
   );
 
-  // Fetch highest end_page previously logged for the active book
+  // Fetch highest end_page previously logged across all books & for the active book
   useEffect(() => {
-    if (!activeBook?.book_id) {
-      setActiveBookLastEndPage(0);
-      return;
-    }
     let isMounted = true;
-    fetchReadingLogs(activeBook.book_id)
+    fetchReadingLogs()
       .then((pastLogs) => {
-        if (!isMounted) return;
-        if (pastLogs && pastLogs.length > 0) {
-          const maxEnd = Math.max(...pastLogs.map((l) => l.end_page || 0));
-          if (maxEnd > 0) {
-            setActiveBookLastEndPage(maxEnd);
-            return;
+        if (!isMounted || !pastLogs || pastLogs.length === 0) return;
+        const map: Record<string, number> = {};
+        for (const l of pastLogs) {
+          if (l.book_id && typeof l.end_page === 'number') {
+            map[l.book_id] = Math.max(map[l.book_id] || 0, l.end_page);
           }
         }
-        setActiveBookLastEndPage(0);
+        setBookLastPages(map);
+        if (activeBook?.book_id && map[activeBook.book_id]) {
+          setActiveBookLastEndPage(map[activeBook.book_id]);
+        }
       })
       .catch(() => {
-        if (isMounted) setActiveBookLastEndPage(0);
+        // Fallback to active book specific lookup
+        if (activeBook?.book_id) {
+          fetchReadingLogs(activeBook.book_id).then((bookLogs) => {
+            if (!isMounted || !bookLogs || bookLogs.length === 0) return;
+            const maxEnd = Math.max(...bookLogs.map((l) => l.end_page || 0));
+            if (maxEnd > 0) {
+              setActiveBookLastEndPage(maxEnd);
+              setBookLastPages((prev) => ({ ...prev, [activeBook.book_id]: maxEnd }));
+            }
+          }).catch(() => {});
+        }
       });
 
     return () => {
@@ -176,6 +185,7 @@ export const HoldToSpeakAssistant: React.FC<HoldToSpeakAssistantProps> = ({
       books,
       lendingRecords,
       streakSummary,
+      bookLastPages,
     });
 
     setUnderstoodResult(res);
@@ -196,6 +206,10 @@ export const HoldToSpeakAssistant: React.FC<HoldToSpeakAssistantProps> = ({
         });
         if (res.actionPayload.endPage) {
           setActiveBookLastEndPage(res.actionPayload.endPage);
+          setBookLastPages((prev) => ({
+            ...prev,
+            [res.actionPayload!.bookId!]: res.actionPayload!.endPage!,
+          }));
         }
         triggerHaptic([40, 60, 40]);
         addToast(`Logged ${res.actionPayload.pagesRead} pages for "${res.matchedBook?.title}"`, 'success');
@@ -254,6 +268,7 @@ export const HoldToSpeakAssistant: React.FC<HoldToSpeakAssistantProps> = ({
           books,
           lendingRecords,
           streakSummary,
+          bookLastPages,
         });
         if (preview && preview.intent !== 'UNKNOWN') {
           setUnderstoodResult(preview);
@@ -435,7 +450,7 @@ export const HoldToSpeakAssistant: React.FC<HoldToSpeakAssistantProps> = ({
         </button>
       </div>
 
-      {/* 2. ATMOSPHERIC SEAMLESS OVERLAY (FADES UP FROM BOTTOM BAR, NO BOX OR MODAL POPUP) */}
+      {/* 2. ATMOSPHERIC SEAMLESS OVERLAY (FULL PAGE GRADIENT & FADE) */}
       {typeof document !== 'undefined' &&
         createPortal(
           <AnimatePresence>
@@ -445,7 +460,7 @@ export const HoldToSpeakAssistant: React.FC<HoldToSpeakAssistantProps> = ({
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.28, ease: 'easeOut' }}
-                className="fixed inset-0 z-40 flex flex-col justify-end pb-24 select-none overflow-hidden"
+                className="fixed inset-0 z-40 flex flex-col justify-between pt-5 sm:pt-7 pb-24 select-none overflow-hidden"
                 onClick={closeOverlay}
               >
                 {/* Full-Screen Ambient Dim */}
@@ -455,19 +470,19 @@ export const HoldToSpeakAssistant: React.FC<HoldToSpeakAssistantProps> = ({
                   }`}
                 />
 
-                {/* Atmospheric Dark/Light-to-Fade Gradient: Theme-aware soft ice-blue in light mode, deep obsidian in dark */}
+                {/* Atmospheric Dark/Light-to-Fade Gradient: Spanning the full height with gentle top fade */}
                 <div
                   className="absolute inset-0 pointer-events-none transition-all duration-300"
                   style={{
                     background: isDark
-                      ? 'linear-gradient(to top, rgba(10, 14, 26, 0.98) 0%, rgba(13, 19, 36, 0.93) 38%, rgba(15, 23, 42, 0.72) 68%, rgba(15, 23, 42, 0.18) 88%, transparent 100%)'
-                      : 'linear-gradient(to top, rgba(235, 243, 255, 0.98) 0%, rgba(240, 246, 255, 0.93) 38%, rgba(244, 248, 255, 0.75) 68%, rgba(248, 250, 255, 0.20) 88%, transparent 100%)',
+                      ? 'linear-gradient(to top, rgba(10, 14, 26, 0.98) 0%, rgba(13, 19, 36, 0.94) 35%, rgba(15, 23, 42, 0.85) 65%, rgba(15, 23, 42, 0.65) 85%, rgba(15, 23, 42, 0.45) 100%)'
+                      : 'linear-gradient(to top, rgba(235, 243, 255, 0.98) 0%, rgba(240, 246, 255, 0.94) 35%, rgba(244, 248, 255, 0.85) 65%, rgba(248, 250, 255, 0.65) 85%, rgba(248, 250, 255, 0.45) 100%)',
                   }}
                 />
 
                 {/* Radiant Chromatic Aurora Pulse at Horizon */}
                 <div
-                  className={`absolute inset-x-0 bottom-0 h-64 blur-3xl pointer-events-none transition-all duration-300 ${
+                  className={`absolute inset-x-0 bottom-0 h-72 blur-3xl pointer-events-none transition-all duration-300 ${
                     isDark
                       ? 'bg-gradient-to-t from-indigo-500/25 via-cyan-500/10 to-transparent'
                       : 'bg-gradient-to-t from-sky-400/25 via-indigo-300/15 to-transparent'
@@ -481,41 +496,35 @@ export const HoldToSpeakAssistant: React.FC<HoldToSpeakAssistantProps> = ({
                   }`}
                 />
 
-                {/* Seamless Content Stream floating on the gradient */}
-                <motion.div
-                  initial={{ y: 25, opacity: 0 }}
-                  animate={{ y: 0, opacity: 1 }}
-                  exit={{ y: 20, opacity: 0 }}
-                  transition={{ type: 'spring', damping: 28, stiffness: 320 }}
-                  className="relative z-10 w-full max-w-lg mx-auto px-5 py-3 flex flex-col space-y-4"
+                {/* 1. TOP HEADER: Molat Voice, Speaker, Cross Icons at TOP LEFT */}
+                <div
+                  className="relative z-10 w-full max-w-lg mx-auto px-5 pt-1 flex items-center justify-start gap-2"
                   onClick={(e) => e.stopPropagation()}
                 >
-              {/* Top Controls: Floating Frosted Pill with Title, TTS Mute & Close */}
-              <div className="flex items-center justify-between">
-                <div
-                  className={`flex items-center gap-2 px-3.5 py-1.5 rounded-full backdrop-blur-xl transition-colors ${
-                    isDark
-                      ? 'bg-white/[0.08] hover:bg-white/[0.12] border border-white/15 text-white/90 shadow-lg'
-                      : 'bg-white/80 hover:bg-white border border-sky-200/80 text-slate-800 shadow-sm'
-                  }`}
-                >
-                  <span
-                    className={`w-2 h-2 rounded-full ${
-                      isListening
-                        ? isDark
-                          ? 'bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.8)] animate-pulse'
-                          : 'bg-sky-500 shadow-[0_0_8px_rgba(14,165,233,0.8)] animate-pulse'
-                        : 'bg-emerald-500'
+                  <div
+                    className={`flex items-center gap-2 px-3 py-1.5 rounded-full backdrop-blur-xl transition-colors ${
+                      isDark
+                        ? 'bg-white/[0.08] hover:bg-white/[0.12] border border-white/15 text-white/90 shadow-lg'
+                        : 'bg-white/80 hover:bg-white border border-sky-200/80 text-slate-800 shadow-sm'
                     }`}
-                  />
-                  <span className="text-[11px] font-semibold flex items-center gap-1.5 font-sans tracking-wide">
-                    <Sparkles size={12} className={isDark ? 'text-cyan-300' : 'text-sky-600'} />
-                    <span>Molat Voice</span>
-                  </span>
-                </div>
+                  >
+                    <span
+                      className={`w-2 h-2 rounded-full ${
+                        isListening
+                          ? isDark
+                            ? 'bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.8)] animate-pulse'
+                            : 'bg-sky-500 shadow-[0_0_8px_rgba(14,165,233,0.8)] animate-pulse'
+                          : 'bg-slate-400'
+                      }`}
+                    />
+                    <span className="text-[11px] font-semibold flex items-center gap-1.5 font-sans tracking-wide">
+                      <Sparkles size={12} className={isDark ? 'text-cyan-300' : 'text-sky-600'} />
+                      <span>Molat Voice</span>
+                    </span>
+                  </div>
 
-                <div className="flex items-center gap-1.5">
                   <button
+                    type="button"
                     onClick={() => setTtsMuted(!ttsMuted)}
                     className={`p-1.5 rounded-full border text-xs transition-colors cursor-pointer shadow-sm backdrop-blur-xl ${
                       !ttsMuted
@@ -532,227 +541,240 @@ export const HoldToSpeakAssistant: React.FC<HoldToSpeakAssistantProps> = ({
                   </button>
 
                   <button
+                    type="button"
                     onClick={closeOverlay}
-                    className={`p-1.5 rounded-full border transition-colors shadow-sm backdrop-blur-xl ${
+                    className={`p-1.5 rounded-full border transition-colors shadow-sm backdrop-blur-xl cursor-pointer ${
                       isDark
                         ? 'bg-white/10 hover:bg-white/20 border-white/15 text-white/80 hover:text-white shadow-md'
                         : 'bg-white/80 hover:bg-white border-sky-200/80 text-slate-600 hover:text-slate-900'
                     }`}
+                    title="Close"
                   >
                     <X size={14} />
                   </button>
                 </div>
-              </div>
 
-              {/* 1. TRANSCRIPT (CRISP FLOATING TYPOGRAPHY WITH DANCING EQUALIZER) */}
-              <div className="flex flex-col items-center text-center space-y-2 py-1">
-                {/* Dancing Equalizer Waveform */}
-                <div className="flex items-center gap-1 h-5">
-                  {[0.35, 0.9, 0.55, 1.0, 0.45, 0.8].map((mult, idx) => (
-                    <motion.span
-                      key={idx}
-                      animate={{
-                        scaleY: isListening ? (liveTranscript ? [0.25, mult * 1.8, 0.25] : [0.25, mult, 0.25]) : 0.25,
-                      }}
-                      transition={{
-                        repeat: Infinity,
-                        duration: 0.5 + idx * 0.08,
-                        ease: 'easeInOut',
-                      }}
-                      className={`w-1 rounded-full h-5 origin-bottom ${
-                        isDark
-                          ? 'bg-gradient-to-t from-cyan-400 via-indigo-300 to-violet-300 shadow-[0_0_6px_rgba(56,189,248,0.4)]'
-                          : 'bg-gradient-to-t from-sky-500 via-indigo-500 to-purple-500 shadow-[0_0_6px_rgba(14,165,233,0.35)]'
-                      }`}
-                    />
-                  ))}
-                </div>
-
-                <div className="min-h-[52px] flex items-center justify-center px-2">
-                  {liveTranscript ? (
-                    <p
-                      className={`font-serif text-lg sm:text-xl font-medium italic tracking-tight leading-relaxed ${
-                        isDark ? 'text-white drop-shadow-md' : 'text-slate-900 drop-shadow-xs'
-                      }`}
-                    >
-                      &ldquo;{liveTranscript}&rdquo;
-                    </p>
-                  ) : isListening ? (
-                    <p
-                      className={`text-xs sm:text-sm font-serif italic animate-pulse ${
-                        isDark ? 'text-cyan-100/80' : 'text-sky-900/80'
-                      }`}
-                    >
-                      Listening... Speak book title, page range, or question
-                    </p>
-                  ) : (
-                    <button
-                      onClick={startListening}
-                      className={`text-xs flex items-center gap-1.5 font-medium px-3.5 py-1 rounded-full border backdrop-blur-md transition-all shadow-xs cursor-pointer ${
-                        isDark
-                          ? 'text-cyan-200 hover:text-white bg-white/10 hover:bg-white/15 border-white/15'
-                          : 'text-sky-700 hover:text-sky-900 bg-white/80 hover:bg-white border-sky-200/80'
-                      }`}
-                    >
-                      <RotateCcw size={12} />
-                      <span>Tap to speak again</span>
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              {/* 2. WHAT IT UNDERSTOOD & ACTIONS (SEAMLESS LUMINOUS STRIP, NO BOX) */}
-              {understoodResult && (
+                {/* 2. MIDDLE CONTENT (Centered vertically): Equalizer, Transcript & Understood Card */}
                 <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className={`w-full p-3.5 rounded-2xl border backdrop-blur-2xl shadow-xl space-y-2.5 ${
-                    isDark
-                      ? 'bg-white/[0.08] border-white/15 text-white'
-                      : 'bg-white/90 border-sky-200/80 text-slate-900 shadow-sky-950/5'
-                  }`}
+                  initial={{ y: 20, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  exit={{ y: 15, opacity: 0 }}
+                  transition={{ type: 'spring', damping: 28, stiffness: 320 }}
+                  className="relative z-10 w-full max-w-lg mx-auto px-5 my-auto flex flex-col items-center text-center space-y-4"
+                  onClick={(e) => e.stopPropagation()}
                 >
-                  <div className="flex items-center justify-between">
-                    <span
-                      className={`text-[10px] uppercase tracking-wider font-bold flex items-center gap-1 ${
-                        isDark ? 'text-cyan-300' : 'text-sky-700'
-                      }`}
-                    >
-                      <CheckCircle2 size={13} className={isDark ? 'text-cyan-400' : 'text-sky-600'} />
-                      <span>What Molat Understood</span>
-                    </span>
-                    <span
-                      className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider ${
-                        isDark
-                          ? 'bg-indigo-500/25 border border-indigo-400/30 text-indigo-200'
-                          : 'bg-sky-100 border border-sky-200 text-sky-800'
-                      }`}
-                    >
-                      {understoodResult.intent.replace('_', ' ')}
-                    </span>
-                  </div>
-
-                  <div className="flex items-start gap-3">
-                    {understoodResult.matchedBook ? (
-                      <div
-                        className="w-12 shrink-0 cursor-pointer hover:scale-105 transition-transform"
-                        onClick={() => {
-                          setSelectedBook(understoodResult.matchedBook!);
-                          closeOverlay();
+                  {/* Dancing Equalizer Waveform: Actively pulses when listening, freezes flat when stopped */}
+                  <div className="flex items-center gap-1 h-5">
+                    {[0.35, 0.9, 0.55, 1.0, 0.45, 0.8].map((mult, idx) => (
+                      <motion.span
+                        key={idx}
+                        animate={{
+                          scaleY: isListening
+                            ? (liveTranscript ? [0.25, mult * 1.8, 0.25] : [0.25, mult, 0.25])
+                            : 0.15,
                         }}
-                      >
-                        <BookCover
-                          title={understoodResult.matchedBook.title}
-                          authors={understoodResult.matchedBook.authors}
-                          coverUrl={understoodResult.matchedBook.cover_url}
-                          readingStatus={understoodResult.matchedBook.reading_status}
-                        />
-                      </div>
-                    ) : (
-                      <div
-                        className={`w-10 h-10 rounded-xl border flex items-center justify-center shrink-0 ${
+                        transition={{
+                          repeat: isListening ? Infinity : 0,
+                          duration: isListening ? 0.5 + idx * 0.08 : 0.2,
+                          ease: 'easeInOut',
+                        }}
+                        className={`w-1 rounded-full h-5 origin-bottom transition-colors ${
                           isDark
-                            ? 'bg-white/10 border-white/15 text-cyan-300'
-                            : 'bg-sky-50 border-sky-200/80 text-sky-700'
+                            ? 'bg-gradient-to-t from-cyan-400 via-indigo-300 to-violet-300 shadow-[0_0_6px_rgba(56,189,248,0.4)]'
+                            : 'bg-gradient-to-t from-sky-500 via-indigo-500 to-purple-500 shadow-[0_0_6px_rgba(14,165,233,0.35)]'
                         }`}
-                      >
-                        {understoodResult.intent === 'CHECK_STREAK' ? (
-                          <Flame size={20} className="text-orange-500" />
-                        ) : understoodResult.intent === 'LOCATE_BOOK' ? (
-                          <MapPin size={20} className="text-sky-600" />
-                        ) : (
-                          <CheckCircle2 size={20} className="text-emerald-500" />
-                        )}
-                      </div>
-                    )}
-
-                    <div className="flex-1 min-w-0 text-left">
-                      <h4
-                        className={`font-serif text-sm font-semibold truncate ${
-                          isDark ? 'text-white drop-shadow-sm' : 'text-slate-900'
-                        }`}
-                      >
-                        {understoodResult.cardTitle}
-                      </h4>
-                      <p
-                        className={`text-xs mt-0.5 leading-snug ${
-                          isDark ? 'text-white/80' : 'text-slate-600'
-                        }`}
-                      >
-                        {understoodResult.cardDetail}
-                      </p>
-                    </div>
+                      />
+                    ))}
                   </div>
 
-                  {/* Actions */}
-                  <div
-                    className={`flex items-center justify-end gap-2 pt-1 border-t ${
-                      isDark ? 'border-white/10' : 'border-slate-200/60'
-                    }`}
-                  >
-                    {understoodResult.matchedBook && (
+                  <div className="min-h-[56px] flex items-center justify-center px-2">
+                    {liveTranscript ? (
+                      <p
+                        className={`font-serif text-lg sm:text-2xl font-medium italic tracking-tight leading-relaxed ${
+                          isDark ? 'text-white drop-shadow-md' : 'text-slate-900 drop-shadow-xs'
+                        }`}
+                      >
+                        &ldquo;{liveTranscript}&rdquo;
+                      </p>
+                    ) : isListening ? (
+                      <p
+                        className={`text-xs sm:text-sm font-serif italic animate-pulse ${
+                          isDark ? 'text-cyan-100/80' : 'text-sky-900/80'
+                        }`}
+                      >
+                        Listening... Speak book title, page range, or question
+                      </p>
+                    ) : (
                       <button
                         type="button"
-                        onClick={() => {
-                          setSelectedBook(understoodResult.matchedBook!);
-                          closeOverlay();
-                        }}
-                        className={`px-3 py-1 rounded-xl border text-xs font-medium transition-colors flex items-center gap-1.5 ${
+                        onClick={startListening}
+                        className={`text-xs flex items-center gap-1.5 font-medium px-3.5 py-1 rounded-full border backdrop-blur-md transition-all shadow-xs cursor-pointer ${
                           isDark
-                            ? 'bg-white/10 hover:bg-white/20 border-white/20 text-white'
-                            : 'bg-slate-100 hover:bg-slate-200 border-slate-200 text-slate-700'
+                            ? 'text-cyan-200 hover:text-white bg-white/10 hover:bg-white/15 border-white/15'
+                            : 'text-sky-700 hover:text-sky-900 bg-white/80 hover:bg-white border-sky-200/80'
                         }`}
                       >
-                        <span>View Book Details</span>
-                        <ArrowRight size={11} />
+                        <RotateCcw size={12} />
+                        <span>Tap to speak again</span>
                       </button>
                     )}
-                    <button
-                      type="button"
-                      onClick={closeOverlay}
-                      className="px-3.5 py-1 rounded-xl bg-gradient-to-r from-sky-600 to-indigo-600 hover:brightness-105 text-white text-xs font-semibold transition-all shadow-md active:scale-95"
-                    >
-                      {isSubmitting ? 'Logging...' : 'Done'}
-                    </button>
                   </div>
-                </motion.div>
-              )}
 
-              {/* 3. SUGGESTIONS (CRISP FROSTED GLASS PILLS) */}
-              <div className="w-full flex flex-col items-center space-y-2.5 pt-1">
-                <span
-                  className={`text-[10px] uppercase tracking-widest font-semibold ${
-                    isDark ? 'text-slate-300/80 drop-shadow' : 'text-sky-900/70 font-bold'
-                  }`}
-                >
-                  Try saying or tapping:
-                </span>
-                <div className="flex flex-wrap justify-center gap-2 max-w-md">
-                  {dynamicSuggestions.map((phrase, idx) => (
-                    <button
-                      key={idx}
-                      type="button"
-                      onClick={() => {
-                        setLiveTranscript(phrase);
-                        handleExecuteCommand(phrase);
-                      }}
-                      className={`px-3.5 py-1.5 rounded-full border text-xs font-normal tracking-wide backdrop-blur-xl transition-all text-left active:scale-95 ${
+                  {/* Understood Result Card */}
+                  {understoodResult && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className={`w-full p-3.5 rounded-2xl border backdrop-blur-2xl shadow-xl space-y-2.5 ${
                         isDark
-                          ? 'bg-white/[0.08] hover:bg-white/[0.16] border-white/[0.15] hover:border-white/30 text-white/95 shadow-[0_4px_16px_rgba(0,0,0,0.25)]'
-                          : 'bg-white/80 hover:bg-white border-sky-200/80 hover:border-sky-300 text-slate-800 shadow-xs hover:shadow-sm'
+                          ? 'bg-white/[0.08] border-white/15 text-white'
+                          : 'bg-white/90 border-sky-200/80 text-slate-900 shadow-sky-950/5'
                       }`}
                     >
-                      &ldquo;{phrase}&rdquo;
-                    </button>
-                  ))}
+                      <div className="flex items-center justify-between">
+                        <span
+                          className={`text-[10px] uppercase tracking-wider font-bold flex items-center gap-1 ${
+                            isDark ? 'text-cyan-300' : 'text-sky-700'
+                          }`}
+                        >
+                          <CheckCircle2 size={13} className={isDark ? 'text-cyan-400' : 'text-sky-600'} />
+                          <span>What Molat Understood</span>
+                        </span>
+                        <span
+                          className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider ${
+                            isDark
+                              ? 'bg-indigo-500/25 border border-indigo-400/30 text-indigo-200'
+                              : 'bg-sky-100 border border-sky-200 text-sky-800'
+                          }`}
+                        >
+                          {understoodResult.intent.replace('_', ' ')}
+                        </span>
+                      </div>
+
+                      <div className="flex items-start gap-3">
+                        {understoodResult.matchedBook ? (
+                          <div
+                            className="w-12 shrink-0 cursor-pointer hover:scale-105 transition-transform"
+                            onClick={() => {
+                              setSelectedBook(understoodResult.matchedBook!);
+                              closeOverlay();
+                            }}
+                          >
+                            <BookCover
+                              title={understoodResult.matchedBook.title}
+                              authors={understoodResult.matchedBook.authors}
+                              coverUrl={understoodResult.matchedBook.cover_url}
+                              readingStatus={understoodResult.matchedBook.reading_status}
+                            />
+                          </div>
+                        ) : (
+                          <div
+                            className={`w-10 h-10 rounded-xl border flex items-center justify-center shrink-0 ${
+                              isDark
+                                ? 'bg-white/10 border-white/15 text-cyan-300'
+                                : 'bg-sky-50 border-sky-200/80 text-sky-700'
+                            }`}
+                          >
+                            {understoodResult.intent === 'CHECK_STREAK' ? (
+                              <Flame size={20} className="text-orange-500" />
+                            ) : understoodResult.intent === 'LOCATE_BOOK' ? (
+                              <MapPin size={20} className="text-sky-600" />
+                            ) : (
+                              <CheckCircle2 size={20} className="text-emerald-500" />
+                            )}
+                          </div>
+                        )}
+
+                        <div className="flex-1 min-w-0 text-left">
+                          <h4
+                            className={`font-serif text-sm font-semibold truncate ${
+                              isDark ? 'text-white drop-shadow-sm' : 'text-slate-900'
+                            }`}
+                          >
+                            {understoodResult.cardTitle}
+                          </h4>
+                          <p
+                            className={`text-xs mt-0.5 leading-snug ${
+                              isDark ? 'text-white/80' : 'text-slate-600'
+                            }`}
+                          >
+                            {understoodResult.cardDetail}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Actions */}
+                      <div
+                        className={`flex items-center justify-end gap-2 pt-1 border-t ${
+                          isDark ? 'border-white/10' : 'border-slate-200/60'
+                        }`}
+                      >
+                        {understoodResult.matchedBook && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSelectedBook(understoodResult.matchedBook!);
+                              closeOverlay();
+                            }}
+                            className={`px-3 py-1 rounded-xl border text-xs font-medium transition-colors flex items-center gap-1.5 ${
+                              isDark
+                                ? 'bg-white/10 hover:bg-white/20 border-white/20 text-white'
+                                : 'bg-slate-100 hover:bg-slate-200 border-slate-200 text-slate-700'
+                            }`}
+                          >
+                            <span>View Book Details</span>
+                            <ArrowRight size={11} />
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={closeOverlay}
+                          className="px-3.5 py-1 rounded-xl bg-gradient-to-r from-sky-600 to-indigo-600 hover:brightness-105 text-white text-xs font-semibold transition-all shadow-md active:scale-95"
+                        >
+                          {isSubmitting ? 'Logging...' : 'Done'}
+                        </button>
+                      </div>
+                    </motion.div>
+                  )}
+                </motion.div>
+
+                {/* 3. BOTTOM SUGGESTIONS: Anchored cleanly above bottom nav bar */}
+                <div
+                  className="relative z-10 w-full max-w-lg mx-auto px-5 flex flex-col items-center space-y-2.5 pb-2"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <span
+                    className={`text-[10px] uppercase tracking-widest font-semibold ${
+                      isDark ? 'text-slate-300/80 drop-shadow' : 'text-sky-900/70 font-bold'
+                    }`}
+                  >
+                    Try saying or tapping:
+                  </span>
+                  <div className="flex flex-wrap justify-center gap-2 max-w-md">
+                    {dynamicSuggestions.map((phrase, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => {
+                          setLiveTranscript(phrase);
+                          handleExecuteCommand(phrase);
+                        }}
+                        className={`px-3.5 py-1.5 rounded-full border text-xs font-normal tracking-wide backdrop-blur-xl transition-all text-left active:scale-95 ${
+                          isDark
+                            ? 'bg-white/[0.08] hover:bg-white/[0.16] border-white/[0.15] hover:border-white/30 text-white/95 shadow-[0_4px_16px_rgba(0,0,0,0.25)]'
+                            : 'bg-white/80 hover:bg-white border-sky-200/80 hover:border-sky-300 text-slate-800 shadow-xs hover:shadow-sm'
+                        }`}
+                      >
+                        &ldquo;{phrase}&rdquo;
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            </motion.div>
-          </motion.div>
+              </motion.div>
+            )}
+          </AnimatePresence>,
+          document.body
         )}
-      </AnimatePresence>,
-      document.body
-    )}
     </>
   );
 };

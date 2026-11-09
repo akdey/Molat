@@ -124,8 +124,10 @@ export function parseVoiceLogCommand(rawSpeech: string, currentStartPage: number
     endPage = Math.max(p1, p2);
     pagesRead = endPage - startPage;
   } else {
-    // 6. Check for delta pages: "read 25 pages", "logged 30 pages", "30 pages"
-    const deltaMatch = preprocessed.match(/\b(?:read|logged|did|read\s+about)?\s*(\d+)\s+pages?\b/i);
+    // 6. Check for delta pages: "add 5 pages", "add 5pages", "read 25 pages", "logged 30 pages", "30 pages"
+    const deltaMatch =
+      preprocessed.match(/\b(?:add|added|read|logged|did|read\s+about)?\s*(\d+)\s*pages?\b/i) ||
+      preprocessed.match(/\b(?:add|added|log|logged)\s+(\d+)\b/i);
     if (deltaMatch) {
       pagesRead = parseInt(deltaMatch[1], 10);
       startPage = currentStartPage;
