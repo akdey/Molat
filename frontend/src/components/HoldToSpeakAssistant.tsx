@@ -355,139 +355,126 @@ export const HoldToSpeakAssistant: React.FC<HoldToSpeakAssistantProps> = ({
         </button>
       </div>
 
-      {/* 2. THE AI ASSISTANT OVERLAY (FLOATING ABOVE BOTTOM BAR, SHOWING TRANSCRIPT, WHAT IT UNDERSTOOD, SUGGESTIONS & ACTIONS) */}
+      {/* 2. ATMOSPHERIC SEAMLESS OVERLAY (FADES UP FROM BOTTOM BAR, NO BOX OR MODAL POPUP) */}
       <AnimatePresence>
         {overlayOpen && (
-          <>
-            {/* Soft Ambient Backdrop Blur (leaves bottom bar untouched) */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={closeOverlay}
-              className="fixed inset-0 z-40 bg-black/40 backdrop-blur-xs"
-            />
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.28, ease: 'easeOut' }}
+            className="fixed inset-x-0 bottom-0 top-0 z-40 flex flex-col justify-end pb-20 select-none overflow-hidden"
+            onClick={closeOverlay}
+          >
+            {/* Atmospheric Gradient Wash: Deep rich obsidian/espresso at bottom, fading smoothly up to transparent */}
+            <div className="absolute inset-x-0 bottom-0 h-[75vh] bg-gradient-to-t from-[#0e0d0c]/98 via-[#181614]/85 via-[#181614]/40 to-transparent backdrop-blur-[6px] pointer-events-none" />
 
-            {/* Floating Glassmorphic AI Overlay Card */}
+            {/* Radiant Color Pulse at Horizon */}
+            <div className="absolute inset-x-0 bottom-0 h-48 bg-gradient-to-t from-accent/25 via-violet-600/15 to-transparent blur-3xl pointer-events-none" />
+
+            {/* Seamless Content Stream floating on the gradient */}
             <motion.div
-              initial={{ opacity: 0, y: 35, scale: 0.94 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: 25, scale: 0.94 }}
-              transition={{ type: 'spring', damping: 26, stiffness: 340 }}
-              className="fixed bottom-[74px] left-3 right-3 sm:left-auto sm:right-6 sm:w-[440px] z-50 p-4 rounded-3xl bg-canvas/95 dark:bg-[#0d1117]/95 border border-rule/80 dark:border-[#30363d] shadow-[0_20px_60px_rgba(0,0,0,0.35)] backdrop-blur-2xl flex flex-col space-y-3.5 max-h-[75vh] overflow-y-auto"
-              role="dialog"
-              aria-label="Voice Assistant"
+              initial={{ y: 25, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: 20, opacity: 0 }}
+              transition={{ type: 'spring', damping: 28, stiffness: 320 }}
+              className="relative z-10 w-full max-w-lg mx-auto px-5 py-3 flex flex-col space-y-4"
+              onClick={(e) => e.stopPropagation()}
             >
-              {/* Overlay Top Bar: Header, Audio Mute Toggle & Close */}
-              <div className="flex items-center justify-between pb-1 border-b border-rule/50 dark:border-rule-dark/50">
-                <div className="flex items-center gap-2">
-                  <span className={`w-2 h-2 rounded-full ${isListening ? 'bg-accent animate-ping' : 'bg-emerald-500'}`} />
-                  <span className="font-serif text-xs font-semibold text-ink dark:text-ink-dark flex items-center gap-1.5">
-                    <Sparkles size={13} className="text-accent" />
-                    <span>Molat AI Assistant</span>
+              {/* Top Controls: Floating Pill with Title, TTS Mute & Close */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 dark:bg-white/5 border border-white/15 backdrop-blur-md">
+                  <span className={`w-2 h-2 rounded-full ${isListening ? 'bg-amber-400 animate-ping' : 'bg-emerald-400'}`} />
+                  <span className="text-[11px] font-semibold text-white/90 flex items-center gap-1.5 font-sans">
+                    <Sparkles size={12} className="text-amber-300" />
+                    <span>Molat Voice</span>
                   </span>
                 </div>
 
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-1.5">
                   <button
                     onClick={() => setTtsMuted(!ttsMuted)}
-                    className={`p-1.5 rounded-lg border text-3xs transition-colors cursor-pointer ${
+                    className={`p-1.5 rounded-full border text-xs transition-colors cursor-pointer ${
                       !ttsMuted
-                        ? 'border-accent/40 bg-accent/10 text-accent'
-                        : 'border-rule dark:border-rule-dark text-ink-muted'
+                        ? 'border-accent/50 bg-accent/20 text-amber-300'
+                        : 'border-white/15 bg-white/5 text-white/50'
                     }`}
-                    title={ttsMuted ? 'Voice Response Muted' : 'Voice Response Active'}
+                    title={ttsMuted ? 'Muted' : 'Spoken Feedback Active'}
                   >
                     {!ttsMuted ? <Volume2 size={13} /> : <VolumeX size={13} />}
                   </button>
 
                   <button
                     onClick={closeOverlay}
-                    className="p-1 rounded-lg text-ink-muted hover:text-ink dark:hover:text-ink-dark hover:bg-surface dark:hover:bg-surface-dark transition-colors"
+                    className="p-1.5 rounded-full bg-white/10 hover:bg-white/20 border border-white/15 text-white/70 hover:text-white transition-colors"
                   >
-                    <X size={15} />
+                    <X size={14} />
                   </button>
                 </div>
               </div>
 
-              {/* 1. TRANSCRIPT SECTION */}
-              <div className="p-3 rounded-2xl bg-surface/80 dark:bg-surface-dark/80 border border-rule dark:border-rule-dark/70 space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] uppercase tracking-wider font-semibold text-ink-muted flex items-center gap-1.5">
-                    {/* Dancing Equalizer Waveform */}
-                    <div className="flex items-center gap-0.5 h-3">
-                      {[0.4, 0.9, 0.6, 1.0, 0.5].map((mult, idx) => (
-                        <motion.span
-                          key={idx}
-                          animate={{
-                            scaleY: isListening ? (liveTranscript ? [0.3, mult * 1.6, 0.3] : [0.3, mult, 0.3]) : 0.3,
-                          }}
-                          transition={{
-                            repeat: Infinity,
-                            duration: 0.5 + idx * 0.1,
-                            ease: 'easeInOut',
-                          }}
-                          className="w-0.5 bg-accent rounded-full h-3 origin-bottom"
-                        />
-                      ))}
-                    </div>
-                    <span>Spoken Transcript</span>
-                  </span>
-
-                  {isListening ? (
-                    <span className="text-[10px] text-accent font-medium animate-pulse">
-                      Listening...
-                    </span>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={startListening}
-                      className="text-[10px] text-accent hover:underline flex items-center gap-1"
-                    >
-                      <RotateCcw size={10} />
-                      <span>Speak again</span>
-                    </button>
-                  )}
+              {/* 1. TRANSCRIPT (CRISP FLOATING TYPOGRAPHY WITH DANCING EQUALIZER) */}
+              <div className="flex flex-col items-center text-center space-y-2 py-1">
+                {/* Dancing Equalizer Waveform */}
+                <div className="flex items-center gap-1 h-5">
+                  {[0.35, 0.9, 0.55, 1.0, 0.45, 0.8].map((mult, idx) => (
+                    <motion.span
+                      key={idx}
+                      animate={{
+                        scaleY: isListening ? (liveTranscript ? [0.25, mult * 1.8, 0.25] : [0.25, mult, 0.25]) : 0.25,
+                      }}
+                      transition={{
+                        repeat: Infinity,
+                        duration: 0.5 + idx * 0.08,
+                        ease: 'easeInOut',
+                      }}
+                      className="w-1 bg-gradient-to-t from-amber-400 via-rose-400 to-violet-300 rounded-full h-5 origin-bottom"
+                    />
+                  ))}
                 </div>
 
-                <div className="min-h-[38px] flex items-center">
+                <div className="min-h-[52px] flex items-center justify-center px-2">
                   {liveTranscript ? (
-                    <p className="font-serif text-sm font-medium text-ink dark:text-ink-dark italic leading-relaxed">
+                    <p className="font-serif text-lg sm:text-xl font-medium text-white italic tracking-tight leading-relaxed drop-shadow-md">
                       &ldquo;{liveTranscript}&rdquo;
                     </p>
                   ) : isListening ? (
-                    <p className="text-xs text-ink-muted italic font-serif">
-                      Listening... Say e.g. &ldquo;Log reading for The Fourth Protocol from 45 to 80&rdquo;
+                    <p className="text-xs sm:text-sm text-white/75 font-serif italic animate-pulse">
+                      Listening... Speak book title, page range, or question
                     </p>
                   ) : (
-                    <p className="text-xs text-ink-muted">
-                      Tap the center mic or hold to speak.
-                    </p>
+                    <button
+                      onClick={startListening}
+                      className="text-xs text-amber-300 hover:text-amber-200 flex items-center gap-1 font-medium cursor-pointer"
+                    >
+                      <RotateCcw size={12} />
+                      <span>Tap to speak again</span>
+                    </button>
                   )}
                 </div>
               </div>
 
-              {/* 2. WHAT IT UNDERSTOOD (PARSED RESULT CARD) */}
+              {/* 2. WHAT IT UNDERSTOOD & ACTIONS (SEAMLESS LUMINOUS STRIP, NO BOX) */}
               {understoodResult && (
                 <motion.div
-                  initial={{ opacity: 0, scale: 0.96 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  className="p-3 rounded-2xl bg-accent/5 dark:bg-accent/10 border border-accent/25 space-y-2 animate-in"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="w-full p-3.5 rounded-2xl bg-white/10 dark:bg-white/5 border border-white/20 backdrop-blur-xl shadow-lg space-y-2.5"
                 >
                   <div className="flex items-center justify-between">
-                    <span className="text-[10px] uppercase tracking-wider font-bold text-accent dark:text-accent-dark flex items-center gap-1">
-                      <CheckCircle2 size={12} />
+                    <span className="text-[10px] uppercase tracking-wider font-bold text-amber-300 flex items-center gap-1">
+                      <CheckCircle2 size={13} className="text-emerald-400" />
                       <span>What Molat Understood</span>
                     </span>
-                    <span className="px-1.5 py-0.2 rounded text-[9px] font-semibold uppercase bg-accent/20 text-accent">
+                    <span className="px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider bg-white/15 text-white">
                       {understoodResult.intent.replace('_', ' ')}
                     </span>
                   </div>
 
-                  <div className="flex items-start gap-3 pt-0.5">
+                  <div className="flex items-start gap-3">
                     {understoodResult.matchedBook ? (
                       <div
-                        className="w-11 shrink-0 cursor-pointer hover:scale-105 transition-transform"
+                        className="w-12 shrink-0 cursor-pointer hover:scale-105 transition-transform"
                         onClick={() => {
                           setSelectedBook(understoodResult.matchedBook!);
                           closeOverlay();
@@ -501,29 +488,29 @@ export const HoldToSpeakAssistant: React.FC<HoldToSpeakAssistantProps> = ({
                         />
                       </div>
                     ) : (
-                      <div className="w-9 h-9 rounded-xl bg-accent/15 text-accent flex items-center justify-center shrink-0">
+                      <div className="w-10 h-10 rounded-xl bg-white/10 border border-white/15 text-amber-300 flex items-center justify-center shrink-0">
                         {understoodResult.intent === 'CHECK_STREAK' ? (
-                          <Flame size={18} className="text-amber-500" />
+                          <Flame size={20} className="text-amber-400" />
                         ) : understoodResult.intent === 'LOCATE_BOOK' ? (
-                          <MapPin size={18} className="text-sky-500" />
+                          <MapPin size={20} className="text-sky-400" />
                         ) : (
-                          <CheckCircle2 size={18} className="text-emerald-500" />
+                          <CheckCircle2 size={20} className="text-emerald-400" />
                         )}
                       </div>
                     )}
 
-                    <div className="flex-1 min-w-0">
-                      <h4 className="font-serif text-xs font-semibold text-ink dark:text-ink-dark truncate">
+                    <div className="flex-1 min-w-0 text-left">
+                      <h4 className="font-serif text-sm font-semibold text-white truncate drop-shadow-sm">
                         {understoodResult.cardTitle}
                       </h4>
-                      <p className="text-[11px] text-ink-secondary dark:text-ink-dark-secondary mt-0.5 leading-snug">
+                      <p className="text-xs text-white/80 mt-0.5 leading-snug">
                         {understoodResult.cardDetail}
                       </p>
                     </div>
                   </div>
 
-                  {/* 3. ACTIONS SECTION */}
-                  <div className="flex items-center justify-end gap-2 pt-1 border-t border-accent/20">
+                  {/* Actions */}
+                  <div className="flex items-center justify-end gap-2 pt-1 border-t border-white/10">
                     {understoodResult.matchedBook && (
                       <button
                         type="button"
@@ -531,16 +518,16 @@ export const HoldToSpeakAssistant: React.FC<HoldToSpeakAssistantProps> = ({
                           setSelectedBook(understoodResult.matchedBook!);
                           closeOverlay();
                         }}
-                        className="px-2.5 py-1 rounded-lg border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark text-xs font-medium text-ink hover:border-accent transition-colors flex items-center gap-1"
+                        className="px-3 py-1 rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 text-xs font-medium text-white transition-colors flex items-center gap-1.5"
                       >
-                        <span>View Book</span>
+                        <span>View Book Details</span>
                         <ArrowRight size={11} />
                       </button>
                     )}
                     <button
                       type="button"
                       onClick={closeOverlay}
-                      className="px-3 py-1 rounded-lg bg-accent text-white text-xs font-medium hover:bg-accent-hover transition-colors shadow-2xs"
+                      className="px-3.5 py-1 rounded-xl bg-gradient-to-r from-amber-500 to-accent hover:from-amber-400 hover:to-accent-hover text-white text-xs font-semibold transition-all shadow-md active:scale-95"
                     >
                       {isSubmitting ? 'Logging...' : 'Done'}
                     </button>
@@ -548,12 +535,12 @@ export const HoldToSpeakAssistant: React.FC<HoldToSpeakAssistantProps> = ({
                 </motion.div>
               )}
 
-              {/* 4. SUGGESTIONS SECTION */}
-              <div className="space-y-1.5 pt-0.5">
-                <span className="text-[10px] uppercase tracking-wider font-semibold text-ink-muted block">
-                  Suggestions to try:
+              {/* 3. SUGGESTIONS (DELICATE FROSTED PILLS FLOATING NATURALLY) */}
+              <div className="w-full flex flex-col items-center space-y-1.5 pt-1">
+                <span className="text-[10px] uppercase tracking-wider font-semibold text-white/60">
+                  Try saying or tapping:
                 </span>
-                <div className="flex flex-wrap gap-1.5">
+                <div className="flex flex-wrap justify-center gap-1.5 max-w-md">
                   {[
                     'Log reading for The Fourth Protocol from 45 to 80',
                     'Where is Dune?',
@@ -567,7 +554,7 @@ export const HoldToSpeakAssistant: React.FC<HoldToSpeakAssistantProps> = ({
                         setLiveTranscript(phrase);
                         handleExecuteCommand(phrase);
                       }}
-                      className="px-2.5 py-1 rounded-xl border border-rule dark:border-rule-dark bg-surface-raised dark:bg-surface-dark hover:border-accent hover:text-accent text-[11px] font-medium text-ink-secondary dark:text-ink-dark-secondary transition-colors cursor-pointer text-left active:scale-98"
+                      className="px-3 py-1 rounded-full bg-white/10 hover:bg-white/20 border border-white/15 text-white/90 hover:text-white text-xs font-medium backdrop-blur-md transition-all active:scale-95 text-left"
                     >
                       &ldquo;{phrase}&rdquo;
                     </button>
@@ -575,7 +562,7 @@ export const HoldToSpeakAssistant: React.FC<HoldToSpeakAssistantProps> = ({
                 </div>
               </div>
             </motion.div>
-          </>
+          </motion.div>
         )}
       </AnimatePresence>
     </>
