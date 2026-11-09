@@ -504,3 +504,4 @@ export const HoldToSpeakAssistant: React.FC<HoldToSpeakAssistantProps> = ({
     </>
   );
 };
+
