@@ -422,8 +422,8 @@ export const HeatmapScreen: React.FC = () => {
             </div>
           </div>
 
-          {/* Clean Controls Bar (Dropdown + Range Pills + Layout Mode Switch) */}
-          <div className="flex flex-wrap items-center gap-1.5 self-start sm:self-auto">
+          {/* Clean Controls Bar (Dropdown + [Range Pills + View Thing in one line]) */}
+          <div className="flex flex-wrap sm:flex-nowrap items-center gap-1.5 self-start sm:self-auto">
             {/* Year / Period Dropdown Selector */}
             <div className="relative inline-flex items-center">
               <select
@@ -444,67 +444,70 @@ export const HeatmapScreen: React.FC = () => {
               <ChevronDown size={13} className="absolute right-2 pointer-events-none text-ink-muted" />
             </div>
 
-            {/* Quick Range Pills: 3M | 6M | 1Y */}
-            <div className="flex items-center gap-0.5 bg-surface-raised dark:bg-surface-dark p-0.5 rounded-lg border border-rule dark:border-rule-dark min-h-[32px]">
-              <button
-                onClick={() => setSelectedView('3m')}
-                className={`px-2 py-1 rounded-md text-2xs font-medium transition-colors cursor-pointer ${
-                  selectedView === '3m'
-                    ? 'bg-accent text-white shadow-xs'
-                    : 'text-ink-secondary hover:text-ink'
-                }`}
-                title="Last 3 Months"
-              >
-                3M
-              </button>
-              <button
-                onClick={() => setSelectedView('6m')}
-                className={`px-2 py-1 rounded-md text-2xs font-medium transition-colors cursor-pointer ${
-                  selectedView === '6m'
-                    ? 'bg-accent text-white shadow-xs'
-                    : 'text-ink-secondary hover:text-ink'
-                }`}
-                title="Last 6 Months"
-              >
-                6M
-              </button>
-              <button
-                onClick={() => setSelectedView('all')}
-                className={`px-2 py-1 rounded-md text-2xs font-medium transition-colors cursor-pointer ${
-                  selectedView === 'all'
-                    ? 'bg-accent text-white shadow-xs'
-                    : 'text-ink-secondary hover:text-ink'
-                }`}
-                title="Full Year"
-              >
-                1Y
-              </button>
-            </div>
+            {/* Range Pills (3M 6M 1Y) AND View Thing locked together in one single line */}
+            <div className="flex items-center gap-1.5 shrink-0">
+              {/* Quick Range Pills: 3M | 6M | 1Y */}
+              <div className="flex items-center gap-0.5 bg-surface-raised dark:bg-surface-dark p-0.5 rounded-lg border border-rule dark:border-rule-dark min-h-[32px]">
+                <button
+                  onClick={() => setSelectedView('3m')}
+                  className={`px-2 py-1 rounded-md text-2xs font-medium transition-colors cursor-pointer ${
+                    selectedView === '3m'
+                      ? 'bg-accent text-white shadow-xs'
+                      : 'text-ink-secondary hover:text-ink'
+                  }`}
+                  title="Last 3 Months"
+                >
+                  3M
+                </button>
+                <button
+                  onClick={() => setSelectedView('6m')}
+                  className={`px-2 py-1 rounded-md text-2xs font-medium transition-colors cursor-pointer ${
+                    selectedView === '6m'
+                      ? 'bg-accent text-white shadow-xs'
+                      : 'text-ink-secondary hover:text-ink'
+                  }`}
+                  title="Last 6 Months"
+                >
+                  6M
+                </button>
+                <button
+                  onClick={() => setSelectedView('all')}
+                  className={`px-2 py-1 rounded-md text-2xs font-medium transition-colors cursor-pointer ${
+                    selectedView === 'all'
+                      ? 'bg-accent text-white shadow-xs'
+                      : 'text-ink-secondary hover:text-ink'
+                  }`}
+                  title="Full Year"
+                >
+                  1Y
+                </button>
+              </div>
 
-            {/* Layout Toggle: Continuous Horizontal Scroll (Default) vs Quarters Multi-Row */}
-            <div className="flex items-center gap-0.5 bg-surface-raised dark:bg-surface-dark p-0.5 rounded-lg border border-rule dark:border-rule-dark min-h-[32px]">
-              <button
-                onClick={() => setLayoutMode('continuous')}
-                className={`p-1.5 rounded-md transition-colors cursor-pointer ${
-                  layoutMode === 'continuous'
-                    ? 'bg-accent text-white shadow-xs'
-                    : 'text-ink-secondary hover:text-ink'
-                }`}
-                title="Continuous Horizontal Scroll Strip (Default)"
-              >
-                <Columns3 size={13} />
-              </button>
-              <button
-                onClick={() => setLayoutMode('quarters')}
-                className={`p-1.5 rounded-md transition-colors cursor-pointer ${
-                  layoutMode === 'quarters'
-                    ? 'bg-accent text-white shadow-xs'
-                    : 'text-ink-secondary hover:text-ink'
-                }`}
-                title="Quarters Multi-Row Wrap"
-              >
-                <LayoutGrid size={13} />
-              </button>
+              {/* Layout Toggle (View Thing): Continuous Horizontal Scroll vs Quarters Multi-Row */}
+              <div className="flex items-center gap-0.5 bg-surface-raised dark:bg-surface-dark p-0.5 rounded-lg border border-rule dark:border-rule-dark min-h-[32px]">
+                <button
+                  onClick={() => setLayoutMode('continuous')}
+                  className={`p-1.5 rounded-md transition-colors cursor-pointer ${
+                    layoutMode === 'continuous'
+                      ? 'bg-accent text-white shadow-xs'
+                      : 'text-ink-secondary hover:text-ink'
+                  }`}
+                  title="Continuous Horizontal Scroll Strip (Default)"
+                >
+                  <Columns3 size={13} />
+                </button>
+                <button
+                  onClick={() => setLayoutMode('quarters')}
+                  className={`p-1.5 rounded-md transition-colors cursor-pointer ${
+                    layoutMode === 'quarters'
+                      ? 'bg-accent text-white shadow-xs'
+                      : 'text-ink-secondary hover:text-ink'
+                  }`}
+                  title="Quarters Multi-Row Wrap"
+                >
+                  <LayoutGrid size={13} />
+                </button>
+              </div>
             </div>
           </div>
         </div>
