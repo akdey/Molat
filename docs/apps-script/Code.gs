@@ -64,7 +64,7 @@ function findSheet(sheetName) {
 
     for (let i = 0; i < sheets.length; i++) {
       const name = sheets[i].getName().toLowerCase();
-      if (name !== 'reading_logs' && name !== 'wishlist' && sheets[i].getLastRow() > 1) {
+      if (name !== 'reading_logs' && name !== 'wishlist' && name !== 'lending' && sheets[i].getLastRow() > 1) {
         return sheets[i];
       }
     }
