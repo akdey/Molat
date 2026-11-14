@@ -429,7 +429,7 @@ export const HeatmapScreen: React.FC = () => {
               <select
                 value={selectedView}
                 onChange={(e) => setSelectedView(e.target.value)}
-                className="text-2xs sm:text-xs py-1 pl-2 pr-5 rounded-lg border border-rule dark:border-rule-dark bg-surface-raised dark:bg-surface-dark text-ink dark:text-ink-dark focus:outline-none focus:border-accent cursor-pointer appearance-none min-h-[28px] sm:min-h-[32px] font-medium max-w-[115px] sm:max-w-none truncate"
+                className="text-2xs sm:text-xs py-1 pl-2 pr-5 rounded-lg border border-rule dark:border-rule-dark bg-surface-raised dark:bg-surface-dark text-ink dark:text-ink-dark focus:outline-none focus:border-accent cursor-pointer appearance-none h-[28px] sm:h-[32px] font-medium w-[98px] sm:w-auto truncate"
                 title="Select Heatmap Timeframe"
               >
                 <option value="all">Past Year</option>
@@ -438,14 +438,14 @@ export const HeatmapScreen: React.FC = () => {
                     Year {yr}
                   </option>
                 ))}
-                <option value="6m">Last 6 Months</option>
-                <option value="3m">Last 3 Months</option>
+                <option value="6m">6 Months</option>
+                <option value="3m">3 Months</option>
               </select>
               <ChevronDown size={11} className="absolute right-1.5 pointer-events-none text-ink-muted" />
             </div>
 
             {/* Quick Range Pills: 3M | 6M | 1Y */}
-            <div className="flex items-center gap-0.5 bg-surface-raised dark:bg-surface-dark p-0.5 rounded-lg border border-rule dark:border-rule-dark min-h-[28px] sm:min-h-[32px] shrink-0">
+            <div className="flex items-center gap-0.5 bg-surface-raised dark:bg-surface-dark p-0.5 rounded-lg border border-rule dark:border-rule-dark h-[28px] sm:h-[32px] shrink-0">
               <button
                 onClick={() => setSelectedView('3m')}
                 className={`px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-md text-[11px] sm:text-2xs font-medium transition-colors cursor-pointer ${
@@ -482,7 +482,7 @@ export const HeatmapScreen: React.FC = () => {
             </div>
 
             {/* Layout Toggle (View Thing): Continuous Horizontal Scroll vs Quarters Multi-Row */}
-            <div className="flex items-center gap-0.5 bg-surface-raised dark:bg-surface-dark p-0.5 rounded-lg border border-rule dark:border-rule-dark min-h-[28px] sm:min-h-[32px] shrink-0">
+            <div className="flex items-center gap-0.5 bg-surface-raised dark:bg-surface-dark p-0.5 rounded-lg border border-rule dark:border-rule-dark h-[28px] sm:h-[32px] shrink-0">
               <button
                 onClick={() => setLayoutMode('continuous')}
                 className={`p-1 sm:p-1.5 rounded-md transition-colors cursor-pointer ${
