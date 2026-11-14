@@ -89,7 +89,7 @@ export const FocusReadingRoomModal: React.FC = () => {
     }
     try {
       if (wakeLockSentinelRef.current) {
-        await wakeLockSentinelRef.current.release().catch(() => {});
+        await wakeLockSentinelRef.current.release().catch(() => { });
       }
       const sentinel = await (navigator as any).wakeLock.request('screen');
       wakeLockSentinelRef.current = sentinel;
@@ -109,7 +109,7 @@ export const FocusReadingRoomModal: React.FC = () => {
     if (wakeLockSentinelRef.current) {
       try {
         await wakeLockSentinelRef.current.release();
-      } catch {}
+      } catch { }
       wakeLockSentinelRef.current = null;
     }
     setWakeLockActive(false);
@@ -124,7 +124,7 @@ export const FocusReadingRoomModal: React.FC = () => {
     if (saved) {
       try {
         const parsed: StoredFocusSession = JSON.parse(saved);
-        
+
         // Auto-purge sessions older than 24 hours to prevent orphaned stale storage
         const isStale = Date.now() - parsed.startTime > 24 * 60 * 60 * 1000;
         if (isStale) {
@@ -375,7 +375,7 @@ export const FocusReadingRoomModal: React.FC = () => {
 
       // Clear persisted session from localStorage
       localStorage.removeItem(STORAGE_KEY);
-    setHasActiveFocusTimer(false);
+      setHasActiveFocusTimer(false);
       setHasActiveFocusTimer(false);
       stopAmbientSound();
       releaseWakeLock();
@@ -425,11 +425,10 @@ export const FocusReadingRoomModal: React.FC = () => {
                 <button
                   type="button"
                   onClick={handleToggleWakeLock}
-                  className={`px-2.5 py-1 rounded-full text-3xs font-medium flex items-center gap-1.5 transition-colors cursor-pointer border ${
-                    wakeLockActive
-                      ? 'bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/30'
-                      : 'bg-surface dark:bg-surface-dark text-ink-muted border-rule dark:border-rule-dark hover:border-accent hover:text-ink'
-                  }`}
+                  className={`px-2.5 py-1 rounded-full text-3xs font-medium flex items-center gap-1.5 transition-colors cursor-pointer border ${wakeLockActive
+                    ? 'bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/30'
+                    : 'bg-surface dark:bg-surface-dark text-ink-muted border-rule dark:border-rule-dark hover:border-accent hover:text-ink'
+                    }`}
                   title={
                     wakeLockActive
                       ? 'Screen kept awake (Desk companion mode)'
@@ -437,7 +436,7 @@ export const FocusReadingRoomModal: React.FC = () => {
                   }
                 >
                   {wakeLockActive ? <Sun size={12} className="text-amber-500" /> : <Moon size={12} />}
-                  <span>{wakeLockActive ? 'Screen Awake' : 'Normal Sleep (Save Battery)'}</span>
+                  <span>{wakeLockActive ? 'Screen Awake' : 'Normal Sleep'}</span>
                 </button>
               )}
 
@@ -488,9 +487,8 @@ export const FocusReadingRoomModal: React.FC = () => {
                 <div className="relative flex flex-col items-center justify-center">
                   {/* Subtle breathing glow ring when running */}
                   <div
-                    className={`absolute inset-0 -m-6 rounded-full transition-opacity duration-1000 pointer-events-none ${
-                      isRunning ? 'bg-accent/5 dark:bg-accent/10 blur-xl animate-pulse' : 'opacity-0'
-                    }`}
+                    className={`absolute inset-0 -m-6 rounded-full transition-opacity duration-1000 pointer-events-none ${isRunning ? 'bg-accent/5 dark:bg-accent/10 blur-xl animate-pulse' : 'opacity-0'
+                      }`}
                   />
 
                   <div className="font-mono text-5xl sm:text-6xl font-light tracking-tight text-ink dark:text-ink-dark tabular-nums drop-shadow-xs">
@@ -514,11 +512,10 @@ export const FocusReadingRoomModal: React.FC = () => {
                   <button
                     type="button"
                     onClick={handleTogglePause}
-                    className={`h-14 px-7 rounded-2xl font-medium text-sm flex items-center gap-2.5 shadow-md active:scale-95 transition-all cursor-pointer ${
-                      isRunning
-                        ? 'bg-surface dark:bg-surface-dark border border-rule dark:border-rule-dark text-ink dark:text-ink-dark hover:bg-surface-raised dark:hover:bg-surface-dark-raised'
-                        : 'bg-accent text-white hover:bg-accent-hover'
-                    }`}
+                    className={`h-14 px-7 rounded-2xl font-medium text-sm flex items-center gap-2.5 shadow-md active:scale-95 transition-all cursor-pointer ${isRunning
+                      ? 'bg-surface dark:bg-surface-dark border border-rule dark:border-rule-dark text-ink dark:text-ink-dark hover:bg-surface-raised dark:hover:bg-surface-dark-raised'
+                      : 'bg-accent text-white hover:bg-accent-hover'
+                      }`}
                   >
                     {isRunning ? (
                       <>
@@ -558,11 +555,10 @@ export const FocusReadingRoomModal: React.FC = () => {
                     <button
                       type="button"
                       onClick={() => handleSelectSoundscape('mute')}
-                      className={`py-2 px-1 rounded-xl text-xs font-medium flex flex-col items-center gap-1 transition-all cursor-pointer ${
-                        soundscape === 'mute'
-                          ? 'bg-accent text-white shadow-xs'
-                          : 'bg-canvas dark:bg-canvas-dark text-ink-muted hover:text-ink border border-rule/50 dark:border-rule-dark/50'
-                      }`}
+                      className={`py-2 px-1 rounded-xl text-xs font-medium flex flex-col items-center gap-1 transition-all cursor-pointer ${soundscape === 'mute'
+                        ? 'bg-accent text-white shadow-xs'
+                        : 'bg-canvas dark:bg-canvas-dark text-ink-muted hover:text-ink border border-rule/50 dark:border-rule-dark/50'
+                        }`}
                     >
                       <VolumeX size={15} />
                       <span className="text-3xs">Silence</span>
@@ -571,11 +567,10 @@ export const FocusReadingRoomModal: React.FC = () => {
                     <button
                       type="button"
                       onClick={() => handleSelectSoundscape('rain')}
-                      className={`py-2 px-1 rounded-xl text-xs font-medium flex flex-col items-center gap-1 transition-all cursor-pointer ${
-                        soundscape === 'rain'
-                          ? 'bg-accent text-white shadow-xs'
-                          : 'bg-canvas dark:bg-canvas-dark text-ink-muted hover:text-ink border border-rule/50 dark:border-rule-dark/50'
-                      }`}
+                      className={`py-2 px-1 rounded-xl text-xs font-medium flex flex-col items-center gap-1 transition-all cursor-pointer ${soundscape === 'rain'
+                        ? 'bg-accent text-white shadow-xs'
+                        : 'bg-canvas dark:bg-canvas-dark text-ink-muted hover:text-ink border border-rule/50 dark:border-rule-dark/50'
+                        }`}
                     >
                       <CloudRain size={15} />
                       <span className="text-3xs">Soft Rain</span>
@@ -584,11 +579,10 @@ export const FocusReadingRoomModal: React.FC = () => {
                     <button
                       type="button"
                       onClick={() => handleSelectSoundscape('fireplace')}
-                      className={`py-2 px-1 rounded-xl text-xs font-medium flex flex-col items-center gap-1 transition-all cursor-pointer ${
-                        soundscape === 'fireplace'
-                          ? 'bg-accent text-white shadow-xs'
-                          : 'bg-canvas dark:bg-canvas-dark text-ink-muted hover:text-ink border border-rule/50 dark:border-rule-dark/50'
-                      }`}
+                      className={`py-2 px-1 rounded-xl text-xs font-medium flex flex-col items-center gap-1 transition-all cursor-pointer ${soundscape === 'fireplace'
+                        ? 'bg-accent text-white shadow-xs'
+                        : 'bg-canvas dark:bg-canvas-dark text-ink-muted hover:text-ink border border-rule/50 dark:border-rule-dark/50'
+                        }`}
                     >
                       <Flame size={15} />
                       <span className="text-3xs">Fireplace</span>
@@ -597,11 +591,10 @@ export const FocusReadingRoomModal: React.FC = () => {
                     <button
                       type="button"
                       onClick={() => handleSelectSoundscape('cafe')}
-                      className={`py-2 px-1 rounded-xl text-xs font-medium flex flex-col items-center gap-1 transition-all cursor-pointer ${
-                        soundscape === 'cafe'
-                          ? 'bg-accent text-white shadow-xs'
-                          : 'bg-canvas dark:bg-canvas-dark text-ink-muted hover:text-ink border border-rule/50 dark:border-rule-dark/50'
-                      }`}
+                      className={`py-2 px-1 rounded-xl text-xs font-medium flex flex-col items-center gap-1 transition-all cursor-pointer ${soundscape === 'cafe'
+                        ? 'bg-accent text-white shadow-xs'
+                        : 'bg-canvas dark:bg-canvas-dark text-ink-muted hover:text-ink border border-rule/50 dark:border-rule-dark/50'
+                        }`}
                     >
                       <Coffee size={15} />
                       <span className="text-3xs">Warm Cafe</span>
