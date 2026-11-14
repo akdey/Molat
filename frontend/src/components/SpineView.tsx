@@ -1,55 +1,119 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { motion } from 'motion/react';
 import type { Book } from '../types/book';
 import { useLibraryStore } from '../store/useLibraryStore';
-import { BookCover } from './BookCover';
-import { Bookmark, MapPin, Star } from 'lucide-react';
 
 interface SpineViewProps {
   books: Book[];
 }
 
+// Authentic Publisher Cloth & Paper Palettes
+interface SpineTheme {
+  bg: string;
+  text: string;
+  accent: string;
+  rib: string;
+  paperType: 'cloth' | 'leather' | 'paperback';
+}
+
+const PALETTES: SpineTheme[] = [
+  { bg: '#2B231D', text: '#FDFBF7', accent: '#D4AF37', rib: '#1A1511', paperType: 'leather' }, // Deep Havana Leather
+  { bg: '#172738', text: '#F0F5FA', accent: '#E5C07B', rib: '#0E1924', paperType: 'cloth' },   // Oxford Navy Buckram
+  { bg: '#541C24', text: '#FDF4F5', accent: '#F2C94C', rib: '#361117', paperType: 'leather' }, // Crimson Morocco
+  { bg: '#1B382B', text: '#EDF7F2', accent: '#E0AA3E', rib: '#10221A', paperType: 'cloth' },   // Forest Green Cloth
+  { bg: '#6B4A23', text: '#FEF9F0', accent: '#FFE29A', rib: '#452F16', paperType: 'cloth' },   // Aged Ochre Binding
+  { bg: '#1E2229', text: '#EDEDED', accent: '#D4AF37', rib: '#12151A', paperType: 'paperback' },// Matte Noir Paperback
+  { bg: '#6E2C1B', text: '#FDF2EE', accent: '#F5C682', rib: '#471B10', paperType: 'cloth' },   // Terracotta Rust
+  { bg: '#153338', text: '#EBF6F8', accent: '#D4AF37', rib: '#0C2023', paperType: 'cloth' },   // Vintage Teal
+  { bg: '#3E1C2F', text: '#FBF0F6', accent: '#F2C94C', rib: '#26111C', paperType: 'leather' }, // Plum Levant
+  { bg: '#DCD4C4', text: '#1F242E', accent: '#8B261D', rib: '#B8AD98', paperType: 'paperback' },// Classic Penguin Cream
+  { bg: '#2A351D', text: '#F3F7EC', accent: '#E0AA3E', rib: '#1A2111', paperType: 'cloth' },   // Antique Olive
+  { bg: '#40241A', text: '#FDF0EA', accent: '#F5C682', rib: '#281510', paperType: 'leather' }, // Burnt Walnut
+];
+
+function hashString(str: string): number {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = (hash << 5) - hash + str.charCodeAt(i);
+    hash |= 0;
+  }
+  return Math.abs(hash);
+}
+
+function getSpineTheme(book: Book) {
+  const hash = hashString(book.book_id + (book.title || ''));
+  const palette = PALETTES[hash % PALETTES.length];
+
+  // Natural organic height variation across books (180px to 215px)
+  const height = 180 + (hash % 36);
+
+  return { palette, height };
+}
+
 export const SpineView: React.FC<SpineViewProps> = ({ books }) => {
   const { setSelectedBook } = useLibraryStore();
-  const [activeLocationFilter, setActiveLocationFilter] = useState<string>('ALL');
 
-  // Distinct locations for quick shelf filter pills
+  const [pulledBookId, setPulledBookId] = useState<string | null>(null);
+  const [activeLocationFilter, setActiveLocationFilter] = useState<string>('ALL');
+  const [booksPerShelf, setBooksPerShelf] = useState<number>(8);
+
+  const pullTimerRef = useRef<any>(null);
+
+  // Responsive shelf capacity: Fits completely on mobile screens WITHOUT horizontal scroll
+  useEffect(() => {
+    const handleResize = () => {
+      const w = window.innerWidth;
+      if (w < 420) {
+        setBooksPerShelf(8); // Phone portrait: 8 books fit comfortably across screen
+      } else if (w < 640) {
+        setBooksPerShelf(10);
+      } else if (w < 768) {
+        setBooksPerShelf(12);
+      } else if (w < 1024) {
+        setBooksPerShelf(14);
+      } else {
+        setBooksPerShelf(16); // Desktop
+      }
+    };
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // Distinct locations for shelf tabs
   const distinctLocations = useMemo(() => {
     const set = new Set<string>();
     books.forEach((b) => set.add(b.location || 'Home Shelf'));
     return Array.from(set).sort();
   }, [books]);
 
-  // Group books into shelves (either by physical location or display tiers)
+  // Group books into stacked wooden shelves
   const shelves = useMemo(() => {
     const filtered =
       activeLocationFilter === 'ALL'
         ? books
         : books.filter((b) => (b.location || 'Home Shelf') === activeLocationFilter);
 
-    // Chunk into shelves of 3-4 books per display ledge on mobile, 5-6 on larger screens
-    // To ensure clean wrapping across all viewports, we chunk into shelves of 6 books
-    const chunkSize = 6;
     const list: { id: string; name: string; books: Book[] }[] = [];
 
-    for (let i = 0; i < filtered.length; i += chunkSize) {
-      const chunk = filtered.slice(i, i + chunkSize);
-      const tier = Math.floor(i / chunkSize) + 1;
+    for (let i = 0; i < filtered.length; i += booksPerShelf) {
+      const chunk = filtered.slice(i, i + booksPerShelf);
+      const tier = Math.floor(i / booksPerShelf) + 1;
       const shelfName =
         activeLocationFilter !== 'ALL'
           ? `${activeLocationFilter} • Tier ${tier}`
-          : `Display Shelf ${tier}`;
+          : `Shelf Tier ${tier}`;
       list.push({
-        id: `shelf-${i}`,
+        id: `shelf-tier-${i}`,
         name: shelfName,
         books: chunk,
       });
     }
 
     return list;
-  }, [books, activeLocationFilter]);
+  }, [books, activeLocationFilter, booksPerShelf]);
 
-  // Touch/haptic feedback
+  // Touch haptics
   const triggerHaptic = (ms: number = 25) => {
     if (typeof navigator !== 'undefined' && navigator.vibrate) {
       try {
@@ -60,19 +124,36 @@ export const SpineView: React.FC<SpineViewProps> = ({ books }) => {
     }
   };
 
+  const handleSpineClick = (book: Book) => {
+    triggerHaptic(30);
+    setPulledBookId(book.book_id);
+
+    if (pullTimerRef.current) clearTimeout(pullTimerRef.current);
+    pullTimerRef.current = setTimeout(() => {
+      setPulledBookId(null);
+      setSelectedBook(book); // Opens standard BookDetailDrawer as requested
+    }, 120);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (pullTimerRef.current) clearTimeout(pullTimerRef.current);
+    };
+  }, []);
+
   return (
-    <div className="space-y-8 select-none">
-      {/* 1. View Header & Shelf Filter */}
+    <div className="space-y-6 select-none">
+      {/* 1. Header & Location Filter */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-1">
         <div>
           <h3 className="font-serif text-base sm:text-lg font-bold text-ink dark:text-ink-dark flex items-center gap-2">
-            <span>Bookshelf Display</span>
+            <span>Bookshelf</span>
             <span className="text-xs font-sans font-normal px-2 py-0.5 rounded-full bg-accent/15 text-accent font-mono">
               {books.length} Volumes
             </span>
           </h3>
           <p className="text-3xs text-ink-muted">
-            3D Angled Ledges &bull; Tap any volume to open full catalog record and reading tracker
+            Standing Spines &bull; Tap any volume on the shelf to inspect full book details
           </p>
         </div>
 
@@ -106,128 +187,166 @@ export const SpineView: React.FC<SpineViewProps> = ({ books }) => {
         )}
       </div>
 
-      {/* 2. FLOATING ARCHITECTURAL DISPLAY SHELVES */}
-      <div className="space-y-10 sm:space-y-12">
+      {/* 2. REALISTIC WOODEN BOOKCASE UNIT */}
+      <div className="relative rounded-2xl bg-[#24160E] dark:bg-[#120B07] border-4 border-[#351E12] dark:border-[#1E1008] shadow-2xl p-2 sm:p-4 space-y-6 overflow-hidden">
+        {/* Deep ambient bookcase backboard shadow */}
+        <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-transparent to-black/35 pointer-events-none z-10 rounded-xl" />
+
         {shelves.map((shelf) => (
-          <div key={shelf.id} className="space-y-2">
-            {/* Shelf Nameplate */}
-            <div className="flex items-center justify-between px-2 text-3xs font-mono uppercase tracking-widest text-ink-muted">
-              <span className="flex items-center gap-1.5 font-bold text-accent dark:text-accent-dark">
-                <Bookmark size={11} />
-                {shelf.name}
+          <div key={shelf.id} className="relative z-20 space-y-1">
+            {/* Brass Shelf Nameplate Tag */}
+            <div className="flex items-center justify-between px-2 pt-1 pb-1">
+              <div className="flex items-center gap-1.5">
+                <div className="w-1.5 h-1.5 rounded-full bg-amber-400/90 shadow-[0_0_6px_rgba(251,191,36,0.6)]" />
+                <span className="text-[10px] uppercase tracking-widest font-mono text-amber-200/90 font-bold drop-shadow-xs truncate max-w-[240px]">
+                  {shelf.name}
+                </span>
+              </div>
+              <span className="text-[10px] font-mono text-amber-300/60 shrink-0">
+                {shelf.books.length} vols
               </span>
-              <span>{shelf.books.length} volumes</span>
             </div>
 
-            {/* 3D Angled Books Row */}
-            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3 sm:gap-5 px-2 pt-4 pb-2 items-end">
-              {shelf.books.map((book) => {
-                const isCompleted = book.reading_status === 'COMPLETED';
-                const isReading = book.reading_status === 'READING';
+            {/* Shelf Book Row: Fitted perfectly to screen width with ZERO horizontal scroll */}
+            <div className="relative min-h-[225px] flex items-end">
+              <div className="w-full flex items-end justify-between px-1 sm:px-2 pt-6 pb-0.5 gap-1 sm:gap-1.5 overflow-hidden">
+                {shelf.books.map((book) => {
+                  const { palette, height } = getSpineTheme(book);
+                  const isPulled = pulledBookId === book.book_id;
+                  const isCompleted = book.reading_status === 'COMPLETED';
+                  const isReading = book.reading_status === 'READING';
+                  const isLightSpine = palette.bg === '#DCD4C4';
 
-                return (
-                  <div
-                    key={book.book_id}
-                    className="relative group cursor-pointer flex flex-col items-center"
-                    onClick={() => {
-                      triggerHaptic(30);
-                      setSelectedBook(book);
-                    }}
-                  >
-                    {/* 3D PERSPECTIVE BOOK CONTAINER */}
-                    <div
-                      className="w-full relative transition-transform duration-300 ease-out group-hover:scale-105 group-hover:-translate-y-2"
-                      style={{
-                        perspective: '900px',
+                  return (
+                    <motion.button
+                      key={book.book_id}
+                      type="button"
+                      onClick={() => handleSpineClick(book)}
+                      animate={{
+                        y: isPulled ? -16 : 0,
+                        scale: isPulled ? 1.03 : 1,
                       }}
+                      whileHover={{ y: -8, transition: { duration: 0.15 } }}
+                      whileTap={{ scale: 0.98 }}
+                      transition={{ type: 'spring', damping: 24, stiffness: 360 }}
+                      className="group relative flex-1 min-w-[24px] max-w-[48px] shrink-0 flex flex-col justify-between rounded-t-xs select-none cursor-pointer text-left overflow-hidden transition-shadow"
+                      style={{
+                        height: `${height}px`,
+                        backgroundColor: palette.bg,
+                        color: palette.text,
+                        boxShadow: isPulled
+                          ? '0 16px 24px -4px rgba(0,0,0,0.85), 0 0 10px rgba(251,191,36,0.4)'
+                          : '2px 0 5px rgba(0,0,0,0.45), inset -2px 0 4px rgba(0,0,0,0.3)',
+                      }}
+                      title={`"${book.title}" by ${book.authors || 'Unknown'}`}
                     >
-                      <div
-                        className="relative w-full transition-transform duration-300 ease-out group-hover:rotate-0"
-                        style={{
-                          transformStyle: 'preserve-3d',
-                          transform: 'rotateY(-16deg) rotateX(2deg)',
-                        }}
-                      >
-                        {/* 1. Front Book Cover */}
-                        <div className="relative aspect-[2/3] w-full rounded-l-xs rounded-r-xs overflow-hidden shadow-xl bg-rule dark:bg-rule-dark">
-                          <BookCover
-                            title={book.title}
-                            authors={book.authors}
-                            coverUrl={book.cover_url}
-                            readingStatus={book.reading_status}
-                            className="w-full h-full object-cover"
-                          />
-
-                          {/* Left Bound Spine Crease Shadow */}
-                          <div className="absolute inset-y-0 left-0 w-3 bg-gradient-to-r from-black/35 via-white/10 to-transparent pointer-events-none" />
-
-                          {/* Subtle Right Edge Page Fold Sheen */}
-                          <div className="absolute inset-y-0 right-0 w-1.5 bg-gradient-to-l from-black/20 to-transparent pointer-events-none" />
-                        </div>
-
-                        {/* 2. 3D Right Side Page Block (Physical Cream Paper Pages Edge) */}
-                        <div
-                          className="absolute top-1 bottom-1 right-0 w-3.5 sm:w-4 bg-[#F5EEDB] dark:bg-[#2A2B2E] border-y border-r border-[#D9CEBA] dark:border-[#3E4044] rounded-r-2xs pointer-events-none origin-left shadow-md"
-                          style={{
-                            transform: 'translateX(100%) rotateY(90deg)',
-                            backgroundImage:
-                              'repeating-linear-gradient(to bottom, transparent, transparent 2px, rgba(0,0,0,0.05) 2px, rgba(0,0,0,0.05) 3px)',
-                          }}
-                        />
-
-                        {/* 3. 3D Top Page Block (Top Edge Pages) */}
-                        <div
-                          className="absolute top-0 left-1 right-0 h-3.5 sm:h-4 bg-[#EFE6D2] dark:bg-[#222326] border-t border-x border-[#D9CEBA] dark:border-[#3E4044] rounded-t-2xs pointer-events-none origin-bottom shadow-xs"
-                          style={{
-                            transform: 'translateY(-100%) rotateX(90deg)',
-                          }}
-                        />
-
-                        {/* 4. Contact Shadow resting on the shelf ledge */}
-                        <div className="absolute -bottom-2 inset-x-1.5 h-3 bg-black/45 dark:bg-black/75 blur-md rounded-full pointer-events-none group-hover:bg-black/60 transition-colors" />
+                      {/* 1. Top Headband & Archival Paper Edge */}
+                      <div className="relative z-10 w-full h-1.5 bg-[#F2EBDE] rounded-t-xs border-b border-black/40 overflow-hidden flex shrink-0">
+                        <div className="w-full h-full bg-gradient-to-r from-red-700/70 via-amber-200/90 to-red-700/70 opacity-90" />
                       </div>
-                    </div>
 
-                    {/* Book Metadata Below Ledge */}
-                    <div className="mt-3.5 text-center w-full px-1">
-                      <h4 className="font-serif text-[11px] sm:text-xs font-semibold text-ink dark:text-ink-dark truncate group-hover:text-accent transition-colors">
-                        {book.title}
-                      </h4>
-                      <p className="text-3xs text-ink-muted truncate mt-0.5">
-                        {book.authors?.split(' ')[0] || 'Unknown'}
-                      </p>
+                      {/* 2. 3D Cylindrical Spine Curvature Lighting Shader */}
+                      <div
+                        className="absolute inset-0 pointer-events-none z-10 rounded-t-xs"
+                        style={{
+                          background:
+                            'linear-gradient(90deg, rgba(0,0,0,0.45) 0%, rgba(255,255,255,0.18) 18%, rgba(255,255,255,0.03) 42%, rgba(0,0,0,0.1) 78%, rgba(0,0,0,0.52) 100%)',
+                        }}
+                      />
 
-                      {/* Status indicator pill */}
-                      <div className="mt-1 flex items-center justify-center gap-1">
+                      {/* 3. Gold Tooled Call Number Header */}
+                      <div className="relative z-20 w-full pt-1 px-0.5 text-center flex flex-col items-center">
+                        <div
+                          className="w-full border-t border-b py-0.5"
+                          style={{ borderColor: `${palette.accent}50` }}
+                        >
+                          <span
+                            className="text-[8px] font-mono tracking-widest uppercase block truncate font-bold"
+                            style={{
+                              color: isLightSpine ? '#8B261D' : palette.accent,
+                              textShadow: isLightSpine ? 'none' : '0 1px 2px rgba(0,0,0,0.8)',
+                            }}
+                          >
+                            {book.book_id.replace('BOOK-', '')}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* 4. Raised Gilt Ribs (Upper) */}
+                      <div
+                        className="relative z-20 w-full h-[2px] opacity-70"
+                        style={{
+                          backgroundColor: palette.rib,
+                          boxShadow: '0 1px 0 rgba(255,255,255,0.18)',
+                        }}
+                      />
+
+                      {/* 5. Crisp Vertical Spine Title */}
+                      <div className="relative z-20 my-auto py-2 flex items-center justify-center overflow-hidden w-full h-full px-0.5">
                         <span
-                          className={`w-1.5 h-1.5 rounded-full ${
-                            isCompleted
-                              ? 'bg-emerald-500 shadow-[0_0_5px_rgba(16,185,129,0.8)]'
-                              : isReading
-                              ? 'bg-amber-500 shadow-[0_0_5px_rgba(245,158,11,0.8)] animate-pulse'
-                              : 'bg-ink-muted/30'
+                          className={`font-serif text-[10px] sm:text-[11px] font-medium tracking-tight text-center leading-tight line-clamp-3 select-none group-hover:text-amber-200 transition-colors ${
+                            isLightSpine
+                              ? 'text-slate-900 drop-shadow-xs font-semibold'
+                              : 'text-white/95 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]'
                           }`}
-                        />
-                        <span className="text-[9px] font-mono uppercase tracking-wider text-ink-muted">
-                          {book.reading_status.slice(0, 4)}
+                          style={{
+                            writingMode: 'vertical-rl',
+                            transform: 'rotate(180deg)',
+                          }}
+                        >
+                          {book.title}
                         </span>
                       </div>
-                    </div>
-                  </div>
-                );
-              })}
+
+                      {/* 6. Raised Gilt Ribs (Lower) */}
+                      <div
+                        className="relative z-20 w-full h-[2px] opacity-70"
+                        style={{
+                          backgroundColor: palette.rib,
+                          boxShadow: '0 1px 0 rgba(255,255,255,0.18)',
+                        }}
+                      />
+
+                      {/* 7. Foot Details: Author & Reading Status Dot */}
+                      <div className="relative z-20 w-full pb-1 px-0.5 text-center flex flex-col items-center gap-1">
+                        <p
+                          className={`text-[8px] font-sans truncate font-medium w-full ${
+                            isLightSpine ? 'text-slate-800' : 'text-white/85 drop-shadow-xs'
+                          }`}
+                        >
+                          {book.authors?.split(' ')[0] || ''}
+                        </p>
+                        <div className="flex items-center justify-center">
+                          <span
+                            className={`w-1.5 h-1.5 rounded-full ${
+                              isCompleted
+                                ? 'bg-emerald-400 shadow-[0_0_5px_rgba(52,211,153,0.9)]'
+                                : isReading
+                                ? 'bg-amber-400 shadow-[0_0_6px_rgba(251,191,36,0.95)] animate-pulse'
+                                : isLightSpine
+                                ? 'bg-slate-400'
+                                : 'bg-white/40'
+                            }`}
+                            title={`Status: ${book.reading_status}`}
+                          />
+                        </div>
+                      </div>
+                    </motion.button>
+                  );
+                })}
+              </div>
             </div>
 
-            {/* MINIMALIST ARCHITECTURAL FLOATING SHELF LEDGE */}
-            <div className="relative w-full pt-1">
-              {/* Shelf Top Face with Beveled Highlight */}
-              <div className="h-1.5 w-full bg-gradient-to-r from-[#EAE2D5] via-[#F4EFE6] to-[#EAE2D5] dark:from-[#252830] dark:via-[#2F343F] dark:to-[#252830] rounded-t-xs border-t border-rule dark:border-rule-dark" />
-              {/* Shelf Front Lip */}
-              <div className="h-3 w-full bg-gradient-to-b from-[#D8CCA9] to-[#BAA988] dark:from-[#20232B] dark:to-[#14161C] border-t border-black/10 dark:border-white/5 shadow-md flex items-center justify-between px-3">
-                <div className="h-[1px] w-full bg-white/20 dark:bg-white/5" />
+            {/* SOLID WALNUT SHELF PLANK */}
+            <div className="relative w-full">
+              {/* Plank Top Face with Warm Light Highlight */}
+              <div className="h-2 w-full bg-gradient-to-r from-[#6E3F21] via-[#8F5632] to-[#6E3F21] border-t border-[#B57C53]/40 shadow-xs" />
+              {/* Beveled Front Lip of the Shelf */}
+              <div className="h-4 w-full bg-gradient-to-b from-[#4E2A15] to-[#30190B] border-t border-black/35 flex items-center justify-between px-3 shadow-md">
+                <div className="h-[1px] w-full bg-white/10" />
               </div>
-              {/* Soft Drop Shadow under the ledge */}
-              <div className="h-4 w-full bg-gradient-to-b from-black/15 to-transparent pointer-events-none" />
+              {/* Deep Cast Shadow under the shelf board */}
+              <div className="h-3 w-full bg-gradient-to-b from-black/55 to-transparent pointer-events-none" />
             </div>
           </div>
         ))}
