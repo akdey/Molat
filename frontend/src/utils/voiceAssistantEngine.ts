@@ -8,6 +8,7 @@ export type AssistantIntent =
   | 'CHECK_STREAK'
   | 'PICK_NEXT_READ'
   | 'LENDING_INFO'
+  | 'START_FOCUS'
   | 'UNKNOWN';
 
 export interface AssistantResult {
@@ -198,7 +199,37 @@ export function processVoiceAssistantCommand(
     };
   }
 
-  // 3. LOCATE BOOK ("Where is [Book]?", "Find [Book]")
+  // 3. START FOCUS READING SESSION ("Start focus room", "Focus on Dune", "Start reading timer")
+  if (
+    lower.includes('focus room') ||
+    lower.includes('focus session') ||
+    lower.includes('reading timer') ||
+    lower.includes('start timer') ||
+    lower.includes('focus reading') ||
+    lower.startsWith('focus on') ||
+    lower.startsWith('focus ') ||
+    lower.includes('reading room') ||
+    (lower.startsWith('start reading') && !lower.includes('page'))
+  ) {
+    const matched = fuzzyMatchBook(speech, context.books);
+    const target =
+      matched?.book || context.books.find((b) => b.reading_status === 'READING') || context.books[0];
+
+    return {
+      intent: 'START_FOCUS',
+      matchedBook: target,
+      success: true,
+      cardTitle: `Focus Reading Room ⏱️`,
+      cardDetail: target
+        ? `Book: "${target.title}" • Battery saver active`
+        : 'Distraction-free ambient timer ready',
+      spokenReply: target
+        ? `Starting focus reading session for "${target.title}". Happy reading!`
+        : `Opening Focus Reading Room. Happy reading!`,
+    };
+  }
+
+  // 4. LOCATE BOOK ("Where is [Book]?", "Find [Book]")
   if (
     lower.startsWith('where is') ||
     lower.startsWith("where's") ||

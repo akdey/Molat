@@ -59,9 +59,9 @@ export const FocusReadingRoomModal: React.FC = () => {
   const [totalPausedMs, setTotalPausedMs] = useState<number>(0);
   const [elapsedSeconds, setElapsedSeconds] = useState<number>(0);
 
-  // Screen Wake Lock state
+  // Screen Wake Lock state (Defaults to Normal Sleep to prioritize battery saving)
   const [wakeLockSupported, setWakeLockSupported] = useState<boolean>(true);
-  const [wakeLockActive, setWakeLockActive] = useState<boolean>(true);
+  const [wakeLockActive, setWakeLockActive] = useState<boolean>(false);
   const wakeLockSentinelRef = useRef<any>(null);
 
   // Soundscape state (defaults to mute for pure silence)
@@ -124,36 +124,46 @@ export const FocusReadingRoomModal: React.FC = () => {
     if (saved) {
       try {
         const parsed: StoredFocusSession = JSON.parse(saved);
-        // Verify book still exists
-        const exists = books.some((b) => b.book_id === parsed.bookId);
-        if (exists) {
-          setSelectedBookId(parsed.bookId);
-          setSessionStartTime(parsed.startTime);
-          setTotalPausedMs(parsed.totalPausedMs);
-          setStartPage(parsed.startPage);
-          setEndPage(parsed.startPage);
-          setSoundscape(parsed.soundscape || 'mute');
-          setVolume(parsed.volume ?? 0.35);
+        
+        // Auto-purge sessions older than 24 hours to prevent orphaned stale storage
+        const isStale = Date.now() - parsed.startTime > 24 * 60 * 60 * 1000;
+        if (isStale) {
+          localStorage.removeItem(STORAGE_KEY);
+          setHasActiveFocusTimer(false);
+        } else {
+          // Verify book still exists
+          const exists = books.some((b) => b.book_id === parsed.bookId);
+          if (exists) {
+            setSelectedBookId(parsed.bookId);
+            setSessionStartTime(parsed.startTime);
+            setTotalPausedMs(parsed.totalPausedMs);
+            setStartPage(parsed.startPage);
+            setEndPage(parsed.startPage);
+            setSoundscape(parsed.soundscape || 'mute');
+            setVolume(parsed.volume ?? 0.35);
 
-          if (parsed.pausedAt) {
-            setPausedAt(parsed.pausedAt);
-            setIsRunning(false);
-            const nowElapsed = Math.floor((parsed.pausedAt - parsed.startTime - parsed.totalPausedMs) / 1000);
-            setElapsedSeconds(Math.max(0, nowElapsed));
-          } else {
-            setIsRunning(true);
-            setPausedAt(null);
-            const nowElapsed = Math.floor((Date.now() - parsed.startTime - parsed.totalPausedMs) / 1000);
-            setElapsedSeconds(Math.max(0, nowElapsed));
-          }
+            if (parsed.pausedAt) {
+              setPausedAt(parsed.pausedAt);
+              setIsRunning(false);
+              const nowElapsed = Math.floor((parsed.pausedAt - parsed.startTime - parsed.totalPausedMs) / 1000);
+              setElapsedSeconds(Math.max(0, nowElapsed));
+            } else {
+              setIsRunning(true);
+              setPausedAt(null);
+              const nowElapsed = Math.floor((Date.now() - parsed.startTime - parsed.totalPausedMs) / 1000);
+              setElapsedSeconds(Math.max(0, nowElapsed));
+            }
 
-          if (parsed.soundscape && parsed.soundscape !== 'mute') {
-            playAmbientSound(parsed.soundscape, parsed.volume ?? 0.35);
+            if (parsed.soundscape && parsed.soundscape !== 'mute') {
+              playAmbientSound(parsed.soundscape, parsed.volume ?? 0.35);
+            }
+            return;
           }
-          return;
         }
       } catch (err) {
         console.warn('Failed to parse focus session:', err);
+        localStorage.removeItem(STORAGE_KEY);
+        setHasActiveFocusTimer(false);
       }
     }
 
@@ -189,7 +199,7 @@ export const FocusReadingRoomModal: React.FC = () => {
         });
     }
 
-    requestWakeLock();
+    // Default to Normal Sleep (no automatic wakeLock request to save maximum battery)
   }, [focusRoomOpen]);
 
   // 2. Persist active session to localStorage whenever state changes
@@ -410,7 +420,7 @@ export const FocusReadingRoomModal: React.FC = () => {
             </div>
 
             <div className="flex items-center gap-2">
-              {/* Screen Wake Lock Pill */}
+              {/* Screen Wake Lock Pill (Normal Sleep by default to save 100% display battery) */}
               {wakeLockSupported && (
                 <button
                   type="button"
@@ -418,12 +428,16 @@ export const FocusReadingRoomModal: React.FC = () => {
                   className={`px-2.5 py-1 rounded-full text-3xs font-medium flex items-center gap-1.5 transition-colors cursor-pointer border ${
                     wakeLockActive
                       ? 'bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/30'
-                      : 'bg-surface dark:bg-surface-dark text-ink-muted border-rule dark:border-rule-dark'
+                      : 'bg-surface dark:bg-surface-dark text-ink-muted border-rule dark:border-rule-dark hover:border-accent hover:text-ink'
                   }`}
-                  title={wakeLockActive ? 'Screen will stay on while reading' : 'Screen may lock normally'}
+                  title={
+                    wakeLockActive
+                      ? 'Screen kept awake (Desk companion mode)'
+                      : 'Normal Sleep (Battery Saver active: phone can sleep, timer runs with 0% battery impact in background)'
+                  }
                 >
                   {wakeLockActive ? <Sun size={12} className="text-amber-500" /> : <Moon size={12} />}
-                  <span>{wakeLockActive ? 'Screen Awake' : 'Normal Sleep'}</span>
+                  <span>{wakeLockActive ? 'Screen Awake' : 'Normal Sleep (Save Battery)'}</span>
                 </button>
               )}
 

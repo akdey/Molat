@@ -33,9 +33,19 @@ Whether cataloguing a multi-hundred volume collection, scanning new arrivals at 
 - **Hold-to-Talk Siri-Style Gesture**: Press and hold the elevated center `+` button from anywhere in the app to activate the ambient AI assistant with tactile haptic feedback.
 - **Zero Cloud & Zero Cost (0ms Latency)**: Runs 100% locally on your device using the browser's hardware-accelerated Web Speech API and an in-memory fuzzy title matching engine. Zero audio or transcripts sent to external servers.
 - **Hands-Free Reading Log Submissions**: Say *"Log reading for The Fourth Protocol from page 45 to 80"* or *"Read 35 pages of Atomic Habits"*—automatically matches the volume, calculates pages read, updates the Google Sheets ledger, and advances your streak.
+- **Voice-Activated Focus Reading Launch**: Say *"Start focus timer"*, *"Start focus room"*, or *"Focus on Dune"*—the assistant automatically opens the Focus Reading Room for that volume with ambient soundscapes and battery-saving timers.
 - **Physical Shelf Locator**: Say *"Where is Dune?"* to immediately locate the exact room and shelf rack without browsing menus.
 - **Atmospheric Gradient Overlay**: Rises smoothly as an organic, borderless dark-to-fade veil with dancing equalizer bars, real-time transcript streaming, a *"What Molat Understood"* confirmation card, and interactive suggestion chips.
 - **Native Spoken Audio Feedback**: Confirms actions aloud using your device's built-in text-to-speech engine (`speechSynthesis`).
+
+### ⏱️ Ambient Reading Focus Room ("Focus Room")
+- **Distraction-Free Reading Companion**: A serene, full-screen reading sanctuary with a minimalist stopwatch timer (`00:24:18`) designed for physical book reading sessions.
+- **Zero Battery Drain by Default (Normal Sleep)**: Built with battery preservation as a first-class priority. Defaults to Normal Sleep so your phone can lock and sleep normally with **0% extra battery drain**—no active background CPU loops or wake-lock power waste.
+- **Wall-Clock Epoch Arithmetic**: Solves the browser backgrounding drift problem. Calculates elapsed duration via wall-clock timestamps (`Date.now() - startTime - pausedMs`) re-synchronized on `visibilitychange` and window `focus`. Even if your phone is locked or asleep for an hour, the timer remains 100% accurate down to the exact second when unlocked.
+- **Self-Cleaning Ephemeral Storage**: Active sessions are safely mirrored under a single constant key in `localStorage` (`molat_active_focus_session_v1`) to survive accidental browser tab restarts. Automatically self-purges sessions older than 24 hours to prevent stale storage accumulation, and deletes immediately upon logging or discarding.
+- **Physical Bookmark Page Logging (No Guessing)**: Pre-fills your starting page from past logs, asks for your ending bookmark page upon finishing, and deterministically computes pages read, reading velocity ($\text{pgs/min}$), and pace ($\text{min/page}$) before saving directly to Google Sheets with a 4-second Undo buffer.
+- **Zero-Network Web Audio Soundscapes**: Optional on-device ambient synthesizers for *Soft Rain on Glass*, *Cozy Fireplace Crackle*, and *Warm Cafe Murmur* using filtered pink/brown noise (100% offline, 0 bytes streamed). Defaults to pure silence (mute).
+- **Optional Desk Clock Mode (Screen Wake Lock)**: Toggleable Screen Wake Lock (`navigator.wakeLock`) keeps the display awake beside your book as an ambient desk clock when desired.
 
 ### 🎲 "Pick My Next Read" (TBR Randomizer)
 - **Zero Decision Fatigue**: Algorithmic selection tool that picks your next book from your unread shelf.
@@ -280,7 +290,7 @@ Molat is packaged with a custom web manifest and Workbox service worker:
 | Layer | Technologies |
 |---|---|
 | **Frontend** | React 18, Vite 5, TypeScript 5.5, Tailwind CSS 3, Zustand, Motion (Framer), Lucide Icons |
-| **Voice & Audio** | Native Web Speech API (`webkitSpeechRecognition`), Web SpeechSynthesis, Local Fuzzy NLP |
+| **Voice & Audio** | Native Web Speech API (`webkitSpeechRecognition`), Web SpeechSynthesis, Web Audio API Soundscape Synthesizer, Screen Wake Lock API, Local Fuzzy NLP |
 | **PWA & Camera** | `vite-plugin-pwa`, Workbox, `html5-qrcode` (rear environment camera) |
 | **Backend API** | FastAPI, Pydantic v2, Python 3.11, `httpx`, `cachetools`, `anyio` |
 | **Database** | Google Sheets via Google Apps Script (Serverless JSON Web App) |

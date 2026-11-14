@@ -27,6 +27,7 @@ export const VoiceAssistantModal: React.FC = () => {
     setVoiceAssistantOpen,
     submitReadingLog,
     setSelectedBook,
+    openFocusRoom,
     addToast,
   } = useLibraryStore();
 
@@ -122,6 +123,15 @@ export const VoiceAssistantModal: React.FC = () => {
         console.error('Failed to auto-submit reading log via assistant:', err);
         addToast('Session recognized, but saving required authentication.', 'error');
       }
+    }
+
+    // If intent is START_FOCUS, launch Focus Reading Room after speaking
+    if (res.intent === 'START_FOCUS') {
+      triggerHaptic([30, 50]);
+      setTimeout(() => {
+        handleClose();
+        openFocusRoom(res.matchedBook);
+      }, 1100);
     }
 
     speakText(res.spokenReply);
@@ -416,6 +426,7 @@ export const VoiceAssistantModal: React.FC = () => {
               </span>
               <div className="flex flex-wrap gap-1.5">
                 {[
+                  'Start focus timer',
                   'Log reading for The Fourth Protocol from 45 to 80',
                   'Where is Dune?',
                   "What's my streak?",
