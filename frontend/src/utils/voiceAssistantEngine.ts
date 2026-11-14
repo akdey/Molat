@@ -199,21 +199,37 @@ export function processVoiceAssistantCommand(
     };
   }
 
-  // 3. START FOCUS READING SESSION ("Start focus room", "Focus on Dune", "Start reading timer")
+  // 3. START FOCUS READING SESSION ("start focus timer", "focus timer", "focus timmer", "focus on Dune", "start timer", "reading room")
+  const hasFocusOrTimer =
+    lower.includes('focus') ||
+    lower.includes('timer') ||
+    lower.includes('timmer') ||
+    lower.includes('stopwatch') ||
+    lower.includes('reading room');
+
+  const hasPageNumbers =
+    lower.includes('page') ||
+    lower.includes('pages') ||
+    /\b\d+\s*(to|-)\s*\d+\b/.test(lower);
+
   if (
-    lower.includes('focus room') ||
-    lower.includes('focus session') ||
-    lower.includes('reading timer') ||
-    lower.includes('start timer') ||
-    lower.includes('focus reading') ||
-    lower.startsWith('focus on') ||
-    lower.startsWith('focus ') ||
-    lower.includes('reading room') ||
-    (lower.startsWith('start reading') && !lower.includes('page'))
+    hasFocusOrTimer ||
+    (lower.startsWith('start reading') && !hasPageNumbers) ||
+    (lower.startsWith('start session') && !hasPageNumbers)
   ) {
-    const matched = fuzzyMatchBook(speech, context.books);
+    // Strip common trigger prefixes before fuzzy matching book title so words like "focus" or "timer" don't skew matching
+    const cleanSpeech = speech
+      .replace(/^(start|open|begin|launch)?\s*(focus|reading|book)?\s*(timer|timmer|room|session|mode)?\s*(for|on)?/i, '')
+      .trim();
+
+    const matched = cleanSpeech.length > 2 ? fuzzyMatchBook(cleanSpeech, context.books) : null;
     const target =
-      matched?.book || context.books.find((b) => b.reading_status === 'READING') || context.books[0];
+      matched?.book ||
+      fuzzyMatchBook(speech, context.books)?.book ||
+      context.books.find((b) => b.reading_status === 'READING') ||
+      context.books[0];
+
+    const hasSpecificBook = matched?.book !== undefined;
 
     return {
       intent: 'START_FOCUS',
@@ -223,7 +239,7 @@ export function processVoiceAssistantCommand(
       cardDetail: target
         ? `Book: "${target.title}" • Battery saver active`
         : 'Distraction-free ambient timer ready',
-      spokenReply: target
+      spokenReply: hasSpecificBook && target
         ? `Starting focus reading session for "${target.title}". Happy reading!`
         : `Opening Focus Reading Room. Happy reading!`,
     };
@@ -345,8 +361,8 @@ export function processVoiceAssistantCommand(
   return {
     intent: 'UNKNOWN',
     success: false,
-    cardTitle: 'Voice Assistant',
-    cardDetail: `Heard: "${speech}"`,
-    spokenReply: `I heard "${speech}". Try saying: "Log reading for [Book] from page 45 to 80" or "Where is Dune?".`,
+    cardTitle: 'Command Not Recognized',
+    cardDetail: `Heard: "${speech}" • Tap an action from below`,
+    spokenReply: `I didn't quite catch that. Please select an option from below, or try saying it again.`,
   };
 }
