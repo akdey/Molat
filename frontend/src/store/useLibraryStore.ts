@@ -80,6 +80,9 @@ interface LibraryState {
   lendingRecords: LendingRecord[];
   pickNextModalOpen: boolean;
   voiceAssistantOpen: boolean;
+  focusRoomOpen: boolean;
+  focusRoomBook: Book | null;
+  hasActiveFocusTimer: boolean;
   
   // Auth & Settings
   authToken: string | null;
@@ -107,6 +110,9 @@ interface LibraryState {
   closeLendModal: () => void;
   setPickNextModalOpen: (open: boolean) => void;
   setVoiceAssistantOpen: (open: boolean) => void;
+  openFocusRoom: (book?: Book) => void;
+  closeFocusRoom: () => void;
+  setHasActiveFocusTimer: (has: boolean) => void;
   setLibraryKey: (key: string) => void;
   loginOwner: (username: string, password: string) => Promise<void>;
   logoutOwner: () => void;
@@ -164,6 +170,9 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
   lendingRecords: [],
   pickNextModalOpen: false,
   voiceAssistantOpen: false,
+  focusRoomOpen: false,
+  focusRoomBook: null,
+  hasActiveFocusTimer: typeof localStorage !== 'undefined' && !!localStorage.getItem('molat_active_focus_session_v1'),
   
   authToken: localStorage.getItem('molat_auth_token') || null,
   authUser: localStorage.getItem('molat_auth_user') || null,
@@ -202,6 +211,12 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
   closeLendModal: () => set({ lendingModalOpen: false, lendingModalBook: null }),
   setPickNextModalOpen: (pickNextModalOpen) => set({ pickNextModalOpen }),
   setVoiceAssistantOpen: (voiceAssistantOpen) => set({ voiceAssistantOpen }),
+  openFocusRoom: (book) => set({
+    focusRoomOpen: true,
+    focusRoomBook: book || get().books.find(b => b.reading_status === 'READING') || get().books[0] || null,
+  }),
+  closeFocusRoom: () => set({ focusRoomOpen: false, focusRoomBook: null }),
+  setHasActiveFocusTimer: (hasActiveFocusTimer) => set({ hasActiveFocusTimer }),
 
   setLibraryKey: (key: string) => {
     localStorage.setItem('molat_library_key', key);

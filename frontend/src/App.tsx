@@ -27,6 +27,7 @@ import {
   ArrowUpDown,
   Dices,
   Mic,
+  Timer,
 } from 'lucide-react';
 
 import { StreakBanner } from './components/StreakBanner';
@@ -48,6 +49,7 @@ import { LendBookDrawer } from './components/LendBookDrawer';
 import { LendingLedger } from './components/LendingLedger';
 import { PickNextReadModal } from './components/PickNextReadModal';
 import { VoiceAssistantModal } from './components/VoiceAssistantModal';
+import { FocusReadingRoomModal } from './components/FocusReadingRoomModal';
 import { HoldToSpeakAssistant } from './components/HoldToSpeakAssistant';
 
 export default function App() {
@@ -77,6 +79,9 @@ export default function App() {
     setConditionFilter,
     setSelectedBook,
     openQuickLog,
+    openFocusRoom,
+    focusRoomOpen,
+    hasActiveFocusTimer,
     openLendModal,
     lendingRecords,
     pickNextModalOpen,
@@ -966,7 +971,24 @@ export default function App() {
                 </div>
               </button>
 
-              {/* 2. Log Reading Session */}
+              {/* 2. Focus Reading Room */}
+              <button
+                onClick={() => {
+                  setCenterMenuOpen(false);
+                  openFocusRoom();
+                }}
+                className="w-full flex items-center gap-3 p-3 rounded-2xl bg-surface dark:bg-surface-dark border border-rule/60 dark:border-rule-dark/60 text-xs font-medium text-ink dark:text-ink-dark text-left transition-colors hover:bg-surface-raised dark:hover:bg-surface-dark-raised active:scale-[0.99]"
+              >
+                <div className="w-9 h-9 rounded-xl bg-accent/10 text-accent flex items-center justify-center shrink-0">
+                  <Timer size={18} />
+                </div>
+                <div>
+                  <div className="font-medium text-ink dark:text-ink-dark">Focus Reading Room</div>
+                  <div className="text-3xs text-ink-muted">Distraction-free timer, screen lock guard & ambient sound</div>
+                </div>
+              </button>
+
+              {/* 3. Log Reading Session */}
               <button
                 onClick={() => {
                   setCenterMenuOpen(false);
@@ -1020,6 +1042,21 @@ export default function App() {
           </div>
         )}
       </AnimatePresence>
+
+      {/* Active Focus Session Floating Indicator (when reading timer is minimized) */}
+      {hasActiveFocusTimer && !focusRoomOpen && (
+        <div className="fixed bottom-[calc(4.75rem+env(safe-area-inset-bottom,0px))] md:bottom-6 left-1/2 -translate-x-1/2 z-40">
+          <button
+            onClick={() => openFocusRoom()}
+            className="px-4 py-2 rounded-full bg-accent hover:bg-accent-hover text-white text-xs font-medium shadow-xl flex items-center gap-2 active:scale-95 transition-all border border-white/20 cursor-pointer"
+          >
+            <span className="w-2 h-2 rounded-full bg-emerald-300 animate-ping" />
+            <Timer size={14} />
+            <span>Return to Focus Room</span>
+            <ChevronRight size={13} />
+          </button>
+        </div>
+      )}
 
       {/* Thumb-Zone Sticky Mobile Bottom Navigation Bar (h-16, pb-[env(safe-area-inset-bottom)], <768px) */}
       <nav
@@ -1084,6 +1121,7 @@ export default function App() {
       {/* Global Modals & Drawers */}
       <BookDetailDrawer />
       <QuickLogModal />
+      <FocusReadingRoomModal />
       <BarcodeScannerModal />
       <LendBookDrawer />
       <KeySettingsModal />

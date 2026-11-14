@@ -20,6 +20,7 @@ import {
   MessageCircle,
   RotateCcw,
   Phone,
+  Timer,
 } from 'lucide-react';
 import type { Book, ReadingStatus, BookCondition, ReadingLog, LendingRecord } from '../types/book';
 import { useLibraryStore } from '../store/useLibraryStore';
@@ -122,6 +123,7 @@ export const BookDetailDrawer: React.FC = () => {
     setSelectedBook,
     updateBookDetails,
     openQuickLog,
+    openFocusRoom,
     setKeyModalOpen,
     lendingRecords,
     openLendModal,
@@ -366,14 +368,26 @@ export const BookDetailDrawer: React.FC = () => {
                         </div>
                       </div>
 
-                      {/* 2. PRIMARY ACTION: LOG READING SESSION */}
-                      <button
-                        onClick={() => openQuickLog(selectedBook)}
-                        className="w-full py-2.5 px-4 rounded-xl bg-accent hover:bg-accent-hover text-white text-xs font-medium flex items-center justify-center gap-2 shadow-sm transition-all active:scale-98"
-                      >
-                        <BookOpen size={16} />
-                        <span>Log Reading Session on This Book</span>
-                      </button>
+                      {/* 2. PRIMARY ACTIONS: FOCUS ROOM & QUICK LOG */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <button
+                          onClick={() => {
+                            openFocusRoom(selectedBook);
+                          }}
+                          className="w-full py-2.5 px-3 rounded-xl bg-accent hover:bg-accent-hover text-white text-xs font-semibold flex items-center justify-center gap-2 shadow-xs transition-all active:scale-98 cursor-pointer"
+                        >
+                          <Timer size={16} />
+                          <span>Focus Reading Room</span>
+                        </button>
+
+                        <button
+                          onClick={() => openQuickLog(selectedBook)}
+                          className="w-full py-2.5 px-3 rounded-xl bg-surface dark:bg-surface-dark hover:bg-surface-raised dark:hover:bg-surface-dark-raised border border-rule dark:border-rule-dark text-ink dark:text-ink-dark text-xs font-medium flex items-center justify-center gap-2 transition-all active:scale-98 cursor-pointer"
+                        >
+                          <BookOpen size={16} />
+                          <span>Log Pages Read</span>
+                        </button>
+                      </div>
 
                       {/* Active Lending Banner or Lend Action */}
                       {(() => {
