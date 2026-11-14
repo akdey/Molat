@@ -134,30 +134,65 @@ export const FocusReadingRoomModal: React.FC = () => {
           // Verify book still exists
           const exists = books.some((b) => b.book_id === parsed.bookId);
           if (exists) {
-            setSelectedBookId(parsed.bookId);
-            setSessionStartTime(parsed.startTime);
-            setTotalPausedMs(parsed.totalPausedMs);
-            setStartPage(parsed.startPage);
-            setEndPage(parsed.startPage);
-            setSoundscape(parsed.soundscape || 'mute');
-            setVolume(parsed.volume ?? 0.35);
+            // If the user explicitly launched Focus Room for a DIFFERENT book from shelf
+            if (focusRoomBook && focusRoomBook.book_id !== parsed.bookId) {
+              const oldBook = books.find((b) => b.book_id === parsed.bookId);
+              const oldTitle = oldBook ? `"${oldBook.title}"` : 'previous book';
+              const discardOld = window.confirm(
+                `You have an active reading session for ${oldTitle}. Discard it and start fresh for "${focusRoomBook.title}"?`
+              );
+              if (discardOld) {
+                localStorage.removeItem(STORAGE_KEY);
+                // Fall through to start fresh session for the new book
+              } else {
+                // Resume previous book
+                setSelectedBookId(parsed.bookId);
+                setSessionStartTime(parsed.startTime);
+                setTotalPausedMs(parsed.totalPausedMs);
+                setStartPage(parsed.startPage);
+                setEndPage(parsed.startPage);
+                setSoundscape(parsed.soundscape || 'mute');
+                setVolume(parsed.volume ?? 0.35);
 
-            if (parsed.pausedAt) {
-              setPausedAt(parsed.pausedAt);
-              setIsRunning(false);
-              const nowElapsed = Math.floor((parsed.pausedAt - parsed.startTime - parsed.totalPausedMs) / 1000);
-              setElapsedSeconds(Math.max(0, nowElapsed));
+                if (parsed.pausedAt) {
+                  setPausedAt(parsed.pausedAt);
+                  setIsRunning(false);
+                  const nowElapsed = Math.floor((parsed.pausedAt - parsed.startTime - parsed.totalPausedMs) / 1000);
+                  setElapsedSeconds(Math.max(0, nowElapsed));
+                } else {
+                  setIsRunning(true);
+                  setPausedAt(null);
+                  const nowElapsed = Math.floor((Date.now() - parsed.startTime - parsed.totalPausedMs) / 1000);
+                  setElapsedSeconds(Math.max(0, nowElapsed));
+                }
+                return;
+              }
             } else {
-              setIsRunning(true);
-              setPausedAt(null);
-              const nowElapsed = Math.floor((Date.now() - parsed.startTime - parsed.totalPausedMs) / 1000);
-              setElapsedSeconds(Math.max(0, nowElapsed));
-            }
+              setSelectedBookId(parsed.bookId);
+              setSessionStartTime(parsed.startTime);
+              setTotalPausedMs(parsed.totalPausedMs);
+              setStartPage(parsed.startPage);
+              setEndPage(parsed.startPage);
+              setSoundscape(parsed.soundscape || 'mute');
+              setVolume(parsed.volume ?? 0.35);
 
-            if (parsed.soundscape && parsed.soundscape !== 'mute') {
-              playAmbientSound(parsed.soundscape, parsed.volume ?? 0.35);
+              if (parsed.pausedAt) {
+                setPausedAt(parsed.pausedAt);
+                setIsRunning(false);
+                const nowElapsed = Math.floor((parsed.pausedAt - parsed.startTime - parsed.totalPausedMs) / 1000);
+                setElapsedSeconds(Math.max(0, nowElapsed));
+              } else {
+                setIsRunning(true);
+                setPausedAt(null);
+                const nowElapsed = Math.floor((Date.now() - parsed.startTime - parsed.totalPausedMs) / 1000);
+                setElapsedSeconds(Math.max(0, nowElapsed));
+              }
+
+              if (parsed.soundscape && parsed.soundscape !== 'mute') {
+                playAmbientSound(parsed.soundscape, parsed.volume ?? 0.35);
+              }
+              return;
             }
-            return;
           }
         }
       } catch (err) {
