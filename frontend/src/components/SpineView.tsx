@@ -236,59 +236,75 @@ export const SpineView: React.FC<SpineViewProps> = ({ books }) => {
                         whileHover={{ y: -8, transition: { duration: 0.15 } }}
                         whileTap={{ scale: 0.98 }}
                         transition={{ type: 'spring', damping: 22, stiffness: 350 }}
-                        className="group relative flex-1 min-w-[26px] max-w-[46px] shrink-0 flex flex-col justify-between rounded-t-sm select-none cursor-pointer text-left transition-shadow"
+                        className="group relative flex-1 min-w-[26px] max-w-[46px] shrink-0 flex flex-col justify-between rounded-t-xs select-none cursor-pointer text-left overflow-hidden transition-shadow"
                         style={{
                           height: `${height}px`,
                           backgroundColor: palette.bg,
-                          color: palette.text,
                           boxShadow: isPulled
-                            ? '0 16px 24px -4px rgba(0,0,0,0.7), 0 0 12px rgba(251,191,36,0.3)'
-                            : '2px 0 5px rgba(0,0,0,0.35), inset -2px 0 4px rgba(0,0,0,0.3)',
+                            ? '0 16px 24px -4px rgba(0,0,0,0.8), 0 0 12px rgba(251,191,36,0.35)'
+                            : '2px 0 6px rgba(0,0,0,0.4), inset -2px 0 4px rgba(0,0,0,0.35)',
                         }}
                         title={`"${book.title}" by ${book.authors || 'Unknown'}`}
                       >
-                        {/* 1. Realistic Top Headband & Archival Paper Edge */}
-                        <div className="w-full h-1.5 bg-[#EFE7D8] rounded-t-xs border-b border-black/40 overflow-hidden flex">
-                          <div className="w-full h-full bg-gradient-to-r from-red-700/60 via-amber-200/80 to-red-700/60 opacity-80" />
+                        {/* A. REAL COVER ARTWORK AS PHYSICAL SPINE WRAP */}
+                        {book.cover_url ? (
+                          <div className="absolute inset-0 overflow-hidden pointer-events-none rounded-t-xs">
+                            {/* 1. Ambient Blurred Cover Tone (ensures the entire spine is tinted in the cover's exact color) */}
+                            <img
+                              src={book.cover_url}
+                              alt=""
+                              aria-hidden="true"
+                              className="absolute inset-0 w-full h-full object-cover scale-150 blur-[3px] opacity-90"
+                            />
+                            {/* 2. Left Edge of the Actual Book Jacket (mimicking real physical spine wrap) */}
+                            <img
+                              src={book.cover_url}
+                              alt=""
+                              aria-hidden="true"
+                              loading="lazy"
+                              className="absolute inset-0 w-full h-full object-cover object-left opacity-95 contrast-[1.08] brightness-[0.88]"
+                            />
+                            {/* 3. Darkened Vignette for Typographic Legibility */}
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/25 to-black/50 pointer-events-none" />
+                          </div>
+                        ) : (
+                          /* Fallback Archival Leather/Cloth when no cover image exists */
+                          <div
+                            className="absolute inset-0 pointer-events-none rounded-t-xs"
+                            style={{ backgroundColor: palette.bg }}
+                          />
+                        )}
+
+                        {/* B. Realistic Top Headband & Archival Paper Edge */}
+                        <div className="relative z-10 w-full h-1.5 bg-[#EFE7D8] rounded-t-xs border-b border-black/50 overflow-hidden flex shrink-0">
+                          <div className="w-full h-full bg-gradient-to-r from-red-700/70 via-amber-200/90 to-red-700/70 opacity-85" />
                         </div>
 
-                        {/* 2. 3D Cylindrical Spine Curvature Specular Lighting Shader */}
+                        {/* C. 3D Cylindrical Spine Curvature Specular Lighting Shader */}
                         <div
-                          className="absolute inset-0 pointer-events-none rounded-t-xs"
+                          className="absolute inset-0 pointer-events-none z-10 rounded-t-xs"
                           style={{
                             background:
-                              'linear-gradient(90deg, rgba(0,0,0,0.42) 0%, rgba(255,255,255,0.22) 18%, rgba(255,255,255,0.03) 42%, rgba(0,0,0,0.08) 78%, rgba(0,0,0,0.52) 100%)',
+                              'linear-gradient(90deg, rgba(0,0,0,0.52) 0%, rgba(255,255,255,0.22) 18%, rgba(255,255,255,0.04) 42%, rgba(0,0,0,0.12) 78%, rgba(0,0,0,0.58) 100%)',
                           }}
                         />
 
-                        {/* 3. Gold Tooled Header Band & Call Number */}
-                        <div className="relative z-10 w-full pt-1 px-0.5 text-center flex flex-col items-center">
-                          <div
-                            className="w-full border-t border-b py-0.5"
-                            style={{ borderColor: `${palette.accent}40` }}
-                          >
-                            <span
-                              className="text-[8px] font-mono tracking-widest uppercase block truncate font-bold"
-                              style={{ color: palette.accent }}
-                            >
+                        {/* D. Gold Tooled Header Band & Call Number */}
+                        <div className="relative z-20 w-full pt-1 px-0.5 text-center flex flex-col items-center">
+                          <div className="w-full border-t border-b border-amber-300/40 py-0.5">
+                            <span className="text-[8px] font-mono tracking-widest uppercase block truncate font-bold text-amber-200 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
                               {book.book_id.replace('BOOK-', '')}
                             </span>
                           </div>
                         </div>
 
-                        {/* 4. Raised Gilt Ribs (Upper) */}
-                        <div
-                          className="relative z-10 w-full h-[2px] opacity-60"
-                          style={{
-                            backgroundColor: palette.rib,
-                            boxShadow: '0 1px 0 rgba(255,255,255,0.2)',
-                          }}
-                        />
+                        {/* E. Raised Gilt Ribs (Upper) */}
+                        <div className="relative z-20 w-full h-[2px] bg-black/40 shadow-[0_1px_0_rgba(255,255,255,0.2)]" />
 
-                        {/* 5. Elegant Vertical Spine Title */}
-                        <div className="relative z-10 my-auto py-2 flex items-center justify-center overflow-hidden w-full h-full">
+                        {/* F. Elegant Vertical Spine Title */}
+                        <div className="relative z-20 my-auto py-2 flex items-center justify-center overflow-hidden w-full h-full">
                           <span
-                            className="font-serif text-[10px] sm:text-[11px] font-medium tracking-tight text-center leading-tight line-clamp-3 select-none drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)] group-hover:brightness-110 transition-all"
+                            className="font-serif text-[10px] sm:text-[11px] font-semibold tracking-tight text-center leading-tight line-clamp-3 select-none text-white drop-shadow-[0_1px_3px_rgba(0,0,0,1)] group-hover:text-amber-200 transition-colors"
                             style={{
                               writingMode: 'vertical-rl',
                               transform: 'rotate(180deg)',
@@ -298,28 +314,22 @@ export const SpineView: React.FC<SpineViewProps> = ({ books }) => {
                           </span>
                         </div>
 
-                        {/* 6. Raised Gilt Ribs (Lower) */}
-                        <div
-                          className="relative z-10 w-full h-[2px] opacity-60"
-                          style={{
-                            backgroundColor: palette.rib,
-                            boxShadow: '0 1px 0 rgba(255,255,255,0.2)',
-                          }}
-                        />
+                        {/* G. Raised Gilt Ribs (Lower) */}
+                        <div className="relative z-20 w-full h-[2px] bg-black/40 shadow-[0_1px_0_rgba(255,255,255,0.2)]" />
 
-                        {/* 7. Foot Details: Author & Reading Status Dot */}
-                        <div className="relative z-10 w-full pb-1 px-0.5 text-center flex flex-col items-center gap-1">
-                          <p className="text-[8px] font-sans truncate opacity-85 w-full drop-shadow-xs">
+                        {/* H. Foot Details: Author & Reading Status Dot */}
+                        <div className="relative z-20 w-full pb-1 px-0.5 text-center flex flex-col items-center gap-1">
+                          <p className="text-[8px] font-sans truncate font-medium text-white/90 w-full drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
                             {book.authors?.split(' ')[0] || ''}
                           </p>
                           <div className="flex items-center justify-center">
                             <span
                               className={`w-1.5 h-1.5 rounded-full ${
                                 isCompleted
-                                  ? 'bg-emerald-400 shadow-[0_0_5px_rgba(52,211,153,0.8)]'
+                                  ? 'bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.9)]'
                                   : isReading
-                                  ? 'bg-amber-400 shadow-[0_0_6px_rgba(251,191,36,0.9)] animate-pulse'
-                                  : 'bg-white/40'
+                                  ? 'bg-amber-400 shadow-[0_0_6px_rgba(251,191,36,0.95)] animate-pulse'
+                                  : 'bg-white/60'
                               }`}
                               title={`Status: ${book.reading_status}`}
                             />
