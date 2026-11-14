@@ -23,6 +23,7 @@ export const QuickLogModal: React.FC = () => {
     quickLogOpen,
     quickLogBook,
     closeQuickLog,
+    setVoiceAssistantOpen,
     submitReadingLog,
     setKeyModalOpen,
     libraryKey,
@@ -326,67 +327,18 @@ export const QuickLogModal: React.FC = () => {
 
           {/* Voice Reading Log Assistant */}
           <div className="p-3 rounded-2xl border border-accent/25 bg-accent/5 dark:bg-accent/10 space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-3xs uppercase tracking-wider font-semibold text-accent dark:text-accent-dark flex items-center gap-1.5">
-                <Sparkles size={12} />
-                <span>Voice Page Logger</span>
-              </span>
-              {isListening ? (
-                <span className="flex items-center gap-1.5 text-3xs font-semibold text-red-600 dark:text-red-400">
-                  <span className="w-2 h-2 rounded-full bg-red-500 animate-ping" />
-                  Listening...
-                </span>
-              ) : (
-                <span className="text-3xs text-ink-muted">Speak naturally</span>
-              )}
-            </div>
-
-            {/* Tap to Speak Button */}
+            {/* Standardized Molat Voice Assistant Trigger */}
             <button
               type="button"
-              onClick={toggleVoiceListening}
-              disabled={!speechSupported}
-              className={`w-full py-2.5 px-3 rounded-xl border text-xs font-medium flex items-center justify-center gap-2 transition-all cursor-pointer ${
-                isListening
-                  ? 'bg-red-500 text-white border-red-600 shadow-md animate-pulse'
-                  : 'bg-surface dark:bg-surface-dark border-rule dark:border-rule-dark text-ink dark:text-ink-dark hover:border-accent hover:bg-surface-raised active:scale-98'
-              }`}
-              title={speechSupported ? 'Click and say e.g. "From page 45 to 80"' : 'Voice not supported in this browser'}
+              onClick={() => {
+                closeQuickLog();
+                setVoiceAssistantOpen(true);
+              }}
+              className="w-full py-2.5 px-3 rounded-xl border border-accent/40 bg-accent/10 dark:bg-accent/20 text-xs font-semibold text-accent dark:text-accent-dark flex items-center justify-center gap-2 transition-all hover:bg-accent/20 active:scale-98 cursor-pointer shadow-xs"
             >
-              {isListening ? (
-                <>
-                  <MicOff size={15} />
-                  <span>Tap to finish speaking</span>
-                </>
-              ) : (
-                <>
-                  <Mic size={15} className="text-accent dark:text-accent-dark" />
-                  <span>Tap to Speak: &ldquo;From page 45 to 80&rdquo;</span>
-                </>
-              )}
+              <Sparkles size={15} />
+              <span>Use Molat Voice Assistant &bull; &ldquo;Log page 45 to 80&rdquo;</span>
             </button>
-
-            {/* Live Heard Transcript */}
-            {isListening && liveTranscript && (
-              <div className="p-2 rounded-lg bg-surface/90 dark:bg-surface-dark/90 border border-accent/30 text-xs text-ink dark:text-ink-dark flex items-center gap-2 animate-fade-in">
-                <Volume2 size={13} className="text-accent shrink-0 animate-pulse" />
-                <span className="italic truncate">&ldquo;{liveTranscript}&rdquo;</span>
-              </div>
-            )}
-
-            {/* Parse Status Badge */}
-            {voiceFeedback && (
-              <div
-                className={`p-2 rounded-lg text-xs font-medium flex items-center gap-1.5 animate-fade-in ${
-                  voiceFeedback.success
-                    ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30'
-                    : 'bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/30'
-                }`}
-              >
-                <Check size={13} className="shrink-0" />
-                <span>{voiceFeedback.text}</span>
-              </div>
-            )}
 
             {/* Natural Phrasing Hints */}
             <div className="flex flex-wrap items-center gap-1 text-3xs text-ink-muted pt-0.5">

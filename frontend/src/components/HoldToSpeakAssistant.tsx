@@ -36,6 +36,9 @@ export const HoldToSpeakAssistant: React.FC<HoldToSpeakAssistantProps> = ({
     streakSummary,
     submitReadingLog,
     setSelectedBook,
+    openFocusRoom,
+    voiceAssistantOpen,
+    setVoiceAssistantOpen,
     addToast,
     updateToast,
     removeToast,
@@ -127,6 +130,7 @@ export const HoldToSpeakAssistant: React.FC<HoldToSpeakAssistantProps> = ({
     }
 
     list.push("What's my streak?");
+    list.push('Start focus timer');
     list.push('What should I read next?');
     return list;
   }, [books, activeBook, activeBookLastEndPage, streakSummary]);
@@ -177,6 +181,7 @@ export const HoldToSpeakAssistant: React.FC<HoldToSpeakAssistantProps> = ({
       window.speechSynthesis.cancel();
     }
     setOverlayOpen(false);
+    setVoiceAssistantOpen(false);
     setLiveTranscript('');
     setUnderstoodResult(null);
   };
@@ -316,6 +321,15 @@ export const HoldToSpeakAssistant: React.FC<HoldToSpeakAssistantProps> = ({
         }
         await commitPendingLog(res);
       }, 4000);
+    }
+
+    // If intent is START_FOCUS, automatically open Focus Reading Room after spoken reply
+    if (res.intent === 'START_FOCUS') {
+      triggerHaptic([30, 50]);
+      setTimeout(() => {
+        closeOverlay();
+        openFocusRoom(res.matchedBook);
+      }, 1100);
     }
 
     speakText(res.spokenReply);
@@ -475,6 +489,15 @@ export const HoldToSpeakAssistant: React.FC<HoldToSpeakAssistantProps> = ({
       clearTimeout(holdTimerRef.current);
     }
   };
+
+  // Synchronize with global voiceAssistantOpen store action
+  useEffect(() => {
+    if (voiceAssistantOpen && !overlayOpen) {
+      startListening();
+    } else if (!voiceAssistantOpen && overlayOpen) {
+      closeOverlay();
+    }
+  }, [voiceAssistantOpen]);
 
   useEffect(() => {
     return () => {

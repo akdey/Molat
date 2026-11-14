@@ -48,7 +48,6 @@ import { HomeDashboard } from './components/HomeDashboard';
 import { LendBookDrawer } from './components/LendBookDrawer';
 import { LendingLedger } from './components/LendingLedger';
 import { PickNextReadModal } from './components/PickNextReadModal';
-import { VoiceAssistantModal } from './components/VoiceAssistantModal';
 import { FocusReadingRoomModal } from './components/FocusReadingRoomModal';
 import { HoldToSpeakAssistant } from './components/HoldToSpeakAssistant';
 
@@ -1139,7 +1138,6 @@ export default function App() {
         }}
         onOpenDetails={(book) => setSelectedBook(book)}
       />
-      <VoiceAssistantModal />
       <ToastContainer />
     </div>
   );
