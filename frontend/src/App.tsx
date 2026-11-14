@@ -929,7 +929,7 @@ export default function App() {
               animate={{ y: 0 }}
               exit={{ y: '100%' }}
               transition={{ type: 'spring', damping: 28, stiffness: 320 }}
-              className="relative z-10 w-full sm:max-w-lg bg-canvas dark:bg-canvas-dark border-t border-rule dark:border-rule-dark rounded-t-3xl shadow-2xl p-4 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))] space-y-2.5"
+              className="relative z-10 w-full sm:max-w-lg bg-canvas dark:bg-canvas-dark border-t border-rule dark:border-rule-dark rounded-t-3xl shadow-2xl p-4 pb-[calc(6.25rem+env(safe-area-inset-bottom,0px))] space-y-2.5 max-h-[85vh] overflow-y-auto overscroll-contain"
             >
               <div className="w-10 h-1 bg-ink-muted/30 rounded-full mx-auto mb-1" />
               <div className="flex items-center justify-between pb-1 px-1">
