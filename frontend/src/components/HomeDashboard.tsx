@@ -358,19 +358,19 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({
                     </div>
                   </div>
 
-                  {/* Action Buttons: Full-width dual buttons, zero clipping, comfortable touch targets */}
-                  <div className="pt-2.5 flex items-center gap-2">
+                  {/* Action Buttons: Compact, crisp dual buttons with zero truncation on mobile */}
+                  <div className="pt-2 flex items-center gap-1.5">
                     <button
                       type="button"
                       onClick={() => {
                         localStorage.setItem('molat_last_active_book_id', primaryBook.book_id);
                         openFocusRoom(primaryBook);
                       }}
-                      className="flex-1 min-w-0 flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-xl border border-accent/40 bg-accent/10 dark:bg-accent/20 hover:bg-accent/20 text-accent dark:text-accent-dark text-xs font-semibold shadow-xs transition-all active:scale-98 cursor-pointer"
+                      className="flex-1 min-w-0 flex items-center justify-center gap-1 py-1.5 px-2 rounded-xl border border-accent/40 bg-accent/10 dark:bg-accent/20 hover:bg-accent/20 text-accent dark:text-accent-dark text-[11px] sm:text-xs font-semibold shadow-xs transition-all active:scale-98 cursor-pointer"
                       title={`Start distraction-free focus timer for "${primaryBook.title}"`}
                     >
-                      <Timer size={14} className="shrink-0" />
-                      <span className="truncate">Focus</span>
+                      <Timer size={13} className="shrink-0" />
+                      <span className="whitespace-nowrap">Focus</span>
                     </button>
 
                     <button
@@ -379,11 +379,11 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({
                         localStorage.setItem('molat_last_active_book_id', primaryBook.book_id);
                         openQuickLog(primaryBook);
                       }}
-                      className="flex-1 min-w-0 flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-xl bg-accent hover:bg-accent-hover text-white text-xs font-semibold shadow-xs transition-all active:scale-98 cursor-pointer"
+                      className="flex-1 min-w-0 flex items-center justify-center gap-1 py-1.5 px-2 rounded-xl bg-accent hover:bg-accent-hover text-white text-[11px] sm:text-xs font-semibold shadow-xs transition-all active:scale-98 cursor-pointer"
                       title={`Log pages for "${primaryBook.title}"`}
                     >
-                      <Plus size={14} className="shrink-0" />
-                      <span className="truncate">Log Pages</span>
+                      <Plus size={13} className="shrink-0" />
+                      <span className="whitespace-nowrap">Log Pages</span>
                     </button>
                   </div>
                 </div>
