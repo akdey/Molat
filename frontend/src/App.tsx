@@ -223,16 +223,16 @@ export default function App() {
             <div>
               <h1 className="font-serif text-lg sm:text-xl font-medium tracking-tight">Molat</h1>
               <p className="text-3xs text-ink-muted dark:text-ink-dark-muted hidden sm:block">
-                Personal Physical Book Library • Google Sheets Persistence
+                Personal Physical Book Library
               </p>
             </div>
           </div>
 
           {/* Desktop & Tablet Navigation Rail/Tabs */}
-          <nav className="hidden md:flex items-center gap-1 bg-surface dark:bg-surface-dark p-1 rounded-xl border border-rule dark:border-rule-dark text-xs font-medium">
+          <nav className="hidden md:flex items-center gap-0.5 lg:gap-1 bg-surface dark:bg-surface-dark p-1 rounded-xl border border-rule dark:border-rule-dark text-xs font-medium">
             <button
               onClick={() => switchTab('home')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-colors min-h-[36px] ${activeTab === 'home'
+              className={`flex items-center gap-1.5 px-2.5 lg:px-3 py-1.5 rounded-lg transition-colors min-h-[36px] ${activeTab === 'home'
                   ? 'bg-canvas dark:bg-canvas-dark text-ink dark:text-ink-dark shadow-xs font-semibold'
                   : 'text-ink-secondary hover:text-ink dark:hover:text-ink-dark'
                 }`}
@@ -242,7 +242,7 @@ export default function App() {
             </button>
             <button
               onClick={() => switchTab('shelf')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-colors min-h-[36px] ${activeTab === 'shelf'
+              className={`flex items-center gap-1.5 px-2.5 lg:px-3 py-1.5 rounded-lg transition-colors min-h-[36px] ${activeTab === 'shelf'
                   ? 'bg-canvas dark:bg-canvas-dark text-ink dark:text-ink-dark shadow-xs font-semibold'
                   : 'text-ink-secondary hover:text-ink dark:hover:text-ink-dark'
                 }`}
@@ -252,7 +252,7 @@ export default function App() {
             </button>
             <button
               onClick={() => switchTab('insights')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-colors min-h-[36px] ${activeTab === 'insights'
+              className={`flex items-center gap-1.5 px-2.5 lg:px-3 py-1.5 rounded-lg transition-colors min-h-[36px] ${activeTab === 'insights'
                   ? 'bg-canvas dark:bg-canvas-dark text-ink dark:text-ink-dark shadow-xs font-semibold'
                   : 'text-ink-secondary hover:text-ink dark:hover:text-ink-dark'
                 }`}
@@ -262,17 +262,17 @@ export default function App() {
             </button>
             <button
               onClick={() => switchTab('tracker')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-colors min-h-[36px] ${activeTab === 'tracker'
+              className={`flex items-center gap-1.5 px-2.5 lg:px-3 py-1.5 rounded-lg transition-colors min-h-[36px] ${activeTab === 'tracker'
                   ? 'bg-canvas dark:bg-canvas-dark text-accent dark:text-accent-dark shadow-xs font-semibold'
                   : 'text-ink-secondary hover:text-ink dark:hover:text-ink-dark'
                 }`}
             >
               <Flame size={14} className="text-accent" />
-              <span>Reading Streak</span>
+              <span><span className="hidden xl:inline">Reading </span>Streak</span>
             </button>
             <button
               onClick={() => switchTab('wishlist')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-colors min-h-[36px] ${activeTab === 'wishlist'
+              className={`flex items-center gap-1.5 px-2.5 lg:px-3 py-1.5 rounded-lg transition-colors min-h-[36px] ${activeTab === 'wishlist'
                   ? 'bg-canvas dark:bg-canvas-dark text-ink dark:text-ink-dark shadow-xs font-semibold'
                   : 'text-ink-secondary hover:text-ink dark:hover:text-ink-dark'
                 }`}
@@ -282,7 +282,7 @@ export default function App() {
             </button>
             <button
               onClick={() => switchTab('lending')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-colors min-h-[36px] ${activeTab === 'lending'
+              className={`flex items-center gap-1.5 px-2.5 lg:px-3 py-1.5 rounded-lg transition-colors min-h-[36px] ${activeTab === 'lending'
                   ? 'bg-canvas dark:bg-canvas-dark text-ink dark:text-ink-dark shadow-xs font-semibold'
                   : 'text-ink-secondary hover:text-ink dark:hover:text-ink-dark'
                 }`}
@@ -300,7 +300,7 @@ export default function App() {
             </button>
             <button
               onClick={() => switchTab('maintenance')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-colors min-h-[36px] ${activeTab === 'maintenance'
+              className={`flex items-center gap-1.5 px-2.5 lg:px-3 py-1.5 rounded-lg transition-colors min-h-[36px] ${activeTab === 'maintenance'
                   ? 'bg-canvas dark:bg-canvas-dark text-ink dark:text-ink-dark shadow-xs font-semibold'
                   : 'text-ink-secondary hover:text-ink dark:hover:text-ink-dark'
                 }`}
@@ -310,14 +310,56 @@ export default function App() {
             </button>
           </nav>
 
-          {/* Action Tools — Clean & Decluttered */}
-          <div className="flex items-center gap-1 sm:gap-2">
+          {/* Action Tools — Clean & Complete across all Desktop & Mobile screens */}
+          <div className="flex items-center gap-1 sm:gap-1.5">
+            {/* Desktop Only: Pick My Next Read (TBR Randomizer) */}
+            <button
+              onClick={() => setPickNextModalOpen(true)}
+              className="hidden md:flex p-2 rounded-xl text-ink-secondary hover:text-ink hover:bg-surface dark:hover:bg-surface-dark transition-colors"
+              title="Pick My Next Read (TBR Randomizer)"
+              aria-label="Pick Next Book"
+            >
+              <Dices size={16} />
+            </button>
+
+            {/* Desktop Only: Scan ISBN Barcode / Add Book */}
+            <button
+              onClick={() => setScannerOpen(true)}
+              className="hidden md:flex p-2 rounded-xl text-ink-secondary hover:text-ink hover:bg-surface dark:hover:bg-surface-dark transition-colors"
+              title="Scan ISBN Barcode / Add Book"
+              aria-label="Scan ISBN Barcode"
+            >
+              <Camera size={16} />
+            </button>
+
+            {/* Desktop Only: Focus Reading Room */}
+            <button
+              onClick={() => openFocusRoom()}
+              className="hidden md:flex items-center gap-1.5 px-2.5 lg:px-3 py-1.5 rounded-xl border border-accent/35 bg-accent/5 dark:bg-accent/15 hover:bg-accent/20 text-accent dark:text-accent-dark text-xs font-semibold shadow-xs transition-all active:scale-98 cursor-pointer"
+              title="Launch Distraction-Free Focus Reading Room"
+            >
+              <Timer size={14} className="shrink-0" />
+              <span className="hidden xl:inline whitespace-nowrap">Focus Room</span>
+            </button>
+
+            {/* Desktop Only: Log Reading Session */}
+            <button
+              onClick={() => openQuickLog()}
+              className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-accent hover:bg-accent-hover text-white text-xs font-semibold shadow-xs transition-all active:scale-98 cursor-pointer"
+              title="Log Reading Session (Pages & Duration)"
+            >
+              <Plus size={14} className="shrink-0" />
+              <span className="whitespace-nowrap">Log Pages</span>
+            </button>
+
+            <div className="hidden md:block w-[1px] h-5 bg-rule dark:bg-rule-dark mx-0.5" />
+
             {/* Sync button with Sheets (accessible with 1 tap, spins when refreshing) */}
             <button
               onClick={() => loadAllData(true)}
               disabled={loading || refreshing}
               className="p-2 rounded-xl text-ink-secondary hover:text-ink hover:bg-surface dark:hover:bg-surface-dark transition-colors relative"
-              title="Force Refresh from Google Sheets"
+              title="Force Refresh Catalogue"
               aria-label="Refresh Data"
             >
               <RefreshCw
