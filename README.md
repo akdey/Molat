@@ -40,12 +40,19 @@ Whether cataloguing a multi-hundred volume collection, scanning new arrivals at 
 
 ### ⏱️ Ambient Reading Focus Room ("Focus Room")
 - **Distraction-Free Reading Companion**: A serene, full-screen reading sanctuary with a minimalist stopwatch timer (`00:24:18`) designed for physical book reading sessions.
+- **Concurrent Multi-Volume Reading & In-Modal Switcher**: Seamlessly juggle daytime non-fiction and evening literature. Switch between active reading volumes directly inside the Focus Room header or Home Dashboard with automatic start-page synchronization.
 - **Zero Battery Drain by Default (Normal Sleep)**: Built with battery preservation as a first-class priority. Defaults to Normal Sleep so your phone can lock and sleep normally with **0% extra battery drain**—no active background CPU loops or wake-lock power waste.
 - **Wall-Clock Epoch Arithmetic**: Solves the browser backgrounding drift problem. Calculates elapsed duration via wall-clock timestamps (`Date.now() - startTime - pausedMs`) re-synchronized on `visibilitychange` and window `focus`. Even if your phone is locked or asleep for an hour, the timer remains 100% accurate down to the exact second when unlocked.
 - **Self-Cleaning Ephemeral Storage**: Active sessions are safely mirrored under a single constant key in `localStorage` (`molat_active_focus_session_v1`) to survive accidental browser tab restarts. Automatically self-purges sessions older than 24 hours to prevent stale storage accumulation, and deletes immediately upon logging or discarding.
 - **Physical Bookmark Page Logging (No Guessing)**: Pre-fills your starting page from past logs, asks for your ending bookmark page upon finishing, and deterministically computes pages read, reading velocity ($\text{pgs/min}$), and pace ($\text{min/page}$) before saving directly to Google Sheets with a 4-second Undo buffer.
 - **Zero-Network Web Audio Soundscapes**: Optional on-device ambient synthesizers for *Soft Rain on Glass*, *Cozy Fireplace Crackle*, and *Warm Cafe Murmur* using filtered pink/brown noise (100% offline, 0 bytes streamed). Defaults to pure silence (mute).
 - **Optional Desk Clock Mode (Screen Wake Lock)**: Toggleable Screen Wake Lock (`navigator.wakeLock`) keeps the display awake beside your book as an ambient desk clock when desired.
+
+### 📖 Concurrent Multi-Volume Reading (Dual Active Reads)
+- **Multi-Book Volume Switcher Tabs**: When juggling multiple books simultaneously (e.g. daytime technical study and bedtime mystery), the Home Dashboard renders dedicated tabs (`#1`, `#2`) with real-time active indicators, independent progress, and velocity tracking.
+- **One-Tap Direct Actions**: Each active reading book features dedicated, one-tap `Focus` and `Log Pages` buttons right from the Home Dashboard without hunting through your library.
+- **In-Modal Volume Switcher**: Switch the target book on the fly inside the Focus Reading Room or Quick Log Modal with automatic historical page synchronization and confirmation guards.
+- **Smart Recency Defaulting**: Automatically remembers and prioritizes the volume you engaged with most recently for instant voice commands (*"Start focus timer"*), quick logs, and focus sessions.
 
 ### 🎲 "Pick My Next Read" (TBR Randomizer)
 - **Zero Decision Fatigue**: Algorithmic selection tool that picks your next book from your unread shelf.

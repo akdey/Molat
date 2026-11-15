@@ -202,12 +202,19 @@ export const FocusReadingRoomModal: React.FC = () => {
       }
     }
 
-    // Fresh session
-    const targetBook = focusRoomBook || books.find((b) => b.reading_status === 'READING') || books[0];
+    // Fresh session: prioritize explicit focusRoomBook -> lastActiveBook from localStorage -> first 'READING' book
+    const lastActiveId = typeof window !== 'undefined' ? localStorage.getItem('molat_last_active_book_id') : null;
+    const lastActiveBook = lastActiveId
+      ? books.find((b) => b.book_id === lastActiveId && b.reading_status === 'READING')
+      : null;
+    const targetBook = focusRoomBook || lastActiveBook || books.find((b) => b.reading_status === 'READING') || books[0];
     const bookId = targetBook ? targetBook.book_id : '';
     const now = Date.now();
 
     setSelectedBookId(bookId);
+    if (bookId && typeof window !== 'undefined') {
+      localStorage.setItem('molat_last_active_book_id', bookId);
+    }
     setSessionStartTime(now);
     setTotalPausedMs(0);
     setPausedAt(null);
@@ -423,6 +430,40 @@ export const FocusReadingRoomModal: React.FC = () => {
     }
   };
 
+  // Switch active book during a focus session (with seamless page progression update)
+  const handleSwitchBook = (newBookId: string) => {
+    if (!newBookId || newBookId === selectedBookId) return;
+
+    if (elapsedSeconds > 60) {
+      const confirmSwitch = window.confirm(
+        'Switch volume? Elapsed timer duration will be logged towards the newly selected book.'
+      );
+      if (!confirmSwitch) return;
+    }
+
+    setSelectedBookId(newBookId);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('molat_last_active_book_id', newBookId);
+    }
+
+    // Update start and end pages for the newly selected book
+    fetchReadingLogs(newBookId)
+      .then((logs) => {
+        if (logs && logs.length > 0) {
+          const lastEnd = logs[0].end_page;
+          setStartPage(lastEnd);
+          setEndPage(lastEnd);
+        } else {
+          setStartPage(0);
+          setEndPage(0);
+        }
+      })
+      .catch(() => {
+        setStartPage(0);
+        setEndPage(0);
+      });
+  };
+
   // Close and discard session
   const handleDiscardSession = () => {
     if (elapsedSeconds > 120) {
@@ -489,7 +530,7 @@ export const FocusReadingRoomModal: React.FC = () => {
 
           {/* Main Scrollable Content */}
           <div className="flex-1 overflow-y-auto overscroll-contain p-5 space-y-6 flex flex-col justify-between">
-            {/* Book Header Card */}
+            {/* Book Header Card with Volume Switcher */}
             {currentBook && (
               <div className="flex items-center gap-3.5 p-3 rounded-2xl bg-surface dark:bg-surface-dark border border-rule/60 dark:border-rule-dark/60">
                 <div className="w-10 h-14 rounded-md overflow-hidden shrink-0 shadow-xs">
@@ -502,9 +543,45 @@ export const FocusReadingRoomModal: React.FC = () => {
                   />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <h4 className="font-serif text-sm font-medium text-ink dark:text-ink-dark truncate">
-                    {currentBook.title}
-                  </h4>
+                  <div className="flex items-center justify-between gap-2">
+                    <h4 className="font-serif text-sm font-medium text-ink dark:text-ink-dark truncate">
+                      {currentBook.title}
+                    </h4>
+
+                    {/* Quick Volume Switcher */}
+                    {books.length > 1 && (
+                      <div className="relative shrink-0">
+                        <select
+                          value={selectedBookId}
+                          onChange={(e) => handleSwitchBook(e.target.value)}
+                          className="text-3xs font-medium px-2 py-1 rounded-lg border border-rule/70 dark:border-rule-dark/70 bg-surface-raised dark:bg-surface-dark-raised text-ink dark:text-ink-dark cursor-pointer focus:outline-none focus:border-accent max-w-[130px] sm:max-w-[160px] truncate"
+                          title="Switch active volume"
+                        >
+                          {books.filter((b) => b.reading_status === 'READING').length > 0 && (
+                            <optgroup label="Currently Reading">
+                              {books
+                                .filter((b) => b.reading_status === 'READING')
+                                .map((b) => (
+                                  <option key={b.book_id} value={b.book_id}>
+                                    📖 {b.title}
+                                  </option>
+                                ))}
+                            </optgroup>
+                          )}
+                          <optgroup label="All Library Volumes">
+                            {books
+                              .filter((b) => b.reading_status !== 'READING')
+                              .slice(0, 20)
+                              .map((b) => (
+                                <option key={b.book_id} value={b.book_id}>
+                                  {b.title}
+                                </option>
+                              ))}
+                          </optgroup>
+                        </select>
+                      </div>
+                    )}
+                  </div>
                   <p className="text-xs text-ink-muted truncate">
                     {currentBook.authors || 'Unknown author'}
                   </p>

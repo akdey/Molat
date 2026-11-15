@@ -197,10 +197,14 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
   setConditionFilter: (conditionFilter) => set({ conditionFilter }),
   setSelectedBook: (selectedBook) => set({ selectedBook }),
   
-  openQuickLog: (book) => set({
-    quickLogOpen: true,
-    quickLogBook: book || get().books.find(b => b.reading_status === 'READING') || get().books[0] || null,
-  }),
+  openQuickLog: (book) => {
+    const lastId = typeof window !== 'undefined' ? localStorage.getItem('molat_last_active_book_id') : null;
+    const lastBook = lastId ? get().books.find(b => b.book_id === lastId && b.reading_status === 'READING') : null;
+    set({
+      quickLogOpen: true,
+      quickLogBook: book || lastBook || get().books.find(b => b.reading_status === 'READING') || get().books[0] || null,
+    });
+  },
   closeQuickLog: () => set({ quickLogOpen: false, quickLogBook: null }),
   setScannerOpen: (scannerOpen) => set({ scannerOpen }),
   setKeyModalOpen: (keyModalOpen) => set({ keyModalOpen }),
@@ -211,10 +215,14 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
   closeLendModal: () => set({ lendingModalOpen: false, lendingModalBook: null }),
   setPickNextModalOpen: (pickNextModalOpen) => set({ pickNextModalOpen }),
   setVoiceAssistantOpen: (voiceAssistantOpen) => set({ voiceAssistantOpen }),
-  openFocusRoom: (book) => set({
-    focusRoomOpen: true,
-    focusRoomBook: book || get().books.find(b => b.reading_status === 'READING') || get().books[0] || null,
-  }),
+  openFocusRoom: (book) => {
+    const lastId = typeof window !== 'undefined' ? localStorage.getItem('molat_last_active_book_id') : null;
+    const lastBook = lastId ? get().books.find(b => b.book_id === lastId && b.reading_status === 'READING') : null;
+    set({
+      focusRoomOpen: true,
+      focusRoomBook: book || lastBook || get().books.find(b => b.reading_status === 'READING') || get().books[0] || null,
+    });
+  },
   closeFocusRoom: () => set({ focusRoomOpen: false, focusRoomBook: null }),
   setHasActiveFocusTimer: (hasActiveFocusTimer) => set({ hasActiveFocusTimer }),
 

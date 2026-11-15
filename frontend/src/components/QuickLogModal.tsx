@@ -77,7 +77,11 @@ export const QuickLogModal: React.FC = () => {
     if (quickLogBook) {
       setSelectedBookId(quickLogBook.book_id);
     } else if (books.length > 0) {
-      const active = books.find((b) => b.reading_status === 'READING');
+      const lastActiveId = typeof window !== 'undefined' ? localStorage.getItem('molat_last_active_book_id') : null;
+      const lastActiveBook = lastActiveId
+        ? books.find((b) => b.book_id === lastActiveId && b.reading_status === 'READING')
+        : null;
+      const active = lastActiveBook || books.find((b) => b.reading_status === 'READING');
       setSelectedBookId(active ? active.book_id : books[0].book_id);
     }
   }, [quickLogBook, books]);
@@ -307,21 +311,41 @@ export const QuickLogModal: React.FC = () => {
             </div>
           )}
 
-          {/* Book Selector */}
+          {/* Book Selector with Optgroups */}
           <div className="space-y-1">
             <label className="text-3xs uppercase tracking-wider font-medium text-ink-muted">
               Select Book
             </label>
             <select
               value={selectedBookId}
-              onChange={(e) => setSelectedBookId(e.target.value)}
+              onChange={(e) => {
+                setSelectedBookId(e.target.value);
+                if (typeof window !== 'undefined') {
+                  localStorage.setItem('molat_last_active_book_id', e.target.value);
+                }
+              }}
               className="w-full px-2.5 py-1.5 rounded-lg border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark text-xs text-ink dark:text-ink-dark focus:outline-none focus:border-accent"
             >
-              {books.map((b) => (
-                <option key={b.book_id} value={b.book_id}>
-                  {b.title} ({b.reading_status})
-                </option>
-              ))}
+              {books.filter((b) => b.reading_status === 'READING').length > 0 && (
+                <optgroup label="Currently Reading">
+                  {books
+                    .filter((b) => b.reading_status === 'READING')
+                    .map((b) => (
+                      <option key={b.book_id} value={b.book_id}>
+                        📖 {b.title}
+                      </option>
+                    ))}
+                </optgroup>
+              )}
+              <optgroup label="All Other Volumes">
+                {books
+                  .filter((b) => b.reading_status !== 'READING')
+                  .map((b) => (
+                    <option key={b.book_id} value={b.book_id}>
+                      {b.title} ({b.reading_status})
+                    </option>
+                  ))}
+              </optgroup>
             </select>
           </div>
 

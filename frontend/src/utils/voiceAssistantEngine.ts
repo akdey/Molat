@@ -223,9 +223,15 @@ export function processVoiceAssistantCommand(
       .trim();
 
     const matched = cleanSpeech.length > 2 ? fuzzyMatchBook(cleanSpeech, context.books) : null;
+    const lastActiveId = typeof window !== 'undefined' ? localStorage.getItem('molat_last_active_book_id') : null;
+    const lastActiveBook = lastActiveId
+      ? context.books.find((b) => b.book_id === lastActiveId && b.reading_status === 'READING')
+      : null;
+
     const target =
       matched?.book ||
       fuzzyMatchBook(speech, context.books)?.book ||
+      lastActiveBook ||
       context.books.find((b) => b.reading_status === 'READING') ||
       context.books[0];
 
@@ -308,7 +314,11 @@ export function processVoiceAssistantCommand(
   if (matched?.book?.book_id && context.bookLastPages) {
     currentStart = context.bookLastPages[matched.book.book_id] || 0;
   } else {
-    const activeBook = context.books.find((b) => b.reading_status === 'READING');
+    const lastActiveId = typeof window !== 'undefined' ? localStorage.getItem('molat_last_active_book_id') : null;
+    const lastActiveBook = lastActiveId
+      ? context.books.find((b) => b.book_id === lastActiveId && b.reading_status === 'READING')
+      : null;
+    const activeBook = lastActiveBook || context.books.find((b) => b.reading_status === 'READING');
     if (activeBook?.book_id && context.bookLastPages) {
       currentStart = context.bookLastPages[activeBook.book_id] || 0;
     }

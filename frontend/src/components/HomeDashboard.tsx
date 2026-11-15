@@ -17,6 +17,7 @@ import {
   Shuffle,
   Dices,
   Sparkles,
+  Timer,
 } from 'lucide-react';
 import type { Book, StreakSummary } from '../types/book';
 import { BookCover } from './BookCover';
@@ -37,10 +38,21 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({
   setSelectedBook,
   setActiveTab,
 }) => {
-  const activeBooks = books.filter((b) => b.reading_status === 'READING');
-  const primaryBook = activeBooks[0];
+  const activeBooks = useMemo(() => books.filter((b) => b.reading_status === 'READING'), [books]);
 
-  const { lendingRecords, setPickNextModalOpen } = useLibraryStore();
+  // Selected active book index, defaulting to last active volume in localStorage
+  const [selectedActiveIndex, setSelectedActiveIndex] = useState(() => {
+    if (typeof window === 'undefined') return 0;
+    const lastId = localStorage.getItem('molat_last_active_book_id');
+    if (!lastId) return 0;
+    const idx = books.filter((b) => b.reading_status === 'READING').findIndex((b) => b.book_id === lastId);
+    return idx >= 0 ? idx : 0;
+  });
+
+  const safeActiveIndex = selectedActiveIndex < activeBooks.length ? selectedActiveIndex : 0;
+  const primaryBook = activeBooks[safeActiveIndex] || activeBooks[0] || null;
+
+  const { lendingRecords, setPickNextModalOpen, openFocusRoom } = useLibraryStore();
   const activeLentCount = lendingRecords.filter((r) => r.status === 'ACTIVE').length;
   const overdueLentCount = lendingRecords.filter((r) => r.status === 'ACTIVE' && r.is_overdue).length;
 
@@ -79,7 +91,7 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({
           aria-label="Active Reading Focus"
           className="rounded-2xl border border-rule dark:border-rule-dark bg-surface-raised dark:bg-surface-dark-raised p-4 sm:p-5 shadow-sm space-y-4"
         >
-          {/* Header Strip: Clean Heading + Streak Pill */}
+          {/* Header Strip: Clean Heading + Multi-Book Counter + Streak Pill */}
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-accent animate-pulse" />
@@ -87,8 +99,8 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({
                 Continue Reading
               </h2>
               {activeBooks.length > 1 && (
-                <span className="text-3xs text-ink-muted">
-                  (+{activeBooks.length - 1} more in progress)
+                <span className="text-3xs font-mono px-2 py-0.5 rounded-full bg-accent/10 text-accent dark:text-accent-dark font-medium">
+                  {activeBooks.length} active volumes
                 </span>
               )}
             </div>
@@ -105,6 +117,38 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({
               </div>
             </div>
           </div>
+
+          {/* Multi-Book Volume Tabs (Instant 1-tap switching between currently reading books) */}
+          {activeBooks.length > 1 && (
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 scrollbar-none">
+              {activeBooks.map((b, idx) => {
+                const isSelected = safeActiveIndex === idx;
+                return (
+                  <button
+                    key={b.book_id}
+                    type="button"
+                    onClick={() => {
+                      setSelectedActiveIndex(idx);
+                      localStorage.setItem('molat_last_active_book_id', b.book_id);
+                    }}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all shrink-0 cursor-pointer flex items-center gap-2 ${
+                      isSelected
+                        ? 'bg-ink text-canvas dark:bg-canvas-dark dark:text-ink shadow-xs border border-transparent font-semibold'
+                        : 'bg-surface dark:bg-surface-dark text-ink-muted hover:text-ink border border-rule/60'
+                    }`}
+                  >
+                    <span
+                      className={`w-1.5 h-1.5 rounded-full ${
+                        isSelected ? 'bg-amber-400 shadow-[0_0_6px_rgba(251,191,36,0.8)]' : 'bg-ink-muted/40'
+                      }`}
+                    />
+                    <span className="truncate max-w-[130px] sm:max-w-[200px]">{b.title}</span>
+                    <span className="text-3xs opacity-70 font-mono">#{idx + 1}</span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
 
           {/* Book Spotlight Row */}
           <div className="flex gap-4">
@@ -156,13 +200,32 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({
                   </span>
                 </div>
 
-                <button
-                  onClick={() => openQuickLog(primaryBook)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-accent hover:bg-accent-hover text-white text-xs font-medium shadow-xs transition-all active:scale-98"
-                >
-                  <Plus size={14} />
-                  <span>Log Pages</span>
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      localStorage.setItem('molat_last_active_book_id', primaryBook.book_id);
+                      openFocusRoom(primaryBook);
+                    }}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-accent/40 bg-accent/10 dark:bg-accent/20 hover:bg-accent/20 text-accent dark:text-accent-dark text-xs font-medium shadow-xs transition-all active:scale-98 cursor-pointer"
+                    title="Start distraction-free focus timer for this volume"
+                  >
+                    <Timer size={14} />
+                    <span>Focus</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      localStorage.setItem('molat_last_active_book_id', primaryBook.book_id);
+                      openQuickLog(primaryBook);
+                    }}
+                    className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-accent hover:bg-accent-hover text-white text-xs font-medium shadow-xs transition-all active:scale-98 cursor-pointer"
+                  >
+                    <Plus size={14} />
+                    <span>Log Pages</span>
+                  </button>
+                </div>
               </div>
             </div>
           </div>
