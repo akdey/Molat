@@ -335,56 +335,56 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({
                     <p className="text-xs text-ink-secondary dark:text-ink-dark-secondary truncate">
                       {primaryBook.authors || 'Unknown author'}
                     </p>
-                    <p className="text-xs text-ink-muted pt-0.5">
-                      {currentBookStats.currentPage > 0 ? (
-                        <span>
-                          At <strong className="text-accent dark:text-accent-dark font-medium">Page {currentBookStats.currentPage}</strong>
-                        </span>
-                      ) : (
-                        <span>Ready to start</span>
+
+                    {/* Unified Bookmark & Pace Line */}
+                    <div className="flex items-center gap-1.5 text-xs text-ink-muted pt-0.5">
+                      <span>
+                        {currentBookStats.currentPage > 0 ? (
+                          <span>
+                            At <strong className="text-accent dark:text-accent-dark font-medium">Page {currentBookStats.currentPage}</strong>
+                          </span>
+                        ) : (
+                          <span>Ready to start</span>
+                        )}
+                      </span>
+                      {currentBookStats.velocity > 0 && (
+                        <>
+                          <span className="text-ink-muted/40">•</span>
+                          <span className="text-2xs font-mono text-ink-secondary dark:text-ink-dark-secondary">
+                            {currentBookStats.velocity} pgs/day
+                          </span>
+                        </>
                       )}
-                    </p>
+                    </div>
                   </div>
 
-                  {/* Volume Action & Pace Strip */}
-                  <div className="pt-2.5 flex items-center justify-between gap-2">
-                    <div className="text-2xs text-ink-muted">
-                      {currentBookStats.velocity > 0 ? (
-                        <span>
-                          Pace: <strong className="text-ink dark:text-ink-dark font-medium">{currentBookStats.velocity} pgs/day</strong>
-                        </span>
-                      ) : (
-                        <span>In progress</span>
-                      )}
-                    </div>
+                  {/* Action Buttons: Full-width dual buttons, zero clipping, comfortable touch targets */}
+                  <div className="pt-2.5 flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        localStorage.setItem('molat_last_active_book_id', primaryBook.book_id);
+                        openFocusRoom(primaryBook);
+                      }}
+                      className="flex-1 min-w-0 flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-xl border border-accent/40 bg-accent/10 dark:bg-accent/20 hover:bg-accent/20 text-accent dark:text-accent-dark text-xs font-semibold shadow-xs transition-all active:scale-98 cursor-pointer"
+                      title={`Start distraction-free focus timer for "${primaryBook.title}"`}
+                    >
+                      <Timer size={14} className="shrink-0" />
+                      <span className="truncate">Focus</span>
+                    </button>
 
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          localStorage.setItem('molat_last_active_book_id', primaryBook.book_id);
-                          openFocusRoom(primaryBook);
-                        }}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-accent/40 bg-accent/10 dark:bg-accent/20 hover:bg-accent/20 text-accent dark:text-accent-dark text-xs font-medium shadow-xs transition-all active:scale-98 cursor-pointer"
-                        title={`Start distraction-free focus timer for "${primaryBook.title}"`}
-                      >
-                        <Timer size={14} />
-                        <span>Focus</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => {
-                          localStorage.setItem('molat_last_active_book_id', primaryBook.book_id);
-                          openQuickLog(primaryBook);
-                        }}
-                        className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-accent hover:bg-accent-hover text-white text-xs font-medium shadow-xs transition-all active:scale-98 cursor-pointer"
-                        title={`Log pages for "${primaryBook.title}"`}
-                      >
-                        <Plus size={14} />
-                        <span>Log Pages</span>
-                      </button>
-                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        localStorage.setItem('molat_last_active_book_id', primaryBook.book_id);
+                        openQuickLog(primaryBook);
+                      }}
+                      className="flex-1 min-w-0 flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-xl bg-accent hover:bg-accent-hover text-white text-xs font-semibold shadow-xs transition-all active:scale-98 cursor-pointer"
+                      title={`Log pages for "${primaryBook.title}"`}
+                    >
+                      <Plus size={14} className="shrink-0" />
+                      <span className="truncate">Log Pages</span>
+                    </button>
                   </div>
                 </div>
               </motion.div>
