@@ -16,6 +16,11 @@ import {
   Star,
   Globe,
   Calendar,
+  History,
+  Tag,
+  Clock,
+  BarChart3,
+  Coins,
 } from 'lucide-react';
 import type { Book, PortfolioSummary, StreakSummary } from '../types/book';
 import { useLibraryStore } from '../store/useLibraryStore';
@@ -124,31 +129,141 @@ export const LibraryInsights: React.FC<LibraryInsightsProps> = ({
       .slice(0, 5);
   }, [books]);
 
-  // 4. Top Rated Volumes
-  const topRatedBooks = React.useMemo(() => {
-    return books
-      .filter((b) => (b.rating || 0) > 0)
-      .sort((a, b) => (b.rating || 0) - (a.rating || 0))
-      .slice(0, 5);
+  // 4. Title Anatomy & Recurring Themes (Natural NLP title analysis)
+  const titleAnatomy = React.useMemo(() => {
+    const STOP_WORDS = new Set([
+      'the', 'of', 'and', 'in', 'a', 'to', 'for', 'on', 'with', 'at', 'by', 'from', 'an', 'as',
+      'into', 'about', 'is', 'it', 'or', 'part', 'vol', 'volume', 'collection', 'edition', 'book',
+      'my', 'your', 'his', 'her', 'their', 'our', 'all', 'one', 'two', 'three', 'four', 'five',
+      'that', 'this', 'how', 'what', 'who', 'not', 'be', 'are', 'was', 'were', 'complete', 'stories',
+      'selected', 'best', 'short', 'new', 'series', 'tales'
+    ]);
+
+    const wordCounts: Record<string, { count: number; sampleTitle: string }> = {};
+    let totalWords = 0;
+
+    books.forEach((book) => {
+      if (!book.title) return;
+      const rawWords = book.title
+        .replace(/[^\w\s]/g, ' ')
+        .split(/\s+/)
+        .map((w) => w.trim().toLowerCase())
+        .filter((w) => w.length > 2 && !STOP_WORDS.has(w));
+
+      totalWords += book.title.trim().split(/\s+/).length;
+
+      rawWords.forEach((w) => {
+        const displayWord = w.charAt(0).toUpperCase() + w.slice(1);
+        if (!wordCounts[displayWord]) {
+          wordCounts[displayWord] = { count: 0, sampleTitle: book.title };
+        }
+        wordCounts[displayWord].count++;
+      });
+    });
+
+    const topKeywords = Object.entries(wordCounts)
+      .sort((a, b) => b[1].count - a[1].count)
+      .slice(0, 8)
+      .map(([word, data]) => ({
+        word,
+        count: data.count,
+        sampleTitle: data.sampleTitle,
+      }));
+
+    const avgTitleLength = books.length > 0 ? (totalWords / books.length).toFixed(1) : '0';
+
+    return {
+      topKeywords,
+      avgTitleLength,
+      totalUniqueWords: Object.keys(wordCounts).length,
+    };
   }, [books]);
 
-  // 5. Publication Eras
-  const publicationEras = React.useMemo(() => {
-    const eras: Record<string, number> = {
-      '2020s Contemporary': 0,
-      '2010s': 0,
-      '2000s': 0,
-      '20th Century & Classics': 0,
-    };
-    for (const b of books) {
-      const yr = b.publication_year;
-      if (!yr) continue;
-      if (yr >= 2020) eras['2020s Contemporary']++;
-      else if (yr >= 2010) eras['2010s']++;
-      else if (yr >= 2000) eras['2000s']++;
-      else eras['20th Century & Classics']++;
+  // 5. Historical Publication Eras & Library Age Analysis
+  const libraryAgeStats = React.useMemo(() => {
+    const currentYear = new Date().getFullYear();
+    const booksWithYear = books.filter(
+      (b) => b.publication_year && b.publication_year >= 1800 && b.publication_year <= currentYear + 1
+    );
+
+    if (!booksWithYear.length) {
+      return {
+        medianYear: 0,
+        oldestBook: null as Book | null,
+        newestBook: null as Book | null,
+        eras: [] as { label: string; range: string; count: number; color: string; pct: number }[],
+        totalWithYear: 0,
+      };
     }
-    return eras;
+
+    const sorted = [...booksWithYear].sort((a, b) => (a.publication_year || 0) - (b.publication_year || 0));
+    const oldestBook = sorted[0];
+    const newestBook = sorted[sorted.length - 1];
+    const midIdx = Math.floor(sorted.length / 2);
+    const medianYear = sorted[midIdx]?.publication_year || 0;
+
+    const eras = [
+      { label: 'Classics & Golden Age', range: 'Pre-2000', count: 0, color: '#C2410C', pct: 0 },
+      { label: '2000s Decade', range: '2000 - 2009', count: 0, color: '#D97706', pct: 0 },
+      { label: '2010s Decade', range: '2010 - 2019', count: 0, color: '#0D9488', pct: 0 },
+      { label: 'Contemporary 2020s', range: '2020 - Present', count: 0, color: '#1E3A8A', pct: 0 },
+    ];
+
+    booksWithYear.forEach((b) => {
+      const yr = b.publication_year || 0;
+      if (yr < 2000) eras[0].count++;
+      else if (yr < 2010) eras[1].count++;
+      else if (yr < 2020) eras[2].count++;
+      else eras[3].count++;
+    });
+
+    eras.forEach((e) => {
+      e.pct = Math.round((e.count / booksWithYear.length) * 100);
+    });
+
+    return {
+      medianYear,
+      oldestBook,
+      newestBook,
+      eras,
+      totalWithYear: booksWithYear.length,
+    };
+  }, [books]);
+
+  // 6. Library Growth & Acquisition Waves (Timeline grouping by purchase_date / created_at)
+  const acquisitionWaves = React.useMemo(() => {
+    const yearCounts: Record<string, number> = {};
+
+    books.forEach((b) => {
+      const rawDate = b.purchase_date || b.created_at;
+      let yr = 'Pre-App Era';
+      if (rawDate) {
+        const match = rawDate.match(/^(\d{4})/);
+        if (match && parseInt(match[1], 10) >= 2000 && parseInt(match[1], 10) <= 2030) {
+          yr = match[1];
+        }
+      }
+      yearCounts[yr] = (yearCounts[yr] || 0) + 1;
+    });
+
+    const sorted = Object.entries(yearCounts).sort((a, b) => {
+      if (a[0] === 'Pre-App Era') return -1;
+      if (b[0] === 'Pre-App Era') return 1;
+      return a[0].localeCompare(b[0]);
+    });
+
+    const maxCount = Math.max(...sorted.map(([, c]) => c), 1);
+    const peak = [...sorted].sort((a, b) => b[1] - a[1])[0];
+
+    return {
+      timeline: sorted.map(([year, count]) => ({
+        year,
+        count,
+        pct: Math.round((count / maxCount) * 100),
+      })),
+      peakYear: peak ? peak[0] : null,
+      peakCount: peak ? peak[1] : 0,
+    };
   }, [books]);
 
   // Total pages logged across the year from heatmap
@@ -495,70 +610,175 @@ export const LibraryInsights: React.FC<LibraryInsightsProps> = ({
           </div>
         </div>
 
-        {/* Top Rated Volumes */}
+        {/* Title Anatomy & Recurring Themes (Natural NLP title analysis) */}
         <div className="p-5 rounded-2xl border border-rule dark:border-rule-dark bg-surface-raised dark:bg-surface-dark-raised space-y-3 shadow-xs">
           <div className="flex items-center justify-between">
             <h3 className="font-serif text-sm font-medium text-ink dark:text-ink-dark flex items-center gap-1.5">
-              <Award size={15} className="text-amber-500" />
-              <span>Top Rated Volumes</span>
+              <Tag size={15} className="text-accent" />
+              <span>Title Anatomy & Themes</span>
             </h3>
-            <span className="text-3xs font-mono text-ink-muted">Personal Rating</span>
+            <span className="text-3xs font-mono px-2 py-0.5 rounded-full bg-accent/10 text-accent font-medium">
+              Avg {titleAnatomy.avgTitleLength} wds/title
+            </span>
           </div>
+          <p className="text-3xs text-ink-muted">
+            Recurring literary motifs detected across {books.length} catalogued titles
+          </p>
 
-          <div className="space-y-2.5">
-            {topRatedBooks.length > 0 ? (
-              topRatedBooks.map((book) => (
+          <div className="flex flex-wrap gap-1.5 pt-1">
+            {titleAnatomy.topKeywords.length > 0 ? (
+              titleAnatomy.topKeywords.map(({ word, count, sampleTitle }) => (
                 <div
-                  key={book.book_id}
-                  onClick={() => setSelectedBook(book)}
-                  className="flex items-center justify-between p-2 rounded-xl hover:bg-surface dark:hover:bg-surface-dark cursor-pointer transition-colors"
+                  key={word}
+                  title={`Found in "${sampleTitle}" and ${count - 1} other titles`}
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-2xs font-mono font-medium border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark hover:border-accent/40 text-ink dark:text-ink-dark transition-colors cursor-default"
                 >
-                  <div className="min-w-0 pr-2">
-                    <p className="font-serif text-xs font-medium text-ink dark:text-ink-dark truncate">
-                      {book.title}
-                    </p>
-                    <p className="text-3xs text-ink-muted truncate">{book.authors || 'Unknown'}</p>
-                  </div>
-                  <span className="inline-flex items-center gap-1 font-mono text-xs font-semibold text-amber-600 dark:text-amber-400 shrink-0">
-                    <Star size={11} className="fill-amber-400 text-amber-500" />
-                    <span>{book.rating}/5</span>
+                  <span className="text-accent dark:text-accent-dark font-semibold">#{word}</span>
+                  <span className="text-3xs text-ink-muted bg-surface-raised dark:bg-surface-dark-raised px-1.5 py-0.2 rounded-full font-sans">
+                    {count}
                   </span>
                 </div>
               ))
             ) : (
               <p className="text-2xs text-ink-muted italic py-3 text-center">
-                Rate books in your shelf to see your favorites here.
+                Add titles to your library to see recurring thematic motifs.
               </p>
             )}
           </div>
         </div>
 
-        {/* Publication Eras & Timeline */}
+        {/* Historical Publication Eras & Library Age */}
         <div className="p-5 rounded-2xl border border-rule dark:border-rule-dark bg-surface-raised dark:bg-surface-dark-raised space-y-3 shadow-xs">
           <div className="flex items-center justify-between">
             <h3 className="font-serif text-sm font-medium text-ink dark:text-ink-dark flex items-center gap-1.5">
-              <Calendar size={15} className="text-accent" />
-              <span>Publication Eras</span>
+              <History size={15} className="text-accent" />
+              <span>Historical Eras & Age</span>
             </h3>
-            <span className="text-3xs font-mono text-ink-muted">Timeline</span>
+            <span className="text-3xs font-mono text-ink-muted">
+              Median {libraryAgeStats.medianYear || '—'}
+            </span>
           </div>
 
-          <div className="space-y-2">
-            {Object.entries(publicationEras).map(([era, count]) => (
-              <div
-                key={era}
-                className="flex items-center justify-between p-2 rounded-xl text-xs hover:bg-surface dark:hover:bg-surface-dark transition-colors"
-              >
-                <span className="truncate pr-2 text-ink dark:text-ink-dark font-medium">
-                  {era}
+          {/* Oldest vs Newest Callout */}
+          {libraryAgeStats.oldestBook && libraryAgeStats.newestBook && (
+            <div className="grid grid-cols-2 gap-2 p-2 rounded-xl bg-surface dark:bg-surface-dark text-3xs border border-rule/50 dark:border-rule-dark/50">
+              <div className="min-w-0 pr-1">
+                <span className="text-ink-muted uppercase tracking-wider block font-medium">Oldest Print</span>
+                <p className="font-serif text-xs font-semibold text-ink dark:text-ink-dark truncate">
+                  {libraryAgeStats.oldestBook.title}
+                </p>
+                <span className="font-mono text-amber-600 dark:text-amber-400 font-bold">
+                  {libraryAgeStats.oldestBook.publication_year}
                 </span>
-                <span className="font-mono text-2xs font-semibold text-ink-secondary dark:text-ink-dark-secondary shrink-0">
-                  {count} {count === 1 ? 'vol' : 'vols'}
+              </div>
+              <div className="min-w-0 pl-1 border-l border-rule/40 dark:border-rule-dark/40">
+                <span className="text-ink-muted uppercase tracking-wider block font-medium">Newest Release</span>
+                <p className="font-serif text-xs font-semibold text-ink dark:text-ink-dark truncate">
+                  {libraryAgeStats.newestBook.title}
+                </p>
+                <span className="font-mono text-accent dark:text-accent-dark font-bold">
+                  {libraryAgeStats.newestBook.publication_year}
                 </span>
+              </div>
+            </div>
+          )}
+
+          {/* Era Distribution Bars */}
+          <div className="space-y-2 pt-1">
+            {libraryAgeStats.eras.map((era) => (
+              <div key={era.label} className="space-y-1">
+                <div className="flex items-center justify-between text-2xs">
+                  <span className="text-ink dark:text-ink-dark font-medium">{era.label}</span>
+                  <span className="font-mono text-3xs text-ink-muted">
+                    {era.count} vols ({era.pct}%)
+                  </span>
+                </div>
+                <div className="w-full h-1.5 rounded-full bg-surface dark:bg-surface-dark overflow-hidden">
+                  <div
+                    style={{ width: `${era.pct}%`, backgroundColor: era.color }}
+                    className="h-full rounded-full transition-all duration-300"
+                  />
+                </div>
               </div>
             ))}
           </div>
         </div>
+      </div>
+
+      {/* Library Growth & Acquisition Waves (Timeline of Additions + Financial Investment) */}
+      <div className="p-5 rounded-2xl border border-rule dark:border-rule-dark bg-surface-raised dark:bg-surface-dark-raised space-y-4 shadow-xs">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div>
+            <h3 className="font-serif text-base font-medium text-ink dark:text-ink-dark flex items-center gap-2">
+              <BarChart3 size={17} className="text-accent" />
+              <span>Library Growth & Acquisition Waves</span>
+            </h3>
+            <p className="text-2xs text-ink-muted">
+              Chronological acquisition cohorts and catalogue expansion pacing over time
+            </p>
+          </div>
+
+          {acquisitionWaves.peakYear && (
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-accent/10 border border-accent/20 text-accent dark:text-accent-dark text-xs font-medium self-start sm:self-auto shrink-0">
+              <TrendingUp size={13} />
+              <span>
+                Peak Wave: <strong>{acquisitionWaves.peakYear}</strong> ({acquisitionWaves.peakCount} vols)
+              </span>
+            </div>
+          )}
+        </div>
+
+        {/* Growth Histogram Bars */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-2.5 pt-2">
+          {acquisitionWaves.timeline.map((wave) => (
+            <div
+              key={wave.year}
+              className="p-3 rounded-xl border border-rule/50 dark:border-rule-dark/50 bg-surface dark:bg-surface-dark flex flex-col justify-between space-y-2"
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-3xs uppercase tracking-wider font-mono text-ink-muted font-medium">
+                  {wave.year}
+                </span>
+                <span className="font-mono text-xs font-bold text-ink dark:text-ink-dark">
+                  {wave.count}
+                </span>
+              </div>
+              <div className="w-full h-2 rounded-full bg-surface-raised dark:bg-surface-dark-raised overflow-hidden">
+                <div
+                  style={{ width: `${wave.pct}%` }}
+                  className="h-full rounded-full bg-accent dark:bg-accent-dark transition-all duration-300"
+                />
+              </div>
+              <span className="text-3xs text-ink-muted block text-right font-mono">
+                {wave.pct}% of peak
+              </span>
+            </div>
+          ))}
+        </div>
+
+        {/* Portfolio Valuation & Lifetime Savings Strip (if financial data exists) */}
+        {portfolio && portfolio.total_rp > 0 && (
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 border-t border-rule/50 dark:border-rule-dark/50">
+            <div className="p-2.5 rounded-xl bg-surface/70 dark:bg-surface-dark/70 flex items-center justify-between text-xs">
+              <span className="text-ink-secondary">Replacement Worth (MRP)</span>
+              <span className="font-mono font-bold text-ink dark:text-ink-dark">
+                ₹{portfolio.total_rp.toLocaleString()}
+              </span>
+            </div>
+            <div className="p-2.5 rounded-xl bg-surface/70 dark:bg-surface-dark/70 flex items-center justify-between text-xs">
+              <span className="text-ink-secondary">Actual Investment (CP)</span>
+              <span className="font-mono font-bold text-accent dark:text-accent-dark">
+                ₹{portfolio.total_cp.toLocaleString()}
+              </span>
+            </div>
+            <div className="p-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200/50 dark:border-emerald-800/40 flex items-center justify-between text-xs text-emerald-800 dark:text-emerald-300">
+              <span className="font-medium">Lifetime Savings</span>
+              <span className="font-mono font-bold">
+                ₹{portfolio.total_saved.toLocaleString()} ({portfolio.discount_pct}%)
+              </span>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Tertiary Row: Shelf Locations & Languages */}
