@@ -207,134 +207,274 @@ export const SpineView: React.FC<SpineViewProps> = ({ books }) => {
               </span>
             </div>
 
-            {/* Shelf Book Row: Fitted perfectly to screen width with ZERO horizontal scroll */}
+            {/* Shelf Book Row: Stacked horizontally when <= 4 books ("one upon one"), or standing side-by-side */}
             <div className="relative min-h-[225px] flex items-end">
-              <div className="w-full flex items-end justify-between px-1 sm:px-2 pt-6 pb-0.5 gap-1 sm:gap-1.5 overflow-hidden">
-                {shelf.books.map((book) => {
-                  const { palette, height } = getSpineTheme(book);
-                  const isPulled = pulledBookId === book.book_id;
-                  const isCompleted = book.reading_status === 'COMPLETED';
-                  const isReading = book.reading_status === 'READING';
-                  const isLightSpine = palette.bg === '#DCD4C4';
+              {shelf.books.length <= 4 ? (
+                /* HORIZONTAL BOOK STACK ("Stacked one upon one") */
+                <div className="w-full flex items-end justify-start px-2 sm:px-4 pt-6 pb-0.5">
+                  <div className="flex flex-col-reverse items-start w-full max-w-sm space-y-reverse space-y-1 py-1">
+                    {shelf.books.map((book, idx) => {
+                      const { palette } = getSpineTheme(book);
+                      const hash = hashString(book.book_id + (book.title || ''));
+                      const isPulled = pulledBookId === book.book_id;
+                      const isCompleted = book.reading_status === 'COMPLETED';
+                      const isReading = book.reading_status === 'READING';
+                      const isLightSpine = palette.bg === '#DCD4C4';
 
-                  return (
-                    <motion.button
-                      key={book.book_id}
-                      type="button"
-                      onClick={() => handleSpineClick(book)}
-                      animate={{
-                        y: isPulled ? -16 : 0,
-                        scale: isPulled ? 1.03 : 1,
-                      }}
-                      whileHover={{ y: -8, transition: { duration: 0.15 } }}
-                      whileTap={{ scale: 0.98 }}
-                      transition={{ type: 'spring', damping: 24, stiffness: 360 }}
-                      className="group relative flex-1 min-w-[24px] max-w-[48px] shrink-0 flex flex-col justify-between rounded-t-xs select-none cursor-pointer text-left overflow-hidden transition-shadow"
-                      style={{
-                        height: `${height}px`,
-                        backgroundColor: palette.bg,
-                        color: palette.text,
-                        boxShadow: isPulled
-                          ? '0 16px 24px -4px rgba(0,0,0,0.85), 0 0 10px rgba(251,191,36,0.4)'
-                          : '2px 0 5px rgba(0,0,0,0.45), inset -2px 0 4px rgba(0,0,0,0.3)',
-                      }}
-                      title={`"${book.title}" by ${book.authors || 'Unknown'}`}
-                    >
-                      {/* 1. Top Headband & Archival Paper Edge */}
-                      <div className="relative z-10 w-full h-1.5 bg-[#F2EBDE] rounded-t-xs border-b border-black/40 overflow-hidden flex shrink-0">
-                        <div className="w-full h-full bg-gradient-to-r from-red-700/70 via-amber-200/90 to-red-700/70 opacity-90" />
-                      </div>
+                      // Organic stack width & thickness
+                      const thickness = 38 + (hash % 8); // 38px to 45px spine height
+                      const widthPercent = 94 - idx * 4 + ((hash % 7) - 3); // Slightly narrower as stack goes up
+                      const rotation = idx === 0 ? 0 : idx % 2 === 1 ? -0.5 : 0.6; // Subtle organic tilt
+                      const offsetLeft = idx === 0 ? 0 : (hash % 12) + 2;
 
-                      {/* 2. 3D Cylindrical Spine Curvature Lighting Shader */}
-                      <div
-                        className="absolute inset-0 pointer-events-none z-10 rounded-t-xs"
-                        style={{
-                          background:
-                            'linear-gradient(90deg, rgba(0,0,0,0.45) 0%, rgba(255,255,255,0.18) 18%, rgba(255,255,255,0.03) 42%, rgba(0,0,0,0.1) 78%, rgba(0,0,0,0.52) 100%)',
-                        }}
-                      />
-
-                      {/* 3. Gold Tooled Call Number Header */}
-                      <div className="relative z-20 w-full pt-1 px-0.5 text-center flex flex-col items-center">
-                        <div
-                          className="w-full border-t border-b py-0.5"
-                          style={{ borderColor: `${palette.accent}50` }}
+                      return (
+                        <motion.button
+                          key={book.book_id}
+                          type="button"
+                          onClick={() => handleSpineClick(book)}
+                          animate={{
+                            y: isPulled ? -10 : 0,
+                            scale: isPulled ? 1.02 : 1,
+                          }}
+                          whileHover={{ y: -4, transition: { duration: 0.15 } }}
+                          whileTap={{ scale: 0.99 }}
+                          transition={{ type: 'spring', damping: 24, stiffness: 360 }}
+                          className="group relative flex items-center justify-between rounded-xs select-none cursor-pointer text-left overflow-hidden transition-all shrink-0"
+                          style={{
+                            height: `${thickness}px`,
+                            width: `${Math.min(100, Math.max(75, widthPercent))}%`,
+                            marginLeft: `${offsetLeft}px`,
+                            transform: `rotate(${rotation}deg)`,
+                            backgroundColor: palette.bg,
+                            color: palette.text,
+                            boxShadow: isPulled
+                              ? '0 12px 20px -3px rgba(0,0,0,0.85), 0 0 10px rgba(251,191,36,0.35)'
+                              : '0 4px 6px -1px rgba(0,0,0,0.55), inset 0 2px 3px rgba(255,255,255,0.12), inset 0 -2px 3px rgba(0,0,0,0.4)',
+                            zIndex: idx + 10,
+                          }}
+                          title={`"${book.title}" by ${book.authors || 'Unknown'}`}
                         >
-                          <span
-                            className="text-[8px] font-mono tracking-widest uppercase block truncate font-bold"
+                          {/* Left Edge Headband Stitch */}
+                          <div className="relative z-10 h-full w-2 bg-[#F2EBDE] border-r border-black/40 overflow-hidden flex shrink-0">
+                            <div className="w-full h-full bg-gradient-to-b from-red-700/80 via-amber-300/90 to-red-700/80 opacity-90" />
+                          </div>
+
+                          {/* 3D Cylindrical Spine Shading (top-to-bottom curved lighting) */}
+                          <div
+                            className="absolute inset-0 pointer-events-none z-10"
                             style={{
-                              color: isLightSpine ? '#8B261D' : palette.accent,
-                              textShadow: isLightSpine ? 'none' : '0 1px 2px rgba(0,0,0,0.8)',
+                              background:
+                                'linear-gradient(180deg, rgba(255,255,255,0.22) 0%, rgba(255,255,255,0.06) 24%, rgba(0,0,0,0.04) 70%, rgba(0,0,0,0.42) 100%)',
+                            }}
+                          />
+
+                          {/* Raised Horizontal Gilt Edge Lines */}
+                          <div
+                            className="absolute top-0 inset-x-0 h-[1.5px] opacity-60 z-20"
+                            style={{ backgroundColor: palette.rib, boxShadow: '0 1px 0 rgba(255,255,255,0.15)' }}
+                          />
+                          <div
+                            className="absolute bottom-0 inset-x-0 h-[1.5px] opacity-70 z-20"
+                            style={{ backgroundColor: palette.rib, boxShadow: '0 -1px 0 rgba(0,0,0,0.3)' }}
+                          />
+
+                          {/* Spine Content (Horizontal Layout) */}
+                          <div className="relative z-20 flex-1 flex items-center justify-between px-2.5 sm:px-3.5 gap-2 overflow-hidden">
+                            {/* Call Number Tag */}
+                            <div
+                              className="px-1.5 py-0.5 rounded-xs border shrink-0 text-center"
+                              style={{ borderColor: `${palette.accent}60` }}
+                            >
+                              <span
+                                className="text-[8px] font-mono font-bold tracking-wider uppercase block"
+                                style={{
+                                  color: isLightSpine ? '#8B261D' : palette.accent,
+                                  textShadow: isLightSpine ? 'none' : '0 1px 2px rgba(0,0,0,0.8)',
+                                }}
+                              >
+                                {book.book_id.replace('BOOK-', '')}
+                              </span>
+                            </div>
+
+                            {/* Title & Author */}
+                            <div className="flex-1 min-w-0 flex items-baseline gap-2">
+                              <span
+                                className={`font-serif text-xs sm:text-[13px] font-semibold tracking-tight truncate group-hover:text-amber-200 transition-colors ${
+                                  isLightSpine
+                                    ? 'text-slate-900 font-bold'
+                                    : 'text-white/95 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]'
+                                }`}
+                              >
+                                {book.title}
+                              </span>
+                              {book.authors && (
+                                <span
+                                  className={`text-[9px] font-sans truncate shrink-0 hidden xs:inline ${
+                                    isLightSpine ? 'text-slate-700' : 'text-white/70'
+                                  }`}
+                                >
+                                  &bull; {book.authors.split(',')[0]}
+                                </span>
+                              )}
+                            </div>
+
+                            {/* Status Indicator Dot */}
+                            <div className="flex items-center gap-1 shrink-0">
+                              <span
+                                className={`w-2 h-2 rounded-full ${
+                                  isCompleted
+                                    ? 'bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.9)]'
+                                    : isReading
+                                    ? 'bg-amber-400 shadow-[0_0_6px_rgba(251,191,36,0.95)] animate-pulse'
+                                    : isLightSpine
+                                    ? 'bg-slate-400'
+                                    : 'bg-white/40'
+                                }`}
+                                title={`Status: ${book.reading_status}`}
+                              />
+                            </div>
+                          </div>
+
+                          {/* Right Paper Block Edge */}
+                          <div className="relative z-10 h-full w-2.5 bg-[#FAF6ED] border-l border-black/30 overflow-hidden flex flex-col justify-around shrink-0 opacity-80">
+                            <div className="w-full h-[1px] bg-black/10" />
+                            <div className="w-full h-[1px] bg-black/10" />
+                            <div className="w-full h-[1px] bg-black/10" />
+                          </div>
+                        </motion.button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : (
+                /* STANDING SPINES (Packed side-by-side with justify-start, no gaps) */
+                <div className="w-full flex items-end justify-start px-1 sm:px-2 pt-6 pb-0.5 gap-1 sm:gap-1.5 overflow-hidden">
+                  {shelf.books.map((book) => {
+                    const { palette, height } = getSpineTheme(book);
+                    const isPulled = pulledBookId === book.book_id;
+                    const isCompleted = book.reading_status === 'COMPLETED';
+                    const isReading = book.reading_status === 'READING';
+                    const isLightSpine = palette.bg === '#DCD4C4';
+
+                    return (
+                      <motion.button
+                        key={book.book_id}
+                        type="button"
+                        onClick={() => handleSpineClick(book)}
+                        animate={{
+                          y: isPulled ? -16 : 0,
+                          scale: isPulled ? 1.03 : 1,
+                        }}
+                        whileHover={{ y: -8, transition: { duration: 0.15 } }}
+                        whileTap={{ scale: 0.98 }}
+                        transition={{ type: 'spring', damping: 24, stiffness: 360 }}
+                        className="group relative flex-1 min-w-[24px] max-w-[48px] shrink-0 flex flex-col justify-between rounded-t-xs select-none cursor-pointer text-left overflow-hidden transition-shadow"
+                        style={{
+                          height: `${height}px`,
+                          backgroundColor: palette.bg,
+                          color: palette.text,
+                          boxShadow: isPulled
+                            ? '0 16px 24px -4px rgba(0,0,0,0.85), 0 0 10px rgba(251,191,36,0.4)'
+                            : '2px 0 5px rgba(0,0,0,0.45), inset -2px 0 4px rgba(0,0,0,0.3)',
+                        }}
+                        title={`"${book.title}" by ${book.authors || 'Unknown'}`}
+                      >
+                        {/* 1. Top Headband & Archival Paper Edge */}
+                        <div className="relative z-10 w-full h-1.5 bg-[#F2EBDE] rounded-t-xs border-b border-black/40 overflow-hidden flex shrink-0">
+                          <div className="w-full h-full bg-gradient-to-r from-red-700/70 via-amber-200/90 to-red-700/70 opacity-90" />
+                        </div>
+
+                        {/* 2. 3D Cylindrical Spine Curvature Lighting Shader */}
+                        <div
+                          className="absolute inset-0 pointer-events-none z-10 rounded-t-xs"
+                          style={{
+                            background:
+                              'linear-gradient(90deg, rgba(0,0,0,0.45) 0%, rgba(255,255,255,0.18) 18%, rgba(255,255,255,0.03) 42%, rgba(0,0,0,0.1) 78%, rgba(0,0,0,0.52) 100%)',
+                          }}
+                        />
+
+                        {/* 3. Gold Tooled Call Number Header */}
+                        <div className="relative z-20 w-full pt-1 px-0.5 text-center flex flex-col items-center">
+                          <div
+                            className="w-full border-t border-b py-0.5"
+                            style={{ borderColor: `${palette.accent}50` }}
+                          >
+                            <span
+                              className="text-[8px] font-mono tracking-widest uppercase block truncate font-bold"
+                              style={{
+                                color: isLightSpine ? '#8B261D' : palette.accent,
+                                textShadow: isLightSpine ? 'none' : '0 1px 2px rgba(0,0,0,0.8)',
+                              }}
+                            >
+                              {book.book_id.replace('BOOK-', '')}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* 4. Raised Gilt Ribs (Upper) */}
+                        <div
+                          className="relative z-20 w-full h-[2px] opacity-70"
+                          style={{
+                            backgroundColor: palette.rib,
+                            boxShadow: '0 1px 0 rgba(255,255,255,0.18)',
+                          }}
+                        />
+
+                        {/* 5. Crisp Vertical Spine Title */}
+                        <div className="relative z-20 my-auto py-2 flex items-center justify-center overflow-hidden w-full h-full px-0.5">
+                          <span
+                            className={`font-serif text-[10px] sm:text-[11px] font-medium tracking-tight text-center leading-tight line-clamp-3 select-none group-hover:text-amber-200 transition-colors ${
+                              isLightSpine
+                                ? 'text-slate-900 drop-shadow-xs font-semibold'
+                                : 'text-white/95 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]'
+                            }`}
+                            style={{
+                              writingMode: 'vertical-rl',
+                              transform: 'rotate(180deg)',
                             }}
                           >
-                            {book.book_id.replace('BOOK-', '')}
+                            {book.title}
                           </span>
                         </div>
-                      </div>
 
-                      {/* 4. Raised Gilt Ribs (Upper) */}
-                      <div
-                        className="relative z-20 w-full h-[2px] opacity-70"
-                        style={{
-                          backgroundColor: palette.rib,
-                          boxShadow: '0 1px 0 rgba(255,255,255,0.18)',
-                        }}
-                      />
-
-                      {/* 5. Crisp Vertical Spine Title */}
-                      <div className="relative z-20 my-auto py-2 flex items-center justify-center overflow-hidden w-full h-full px-0.5">
-                        <span
-                          className={`font-serif text-[10px] sm:text-[11px] font-medium tracking-tight text-center leading-tight line-clamp-3 select-none group-hover:text-amber-200 transition-colors ${
-                            isLightSpine
-                              ? 'text-slate-900 drop-shadow-xs font-semibold'
-                              : 'text-white/95 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]'
-                          }`}
+                        {/* 6. Raised Gilt Ribs (Lower) */}
+                        <div
+                          className="relative z-20 w-full h-[2px] opacity-70"
                           style={{
-                            writingMode: 'vertical-rl',
-                            transform: 'rotate(180deg)',
+                            backgroundColor: palette.rib,
+                            boxShadow: '0 1px 0 rgba(255,255,255,0.18)',
                           }}
-                        >
-                          {book.title}
-                        </span>
-                      </div>
+                        />
 
-                      {/* 6. Raised Gilt Ribs (Lower) */}
-                      <div
-                        className="relative z-20 w-full h-[2px] opacity-70"
-                        style={{
-                          backgroundColor: palette.rib,
-                          boxShadow: '0 1px 0 rgba(255,255,255,0.18)',
-                        }}
-                      />
-
-                      {/* 7. Foot Details: Author & Reading Status Dot */}
-                      <div className="relative z-20 w-full pb-1 px-0.5 text-center flex flex-col items-center gap-1">
-                        <p
-                          className={`text-[8px] font-sans truncate font-medium w-full ${
-                            isLightSpine ? 'text-slate-800' : 'text-white/85 drop-shadow-xs'
-                          }`}
-                        >
-                          {book.authors?.split(' ')[0] || ''}
-                        </p>
-                        <div className="flex items-center justify-center">
-                          <span
-                            className={`w-1.5 h-1.5 rounded-full ${
-                              isCompleted
-                                ? 'bg-emerald-400 shadow-[0_0_5px_rgba(52,211,153,0.9)]'
-                                : isReading
-                                ? 'bg-amber-400 shadow-[0_0_6px_rgba(251,191,36,0.95)] animate-pulse'
-                                : isLightSpine
-                                ? 'bg-slate-400'
-                                : 'bg-white/40'
+                        {/* 7. Foot Details: Author & Reading Status Dot */}
+                        <div className="relative z-20 w-full pb-1 px-0.5 text-center flex flex-col items-center gap-1">
+                          <p
+                            className={`text-[8px] font-sans truncate font-medium w-full ${
+                              isLightSpine ? 'text-slate-800' : 'text-white/85 drop-shadow-xs'
                             }`}
-                            title={`Status: ${book.reading_status}`}
-                          />
+                          >
+                            {book.authors?.split(' ')[0] || ''}
+                          </p>
+                          <div className="flex items-center justify-center">
+                            <span
+                              className={`w-1.5 h-1.5 rounded-full ${
+                                isCompleted
+                                  ? 'bg-emerald-400 shadow-[0_0_5px_rgba(52,211,153,0.9)]'
+                                  : isReading
+                                  ? 'bg-amber-400 shadow-[0_0_6px_rgba(251,191,36,0.95)] animate-pulse'
+                                  : isLightSpine
+                                  ? 'bg-slate-400'
+                                  : 'bg-white/40'
+                              }`}
+                              title={`Status: ${book.reading_status}`}
+                            />
+                          </div>
                         </div>
-                      </div>
-                    </motion.button>
-                  );
-                })}
-              </div>
+                      </motion.button>
+                    );
+                  })}
+                </div>
+              )}
             </div>
 
             {/* SOLID WALNUT SHELF PLANK */}
