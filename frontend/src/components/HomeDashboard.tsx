@@ -323,63 +323,38 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({
                   />
                 </div>
 
-                {/* Book Info & Quick Actions */}
+                {/* Book Info & Quick Actions (Clean, quiet literary layout without data noise) */}
                 <div className="flex-1 min-w-0 flex flex-col justify-between py-0.5">
                   <div className="space-y-1">
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      <h3
-                        onClick={() => setSelectedBook(primaryBook)}
-                        className="font-serif text-base sm:text-lg font-medium text-ink dark:text-ink-dark line-clamp-1 cursor-pointer hover:text-accent dark:hover:text-accent-dark transition-colors leading-snug"
-                      >
-                        {primaryBook.title}
-                      </h3>
-                      {currentBookStats.lastReadText && (
-                        <span className="px-1.5 py-0.5 rounded text-3xs font-mono bg-accent/10 text-accent dark:text-accent-dark font-medium shrink-0">
-                          {currentBookStats.lastReadText}
-                        </span>
-                      )}
-                    </div>
+                    <h3
+                      onClick={() => setSelectedBook(primaryBook)}
+                      className="font-serif text-base sm:text-lg font-medium text-ink dark:text-ink-dark line-clamp-1 cursor-pointer hover:text-accent dark:hover:text-accent-dark transition-colors leading-snug"
+                    >
+                      {primaryBook.title}
+                    </h3>
                     <p className="text-xs text-ink-secondary dark:text-ink-dark-secondary truncate">
                       {primaryBook.authors || 'Unknown author'}
                     </p>
-
-                    {/* Volume-Specific Bookmark & Pages Tracked */}
-                    <div className="flex flex-wrap items-center gap-2 text-2xs text-ink-muted pt-0.5">
-                      <span className="font-medium text-ink dark:text-ink-dark">
-                        Bookmark:{' '}
-                        <strong className="text-accent dark:text-accent-dark">
-                          {currentBookStats.currentPage > 0 ? `Page ${currentBookStats.currentPage}` : 'Not started'}
-                        </strong>
-                      </span>
-                      {currentBookStats.totalPagesRead > 0 && (
-                        <>
-                          <span>•</span>
-                          <span>
-                            {currentBookStats.totalPagesRead} pgs logged ({currentBookStats.sessionsCount} session
-                            {currentBookStats.sessionsCount === 1 ? '' : 's'})
-                          </span>
-                        </>
+                    <p className="text-xs text-ink-muted pt-0.5">
+                      {currentBookStats.currentPage > 0 ? (
+                        <span>
+                          At <strong className="text-accent dark:text-accent-dark font-medium">Page {currentBookStats.currentPage}</strong>
+                        </span>
+                      ) : (
+                        <span>Ready to start</span>
                       )}
-                    </div>
+                    </p>
                   </div>
 
-                  {/* Volume-Specific Action & Pace Strip */}
-                  <div className="pt-3 flex flex-wrap items-center justify-between gap-2 border-t border-rule/30 dark:border-rule-dark/30 mt-2">
-                    <div className="text-2xs text-ink-secondary dark:text-ink-dark-secondary flex items-center gap-2">
-                      <span>
-                        Velocity:{' '}
-                        <strong className="text-ink dark:text-ink-dark font-medium">
-                          {currentBookStats.velocity > 0
-                            ? `${currentBookStats.velocity} pgs/day`
-                            : currentBookStats.totalPagesRead > 0
-                            ? `${currentBookStats.totalPagesRead} pgs logged`
-                            : 'Tracking...'}
-                        </strong>
-                      </span>
-                      {currentBookStats.readingPaceMinPerPage > 0 && (
-                        <span className="text-3xs text-ink-muted hidden xs:inline">
-                          ({currentBookStats.readingPaceMinPerPage} min/pg)
+                  {/* Volume Action & Pace Strip */}
+                  <div className="pt-2.5 flex items-center justify-between gap-2">
+                    <div className="text-2xs text-ink-muted">
+                      {currentBookStats.velocity > 0 ? (
+                        <span>
+                          Pace: <strong className="text-ink dark:text-ink-dark font-medium">{currentBookStats.velocity} pgs/day</strong>
                         </span>
+                      ) : (
+                        <span>In progress</span>
                       )}
                     </div>
 
