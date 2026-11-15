@@ -1,5 +1,5 @@
-import React, { useState, useMemo } from 'react';
-import { motion } from 'motion/react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import {
   Flame,
   Bookmark,
@@ -49,8 +49,40 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({
     return idx >= 0 ? idx : 0;
   });
 
+  const [slideDirection, setSlideDirection] = useState<number>(0);
+  const [hasShakenOnLoad, setHasShakenOnLoad] = useState<boolean>(false);
+
+  // Subtle peek & shake discoverability cue on page load when multiple books are active
+  useEffect(() => {
+    if (activeBooks.length > 1) {
+      const timer = setTimeout(() => {
+        setHasShakenOnLoad(true);
+      }, 1600);
+      return () => clearTimeout(timer);
+    }
+  }, [activeBooks.length]);
+
   const safeActiveIndex = selectedActiveIndex < activeBooks.length ? selectedActiveIndex : 0;
   const primaryBook = activeBooks[safeActiveIndex] || activeBooks[0] || null;
+
+  const handleSwipe = (direction: 'next' | 'prev') => {
+    if (activeBooks.length <= 1) return;
+    if (direction === 'next') {
+      setSlideDirection(1);
+      setSelectedActiveIndex((prev) => {
+        const nextIdx = (prev + 1) % activeBooks.length;
+        localStorage.setItem('molat_last_active_book_id', activeBooks[nextIdx].book_id);
+        return nextIdx;
+      });
+    } else {
+      setSlideDirection(-1);
+      setSelectedActiveIndex((prev) => {
+        const prevIdx = (prev - 1 + activeBooks.length) % activeBooks.length;
+        localStorage.setItem('molat_last_active_book_id', activeBooks[prevIdx].book_id);
+        return prevIdx;
+      });
+    }
+  };
 
   const { lendingRecords, setPickNextModalOpen, openFocusRoom } = useLibraryStore();
   const activeLentCount = lendingRecords.filter((r) => r.status === 'ACTIVE').length;
@@ -118,9 +150,141 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({
             </div>
           </div>
 
-          {/* Multi-Book Volume Tabs (Instant 1-tap switching between currently reading books) */}
+          {/* Swipeable Carousel Container with Initial Discoverability Nudge */}
+          <motion.div
+            animate={
+              !hasShakenOnLoad && activeBooks.length > 1
+                ? { x: [0, -22, 8, -6, 2, 0] }
+                : { x: 0 }
+            }
+            transition={{
+              delay: 0.6,
+              duration: 0.85,
+              ease: 'easeInOut',
+            }}
+            className="relative overflow-hidden"
+          >
+            <AnimatePresence initial={false} custom={slideDirection} mode="wait">
+              <motion.div
+                key={primaryBook.book_id}
+                custom={slideDirection}
+                variants={{
+                  enter: (direction: number) => ({
+                    x: direction > 0 ? 60 : -60,
+                    opacity: 0,
+                  }),
+                  center: {
+                    x: 0,
+                    opacity: 1,
+                  },
+                  exit: (direction: number) => ({
+                    x: direction > 0 ? -60 : 60,
+                    opacity: 0,
+                  }),
+                }}
+                initial="enter"
+                animate="center"
+                exit="exit"
+                transition={{ duration: 0.22, ease: 'easeOut' }}
+                drag={activeBooks.length > 1 ? 'x' : false}
+                dragConstraints={{ left: 0, right: 0 }}
+                dragElastic={0.25}
+                onDragEnd={(_e, { offset, velocity }) => {
+                  const swipeThreshold = 30;
+                  const velocityThreshold = 250;
+                  if (offset.x < -swipeThreshold || velocity.x < -velocityThreshold) {
+                    handleSwipe('next');
+                  } else if (offset.x > swipeThreshold || velocity.x > velocityThreshold) {
+                    handleSwipe('prev');
+                  }
+                }}
+                className={`flex gap-4 ${
+                  activeBooks.length > 1 ? 'cursor-grab active:cursor-grabbing touch-pan-y' : ''
+                } select-none`}
+              >
+                {/* Book Cover Thumbnail */}
+                <div
+                  className="w-20 sm:w-24 shrink-0 cursor-pointer shadow-sm hover:scale-[1.02] transition-transform"
+                  onClick={() => setSelectedBook(primaryBook)}
+                >
+                  <BookCover
+                    title={primaryBook.title}
+                    authors={primaryBook.authors}
+                    coverUrl={primaryBook.cover_url}
+                    readingStatus={primaryBook.reading_status}
+                  />
+                </div>
+
+                {/* Book Info & Quick Actions */}
+                <div className="flex-1 min-w-0 flex flex-col justify-between py-0.5">
+                  <div className="space-y-1">
+                    <h3
+                      onClick={() => setSelectedBook(primaryBook)}
+                      className="font-serif text-base sm:text-lg font-medium text-ink dark:text-ink-dark line-clamp-2 cursor-pointer hover:text-accent dark:hover:text-accent-dark transition-colors leading-snug"
+                    >
+                      {primaryBook.title}
+                    </h3>
+                    <p className="text-xs text-ink-secondary dark:text-ink-dark-secondary truncate">
+                      {primaryBook.authors || 'Unknown author'}
+                    </p>
+                    <div className="flex flex-wrap items-center gap-2 text-2xs text-ink-muted pt-1">
+                      {primaryBook.genre && (
+                        <span className="px-2 py-0.5 rounded-md bg-surface dark:bg-surface-dark border border-rule/50 dark:border-rule-dark/50 text-3xs font-medium text-ink-secondary">
+                          {primaryBook.genre.split(',')[0].trim()}
+                        </span>
+                      )}
+                      {primaryBook.location && (
+                        <span>• {primaryBook.location}</span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Action & Pace Strip */}
+                  <div className="pt-3 flex flex-wrap items-center justify-between gap-2">
+                    <div className="text-2xs text-ink-secondary dark:text-ink-dark-secondary">
+                      <span>
+                        Velocity:{' '}
+                        <strong className="text-ink dark:text-ink-dark font-medium">
+                          {velocity > 0 ? `${velocity} pgs/day` : 'Tracking...'}
+                        </strong>
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          localStorage.setItem('molat_last_active_book_id', primaryBook.book_id);
+                          openFocusRoom(primaryBook);
+                        }}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-accent/40 bg-accent/10 dark:bg-accent/20 hover:bg-accent/20 text-accent dark:text-accent-dark text-xs font-medium shadow-xs transition-all active:scale-98 cursor-pointer"
+                        title="Start distraction-free focus timer for this volume"
+                      >
+                        <Timer size={14} />
+                        <span>Focus</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          localStorage.setItem('molat_last_active_book_id', primaryBook.book_id);
+                          openQuickLog(primaryBook);
+                        }}
+                        className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-accent hover:bg-accent-hover text-white text-xs font-medium shadow-xs transition-all active:scale-98 cursor-pointer"
+                      >
+                        <Plus size={14} />
+                        <span>Log Pages</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            </AnimatePresence>
+          </motion.div>
+
+          {/* Pagination Dots at Bottom */}
           {activeBooks.length > 1 && (
-            <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 scrollbar-none">
+            <div className="flex items-center justify-center gap-1.5 pt-0.5">
               {activeBooks.map((b, idx) => {
                 const isSelected = safeActiveIndex === idx;
                 return (
@@ -128,107 +292,22 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({
                     key={b.book_id}
                     type="button"
                     onClick={() => {
+                      setSlideDirection(idx > safeActiveIndex ? 1 : -1);
                       setSelectedActiveIndex(idx);
                       localStorage.setItem('molat_last_active_book_id', b.book_id);
                     }}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all shrink-0 cursor-pointer flex items-center gap-2 ${
+                    className={`h-1.5 rounded-full transition-all cursor-pointer ${
                       isSelected
-                        ? 'bg-ink text-canvas dark:bg-canvas-dark dark:text-ink shadow-xs border border-transparent font-semibold'
-                        : 'bg-surface dark:bg-surface-dark text-ink-muted hover:text-ink border border-rule/60'
+                        ? 'w-5 bg-accent shadow-[0_0_6px_rgba(251,191,36,0.6)]'
+                        : 'w-1.5 bg-ink-muted/30 hover:bg-ink-muted/60'
                     }`}
-                  >
-                    <span
-                      className={`w-1.5 h-1.5 rounded-full ${
-                        isSelected ? 'bg-amber-400 shadow-[0_0_6px_rgba(251,191,36,0.8)]' : 'bg-ink-muted/40'
-                      }`}
-                    />
-                    <span className="truncate max-w-[130px] sm:max-w-[200px]">{b.title}</span>
-                    <span className="text-3xs opacity-70 font-mono">#{idx + 1}</span>
-                  </button>
+                    title={`Switch to "${b.title}"`}
+                    aria-label={`Go to book ${idx + 1}`}
+                  />
                 );
               })}
             </div>
           )}
-
-          {/* Book Spotlight Row */}
-          <div className="flex gap-4">
-            {/* Book Cover Thumbnail */}
-            <div
-              className="w-20 sm:w-24 shrink-0 cursor-pointer shadow-sm hover:scale-[1.02] transition-transform"
-              onClick={() => setSelectedBook(primaryBook)}
-            >
-              <BookCover
-                title={primaryBook.title}
-                authors={primaryBook.authors}
-                coverUrl={primaryBook.cover_url}
-                readingStatus={primaryBook.reading_status}
-              />
-            </div>
-
-            {/* Book Info & Quick Actions */}
-            <div className="flex-1 min-w-0 flex flex-col justify-between py-0.5">
-              <div className="space-y-1">
-                <h3
-                  onClick={() => setSelectedBook(primaryBook)}
-                  className="font-serif text-base sm:text-lg font-medium text-ink dark:text-ink-dark line-clamp-2 cursor-pointer hover:text-accent dark:hover:text-accent-dark transition-colors leading-snug"
-                >
-                  {primaryBook.title}
-                </h3>
-                <p className="text-xs text-ink-secondary dark:text-ink-dark-secondary truncate">
-                  {primaryBook.authors || 'Unknown author'}
-                </p>
-                <div className="flex flex-wrap items-center gap-2 text-2xs text-ink-muted pt-1">
-                  {primaryBook.genre && (
-                    <span className="px-2 py-0.5 rounded-md bg-surface dark:bg-surface-dark border border-rule/50 dark:border-rule-dark/50 text-3xs font-medium text-ink-secondary">
-                      {primaryBook.genre.split(',')[0].trim()}
-                    </span>
-                  )}
-                  {primaryBook.location && (
-                    <span>• {primaryBook.location}</span>
-                  )}
-                </div>
-              </div>
-
-              {/* Action & Pace Strip */}
-              <div className="pt-3 flex flex-wrap items-center justify-between gap-2">
-                <div className="text-2xs text-ink-secondary dark:text-ink-dark-secondary">
-                  <span>
-                    Velocity:{' '}
-                    <strong className="text-ink dark:text-ink-dark font-medium">
-                      {velocity > 0 ? `${velocity} pgs/day` : 'Tracking...'}
-                    </strong>
-                  </span>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      localStorage.setItem('molat_last_active_book_id', primaryBook.book_id);
-                      openFocusRoom(primaryBook);
-                    }}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-accent/40 bg-accent/10 dark:bg-accent/20 hover:bg-accent/20 text-accent dark:text-accent-dark text-xs font-medium shadow-xs transition-all active:scale-98 cursor-pointer"
-                    title="Start distraction-free focus timer for this volume"
-                  >
-                    <Timer size={14} />
-                    <span>Focus</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      localStorage.setItem('molat_last_active_book_id', primaryBook.book_id);
-                      openQuickLog(primaryBook);
-                    }}
-                    className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-accent hover:bg-accent-hover text-white text-xs font-medium shadow-xs transition-all active:scale-98 cursor-pointer"
-                  >
-                    <Plus size={14} />
-                    <span>Log Pages</span>
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
 
           {/* Daily Goal Progress Bar */}
           <div className="pt-2 border-t border-rule/50 dark:border-rule-dark/50 space-y-1.5">
