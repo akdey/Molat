@@ -130,11 +130,11 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({
               <h2 className="font-serif text-sm font-medium text-ink dark:text-ink-dark">
                 Continue Reading
               </h2>
-              {activeBooks.length > 1 && (
+              {/* {activeBooks.length > 1 && (
                 <span className="text-3xs font-mono px-2 py-0.5 rounded-full bg-accent/10 text-accent dark:text-accent-dark font-medium">
                   {activeBooks.length} active volumes
                 </span>
-              )}
+              )} */}
             </div>
 
             {/* Streak & Daily Progress Pill */}
@@ -198,9 +198,8 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({
                     handleSwipe('prev');
                   }
                 }}
-                className={`flex gap-4 ${
-                  activeBooks.length > 1 ? 'cursor-grab active:cursor-grabbing touch-pan-y' : ''
-                } select-none`}
+                className={`flex gap-4 ${activeBooks.length > 1 ? 'cursor-grab active:cursor-grabbing touch-pan-y' : ''
+                  } select-none`}
               >
                 {/* Book Cover Thumbnail */}
                 <div
@@ -296,11 +295,10 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({
                       setSelectedActiveIndex(idx);
                       localStorage.setItem('molat_last_active_book_id', b.book_id);
                     }}
-                    className={`h-1.5 rounded-full transition-all cursor-pointer ${
-                      isSelected
+                    className={`h-1.5 rounded-full transition-all cursor-pointer ${isSelected
                         ? 'w-5 bg-accent shadow-[0_0_6px_rgba(251,191,36,0.6)]'
                         : 'w-1.5 bg-ink-muted/30 hover:bg-ink-muted/60'
-                    }`}
+                      }`}
                     title={`Switch to "${b.title}"`}
                     aria-label={`Go to book ${idx + 1}`}
                   />
