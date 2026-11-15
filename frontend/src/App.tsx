@@ -216,81 +216,110 @@ export default function App() {
         <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between gap-4">
           {/* Logo & Subtitle */}
           <div
-            className="flex items-center gap-2.5 cursor-pointer select-none"
+            className="flex items-center gap-2.5 cursor-pointer select-none shrink-0"
             onClick={() => switchTab('home')}
           >
             <BookOpen className="text-accent dark:text-accent-dark h-5 w-5 sm:h-6 sm:w-6 shrink-0" />
-            <div>
-              <h1 className="font-serif text-lg sm:text-xl font-medium tracking-tight">Molat</h1>
-              <p className="text-3xs text-ink-muted dark:text-ink-dark-muted hidden sm:block">
-                Personal Physical Book Library
+            <div className="shrink-0 flex flex-col justify-center">
+              <h1 className="font-serif text-lg sm:text-xl font-medium tracking-tight leading-none">Molat</h1>
+              <p className="text-3xs text-ink-muted dark:text-ink-dark-muted hidden sm:block whitespace-nowrap mt-0.5">
+                Personal Library
               </p>
             </div>
           </div>
 
-          {/* Desktop & Tablet Navigation Rail/Tabs */}
-          <nav className="hidden md:flex items-center gap-0.5 lg:gap-1 bg-surface dark:bg-surface-dark p-1 rounded-xl border border-rule dark:border-rule-dark text-xs font-medium">
+          {/* Desktop & Tablet Navigation Rail/Tabs: Compact Icons with Active Label and Tooltips */}
+          <nav className="hidden md:flex items-center gap-0.5 lg:gap-1 bg-surface dark:bg-surface-dark p-1 rounded-xl border border-rule dark:border-rule-dark text-xs font-medium shrink-0">
+            {/* Home */}
             <button
               onClick={() => switchTab('home')}
-              className={`flex items-center gap-1.5 px-2.5 lg:px-3 py-1.5 rounded-lg transition-colors min-h-[36px] ${activeTab === 'home'
+              className={`flex items-center gap-1.5 px-2.5 lg:px-3 py-1.5 rounded-lg transition-all min-h-[36px] whitespace-nowrap ${
+                activeTab === 'home'
                   ? 'bg-canvas dark:bg-canvas-dark text-ink dark:text-ink-dark shadow-xs font-semibold'
-                  : 'text-ink-secondary hover:text-ink dark:hover:text-ink-dark'
-                }`}
+                  : 'text-ink-secondary hover:text-ink dark:hover:text-ink-dark hover:bg-canvas/50 dark:hover:bg-canvas-dark/50'
+              }`}
+              title="Home Dashboard"
+              aria-label="Home Dashboard"
             >
-              <Home size={14} />
-              <span>Home</span>
+              <Home size={15} className="shrink-0" />
+              <span className={activeTab === 'home' ? 'inline' : 'hidden xl:inline'}>Home</span>
             </button>
+
+            {/* Bookshelf */}
             <button
               onClick={() => switchTab('shelf')}
-              className={`flex items-center gap-1.5 px-2.5 lg:px-3 py-1.5 rounded-lg transition-colors min-h-[36px] ${activeTab === 'shelf'
+              className={`flex items-center gap-1.5 px-2.5 lg:px-3 py-1.5 rounded-lg transition-all min-h-[36px] whitespace-nowrap ${
+                activeTab === 'shelf'
                   ? 'bg-canvas dark:bg-canvas-dark text-ink dark:text-ink-dark shadow-xs font-semibold'
-                  : 'text-ink-secondary hover:text-ink dark:hover:text-ink-dark'
-                }`}
+                  : 'text-ink-secondary hover:text-ink dark:hover:text-ink-dark hover:bg-canvas/50 dark:hover:bg-canvas-dark/50'
+              }`}
+              title="Bookshelf (Standing Spines)"
+              aria-label="Bookshelf"
             >
-              <Library size={14} />
-              <span>Bookshelf</span>
+              <Library size={15} className="shrink-0" />
+              <span className={activeTab === 'shelf' ? 'inline' : 'hidden xl:inline'}>Shelf</span>
             </button>
+
+            {/* Insights */}
             <button
               onClick={() => switchTab('insights')}
-              className={`flex items-center gap-1.5 px-2.5 lg:px-3 py-1.5 rounded-lg transition-colors min-h-[36px] ${activeTab === 'insights'
+              className={`flex items-center gap-1.5 px-2.5 lg:px-3 py-1.5 rounded-lg transition-all min-h-[36px] whitespace-nowrap ${
+                activeTab === 'insights'
                   ? 'bg-canvas dark:bg-canvas-dark text-ink dark:text-ink-dark shadow-xs font-semibold'
-                  : 'text-ink-secondary hover:text-ink dark:hover:text-ink-dark'
-                }`}
+                  : 'text-ink-secondary hover:text-ink dark:hover:text-ink-dark hover:bg-canvas/50 dark:hover:bg-canvas-dark/50'
+              }`}
+              title="Library Insights & Analytics"
+              aria-label="Insights"
             >
-              <PieChart size={14} />
-              <span>Insights</span>
+              <PieChart size={15} className="shrink-0" />
+              <span className={activeTab === 'insights' ? 'inline' : 'hidden xl:inline'}>Insights</span>
             </button>
+
+            {/* Reading Streak */}
             <button
               onClick={() => switchTab('tracker')}
-              className={`flex items-center gap-1.5 px-2.5 lg:px-3 py-1.5 rounded-lg transition-colors min-h-[36px] ${activeTab === 'tracker'
+              className={`flex items-center gap-1.5 px-2.5 lg:px-3 py-1.5 rounded-lg transition-all min-h-[36px] whitespace-nowrap ${
+                activeTab === 'tracker'
                   ? 'bg-canvas dark:bg-canvas-dark text-accent dark:text-accent-dark shadow-xs font-semibold'
-                  : 'text-ink-secondary hover:text-ink dark:hover:text-ink-dark'
-                }`}
+                  : 'text-ink-secondary hover:text-ink dark:hover:text-ink-dark hover:bg-canvas/50 dark:hover:bg-canvas-dark/50'
+              }`}
+              title="Reading Streak & Activity Heatmap"
+              aria-label="Reading Streak"
             >
-              <Flame size={14} className="text-accent" />
-              <span><span className="hidden xl:inline">Reading </span>Streak</span>
+              <Flame size={15} className="text-accent shrink-0" />
+              <span className={activeTab === 'tracker' ? 'inline' : 'hidden xl:inline'}>Streak</span>
             </button>
+
+            {/* Wishlist */}
             <button
               onClick={() => switchTab('wishlist')}
-              className={`flex items-center gap-1.5 px-2.5 lg:px-3 py-1.5 rounded-lg transition-colors min-h-[36px] ${activeTab === 'wishlist'
+              className={`flex items-center gap-1.5 px-2.5 lg:px-3 py-1.5 rounded-lg transition-all min-h-[36px] whitespace-nowrap ${
+                activeTab === 'wishlist'
                   ? 'bg-canvas dark:bg-canvas-dark text-ink dark:text-ink-dark shadow-xs font-semibold'
-                  : 'text-ink-secondary hover:text-ink dark:hover:text-ink-dark'
-                }`}
+                  : 'text-ink-secondary hover:text-ink dark:hover:text-ink-dark hover:bg-canvas/50 dark:hover:bg-canvas-dark/50'
+              }`}
+              title="Acquisitions Wishlist"
+              aria-label="Wishlist"
             >
-              <ShoppingBag size={14} />
-              <span>Wishlist</span>
+              <ShoppingBag size={15} className="shrink-0" />
+              <span className={activeTab === 'wishlist' ? 'inline' : 'hidden xl:inline'}>Wishlist</span>
             </button>
+
+            {/* Lending */}
             <button
               onClick={() => switchTab('lending')}
-              className={`flex items-center gap-1.5 px-2.5 lg:px-3 py-1.5 rounded-lg transition-colors min-h-[36px] ${activeTab === 'lending'
+              className={`flex items-center gap-1.5 px-2.5 lg:px-3 py-1.5 rounded-lg transition-all min-h-[36px] whitespace-nowrap ${
+                activeTab === 'lending'
                   ? 'bg-canvas dark:bg-canvas-dark text-ink dark:text-ink-dark shadow-xs font-semibold'
-                  : 'text-ink-secondary hover:text-ink dark:hover:text-ink-dark'
-                }`}
+                  : 'text-ink-secondary hover:text-ink dark:hover:text-ink-dark hover:bg-canvas/50 dark:hover:bg-canvas-dark/50'
+              }`}
+              title="Lent Out Books"
+              aria-label="Lending"
             >
-              <Handshake size={14} className={overdueLentCount > 0 ? 'text-amber-600 dark:text-amber-400' : ''} />
-              <span>Lent Out</span>
+              <Handshake size={15} className={`shrink-0 ${overdueLentCount > 0 ? 'text-amber-600 dark:text-amber-400' : ''}`} />
+              <span className={activeTab === 'lending' ? 'inline' : 'hidden xl:inline'}>Lending</span>
               {activeLentCount > 0 && (
-                <span className={`px-1.5 py-0.2 rounded-full text-3xs font-mono font-semibold ${overdueLentCount > 0
+                <span className={`px-1.5 py-0.2 rounded-full text-3xs font-mono font-semibold shrink-0 ${overdueLentCount > 0
                     ? 'bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300'
                     : 'bg-surface-raised dark:bg-surface-dark-raised text-ink-muted'
                   }`}>
@@ -298,20 +327,25 @@ export default function App() {
                 </span>
               )}
             </button>
+
+            {/* Audit */}
             <button
               onClick={() => switchTab('maintenance')}
-              className={`flex items-center gap-1.5 px-2.5 lg:px-3 py-1.5 rounded-lg transition-colors min-h-[36px] ${activeTab === 'maintenance'
+              className={`flex items-center gap-1.5 px-2.5 lg:px-3 py-1.5 rounded-lg transition-all min-h-[36px] whitespace-nowrap ${
+                activeTab === 'maintenance'
                   ? 'bg-canvas dark:bg-canvas-dark text-ink dark:text-ink-dark shadow-xs font-semibold'
-                  : 'text-ink-secondary hover:text-ink dark:hover:text-ink-dark'
-                }`}
+                  : 'text-ink-secondary hover:text-ink dark:hover:text-ink-dark hover:bg-canvas/50 dark:hover:bg-canvas-dark/50'
+              }`}
+              title="Catalogue Health Audit"
+              aria-label="Catalogue Health Audit"
             >
-              <Wrench size={14} />
-              <span>Audit</span>
+              <Wrench size={15} className="shrink-0" />
+              <span className={activeTab === 'maintenance' ? 'inline' : 'hidden xl:inline'}>Audit</span>
             </button>
           </nav>
 
-          {/* Action Tools — Clean & Complete across all Desktop & Mobile screens */}
-          <div className="flex items-center gap-1 sm:gap-1.5">
+          {/* Action Tools — Clean, Uniform Icons with Native Tooltips */}
+          <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
             {/* Desktop Only: Pick My Next Read (TBR Randomizer) */}
             <button
               onClick={() => setPickNextModalOpen(true)}
@@ -331,28 +365,6 @@ export default function App() {
             >
               <Camera size={16} />
             </button>
-
-            {/* Desktop Only: Focus Reading Room */}
-            <button
-              onClick={() => openFocusRoom()}
-              className="hidden md:flex items-center gap-1.5 px-2.5 lg:px-3 py-1.5 rounded-xl border border-accent/35 bg-accent/5 dark:bg-accent/15 hover:bg-accent/20 text-accent dark:text-accent-dark text-xs font-semibold shadow-xs transition-all active:scale-98 cursor-pointer"
-              title="Launch Distraction-Free Focus Reading Room"
-            >
-              <Timer size={14} className="shrink-0" />
-              <span className="hidden xl:inline whitespace-nowrap">Focus Room</span>
-            </button>
-
-            {/* Desktop Only: Log Reading Session */}
-            <button
-              onClick={() => openQuickLog()}
-              className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-accent hover:bg-accent-hover text-white text-xs font-semibold shadow-xs transition-all active:scale-98 cursor-pointer"
-              title="Log Reading Session (Pages & Duration)"
-            >
-              <Plus size={14} className="shrink-0" />
-              <span className="whitespace-nowrap">Log Pages</span>
-            </button>
-
-            <div className="hidden md:block w-[1px] h-5 bg-rule dark:bg-rule-dark mx-0.5" />
 
             {/* Sync button with Sheets (accessible with 1 tap, spins when refreshing) */}
             <button
@@ -391,7 +403,7 @@ export default function App() {
             {/* Desktop Only: Owner Authentication Pill */}
             <button
               onClick={() => setKeyModalOpen(true)}
-              className={`hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-medium transition-colors ${authToken
+              className={`hidden md:flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border text-xs font-medium transition-colors shrink-0 ${authToken
                   ? 'border-emerald-300 dark:border-emerald-800/50 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-800 dark:text-emerald-300'
                   : 'border-rule dark:border-rule-dark hover:bg-surface dark:hover:bg-surface-dark text-ink-secondary hover:text-ink'
                 }`}
@@ -399,7 +411,7 @@ export default function App() {
               aria-label="Owner Authentication"
             >
               <KeyRound size={13} />
-              <span>{authToken ? authUser || 'Owner' : 'Sign In'}</span>
+              <span className="hidden lg:inline">{authToken ? authUser || 'Owner' : 'Sign In'}</span>
             </button>
 
             {/* Mobile Overflow Menu (replaces the 4 cluttered buttons on mobile) */}
