@@ -103,6 +103,12 @@ Whether cataloguing a multi-hundred volume collection, scanning new arrivals at 
   7. Direct Open Library Jacket Endpoint
 - **Quality Guard**: Automatically detects and rejects 1x1 transparent tracking pixels, blank placeholders, or broken URLs.
 
+### 📊 Deep Library Analytics & Literary Insights
+- **Title Anatomy & Recurring Thematic Motifs**: On-device NLP tokenization across all titles extracting subconscious literary keywords (`#Death`, `#Secret`, `#Protocol`, `#Shadow`, etc.) with recurring counts and average title word lengths without manual tagging.
+- **Historical Publication Eras & Library Age**: Real-time analysis of publication years calculating the median age of your physical library, highlighting the oldest print volume vs. newest release, and mapping volumes across historical eras (Classics/Pre-2000, 2000s, 2010s, Contemporary 2020s).
+- **Library Growth & Acquisition Waves**: Chronological histogram tracking when volumes entered your collection, pinpointing peak acquisition epochs alongside your total physical portfolio replacement worth and lifetime savings.
+- **Category Donut & Tsundoku Backlog**: Visual breakdown of literary genres and reading lifecycle states (Completed, Reading, Unread).
+
 ### 🎨 Anti-Vibe Editorial Design
 - **Literary Palette**: Oxford Navy (`#1E3A8A`), warm ivory surfaces (`#FBF9F5`), muted borders, and quiet typography avoiding generic AI aesthetics.
 - **Dark Mode Support**: Seamless toggle between warm paper daylight and low-contrast midnight obsidian themes.
