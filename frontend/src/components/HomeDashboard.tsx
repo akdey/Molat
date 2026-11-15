@@ -19,9 +19,10 @@ import {
   Sparkles,
   Timer,
 } from 'lucide-react';
-import type { Book, StreakSummary } from '../types/book';
+import type { Book, StreakSummary, ReadingLog } from '../types/book';
 import { BookCover } from './BookCover';
 import { useLibraryStore } from '../store/useLibraryStore';
+import { fetchReadingLogs } from '../api/client';
 
 interface HomeDashboardProps {
   books: Book[];
@@ -64,6 +65,114 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({
 
   const safeActiveIndex = selectedActiveIndex < activeBooks.length ? selectedActiveIndex : 0;
   const primaryBook = activeBooks[safeActiveIndex] || activeBooks[0] || null;
+
+  // Load reading logs to compute distinct volume-level metrics for each active book
+  const [readingLogs, setReadingLogs] = useState<ReadingLog[]>([]);
+
+  useEffect(() => {
+    let isMounted = true;
+    fetchReadingLogs()
+      .then((logs) => {
+        if (isMounted && logs) {
+          setReadingLogs(logs);
+        }
+      })
+      .catch((err) => {
+        console.warn('Could not load reading logs for book stats:', err);
+      });
+    return () => {
+      isMounted = false;
+    };
+  }, [books]);
+
+  // Volume-specific statistics computed dynamically per active book
+  const activeBookStatsMap = useMemo(() => {
+    const map: Record<
+      string,
+      {
+        currentPage: number;
+        totalPagesRead: number;
+        sessionsCount: number;
+        velocity: number;
+        lastReadText: string;
+        readingPaceMinPerPage: number;
+      }
+    > = {};
+
+    activeBooks.forEach((book) => {
+      const bLogs = readingLogs.filter((l) => l.book_id === book.book_id);
+      if (!bLogs.length) {
+        map[book.book_id] = {
+          currentPage: 0,
+          totalPagesRead: 0,
+          sessionsCount: 0,
+          velocity: 0,
+          lastReadText: 'Not logged yet',
+          readingPaceMinPerPage: 0,
+        };
+        return;
+      }
+
+      // Latest bookmark end page
+      const currentPage = Math.max(...bLogs.map((l) => l.end_page || 0), 0);
+      const totalPagesRead = bLogs.reduce((acc, l) => acc + (l.pages_read || 0), 0);
+      const totalDurationMins = bLogs.reduce((acc, l) => acc + (l.duration_minutes || 0), 0);
+
+      // Distinct days on which this volume was read
+      const uniqueDates = new Set(bLogs.map((l) => l.session_date).filter(Boolean));
+      const daysCount = Math.max(uniqueDates.size, 1);
+
+      // Book-specific velocity (average pages read per reading day for this specific book)
+      const bookVelocity = Math.round((totalPagesRead / daysCount) * 10) / 10;
+
+      // Book-specific reading pace (minutes per page)
+      const readingPaceMinPerPage =
+        totalDurationMins > 0 && totalPagesRead > 0
+          ? Math.round((totalDurationMins / totalPagesRead) * 10) / 10
+          : 0;
+
+      // Last read date text
+      const latestLog = bLogs[0];
+      let lastReadText = '';
+      if (latestLog?.session_date) {
+        const today = new Date().toISOString().slice(0, 10);
+        if (latestLog.session_date === today) {
+          lastReadText = 'Read Today';
+        } else {
+          lastReadText = `Last read ${latestLog.session_date}`;
+        }
+      }
+
+      map[book.book_id] = {
+        currentPage,
+        totalPagesRead,
+        sessionsCount: bLogs.length,
+        velocity: bookVelocity,
+        lastReadText,
+        readingPaceMinPerPage,
+      };
+    });
+
+    return map;
+  }, [activeBooks, readingLogs]);
+
+  const currentBookStats = primaryBook
+    ? activeBookStatsMap[primaryBook.book_id] || {
+        currentPage: 0,
+        totalPagesRead: 0,
+        sessionsCount: 0,
+        velocity: 0,
+        lastReadText: '',
+        readingPaceMinPerPage: 0,
+      }
+    : {
+        currentPage: 0,
+        totalPagesRead: 0,
+        sessionsCount: 0,
+        velocity: 0,
+        lastReadText: '',
+        readingPaceMinPerPage: 0,
+      };
 
   const handleSwipe = (direction: 'next' | 'prev') => {
     if (activeBooks.length <= 1) return;
@@ -217,36 +326,61 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({
                 {/* Book Info & Quick Actions */}
                 <div className="flex-1 min-w-0 flex flex-col justify-between py-0.5">
                   <div className="space-y-1">
-                    <h3
-                      onClick={() => setSelectedBook(primaryBook)}
-                      className="font-serif text-base sm:text-lg font-medium text-ink dark:text-ink-dark line-clamp-2 cursor-pointer hover:text-accent dark:hover:text-accent-dark transition-colors leading-snug"
-                    >
-                      {primaryBook.title}
-                    </h3>
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <h3
+                        onClick={() => setSelectedBook(primaryBook)}
+                        className="font-serif text-base sm:text-lg font-medium text-ink dark:text-ink-dark line-clamp-1 cursor-pointer hover:text-accent dark:hover:text-accent-dark transition-colors leading-snug"
+                      >
+                        {primaryBook.title}
+                      </h3>
+                      {currentBookStats.lastReadText && (
+                        <span className="px-1.5 py-0.5 rounded text-3xs font-mono bg-accent/10 text-accent dark:text-accent-dark font-medium shrink-0">
+                          {currentBookStats.lastReadText}
+                        </span>
+                      )}
+                    </div>
                     <p className="text-xs text-ink-secondary dark:text-ink-dark-secondary truncate">
                       {primaryBook.authors || 'Unknown author'}
                     </p>
-                    <div className="flex flex-wrap items-center gap-2 text-2xs text-ink-muted pt-1">
-                      {primaryBook.genre && (
-                        <span className="px-2 py-0.5 rounded-md bg-surface dark:bg-surface-dark border border-rule/50 dark:border-rule-dark/50 text-3xs font-medium text-ink-secondary">
-                          {primaryBook.genre.split(',')[0].trim()}
-                        </span>
-                      )}
-                      {primaryBook.location && (
-                        <span>• {primaryBook.location}</span>
+
+                    {/* Volume-Specific Bookmark & Pages Tracked */}
+                    <div className="flex flex-wrap items-center gap-2 text-2xs text-ink-muted pt-0.5">
+                      <span className="font-medium text-ink dark:text-ink-dark">
+                        Bookmark:{' '}
+                        <strong className="text-accent dark:text-accent-dark">
+                          {currentBookStats.currentPage > 0 ? `Page ${currentBookStats.currentPage}` : 'Not started'}
+                        </strong>
+                      </span>
+                      {currentBookStats.totalPagesRead > 0 && (
+                        <>
+                          <span>•</span>
+                          <span>
+                            {currentBookStats.totalPagesRead} pgs logged ({currentBookStats.sessionsCount} session
+                            {currentBookStats.sessionsCount === 1 ? '' : 's'})
+                          </span>
+                        </>
                       )}
                     </div>
                   </div>
 
-                  {/* Action & Pace Strip */}
-                  <div className="pt-3 flex flex-wrap items-center justify-between gap-2">
-                    <div className="text-2xs text-ink-secondary dark:text-ink-dark-secondary">
+                  {/* Volume-Specific Action & Pace Strip */}
+                  <div className="pt-3 flex flex-wrap items-center justify-between gap-2 border-t border-rule/30 dark:border-rule-dark/30 mt-2">
+                    <div className="text-2xs text-ink-secondary dark:text-ink-dark-secondary flex items-center gap-2">
                       <span>
                         Velocity:{' '}
                         <strong className="text-ink dark:text-ink-dark font-medium">
-                          {velocity > 0 ? `${velocity} pgs/day` : 'Tracking...'}
+                          {currentBookStats.velocity > 0
+                            ? `${currentBookStats.velocity} pgs/day`
+                            : currentBookStats.totalPagesRead > 0
+                            ? `${currentBookStats.totalPagesRead} pgs logged`
+                            : 'Tracking...'}
                         </strong>
                       </span>
+                      {currentBookStats.readingPaceMinPerPage > 0 && (
+                        <span className="text-3xs text-ink-muted hidden xs:inline">
+                          ({currentBookStats.readingPaceMinPerPage} min/pg)
+                        </span>
+                      )}
                     </div>
 
                     <div className="flex items-center gap-2">
@@ -257,7 +391,7 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({
                           openFocusRoom(primaryBook);
                         }}
                         className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-accent/40 bg-accent/10 dark:bg-accent/20 hover:bg-accent/20 text-accent dark:text-accent-dark text-xs font-medium shadow-xs transition-all active:scale-98 cursor-pointer"
-                        title="Start distraction-free focus timer for this volume"
+                        title={`Start distraction-free focus timer for "${primaryBook.title}"`}
                       >
                         <Timer size={14} />
                         <span>Focus</span>
@@ -270,6 +404,7 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({
                           openQuickLog(primaryBook);
                         }}
                         className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-accent hover:bg-accent-hover text-white text-xs font-medium shadow-xs transition-all active:scale-98 cursor-pointer"
+                        title={`Log pages for "${primaryBook.title}"`}
                       >
                         <Plus size={14} />
                         <span>Log Pages</span>
@@ -315,7 +450,7 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({
                   <CheckCircle2 size={13} className="text-emerald-600 dark:text-emerald-400" />
                 )}
                 <span>
-                  Today's reading goal:{' '}
+                  Today's reading habit (all books):{' '}
                   <strong className="text-ink dark:text-ink-dark">{todayPages}</strong> / {dailyGoal} pages
                 </span>
               </span>
