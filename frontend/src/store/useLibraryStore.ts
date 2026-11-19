@@ -216,11 +216,9 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
   setPickNextModalOpen: (pickNextModalOpen) => set({ pickNextModalOpen }),
   setVoiceAssistantOpen: (voiceAssistantOpen) => set({ voiceAssistantOpen }),
   openFocusRoom: (book) => {
-    const lastId = typeof window !== 'undefined' ? localStorage.getItem('molat_last_active_book_id') : null;
-    const lastBook = lastId ? get().books.find(b => b.book_id === lastId && b.reading_status === 'READING') : null;
     set({
       focusRoomOpen: true,
-      focusRoomBook: book || lastBook || get().books.find(b => b.reading_status === 'READING') || get().books[0] || null,
+      focusRoomBook: book || null,
     });
   },
   closeFocusRoom: () => set({ focusRoomOpen: false, focusRoomBook: null }),

@@ -41,6 +41,29 @@ interface StoredFocusSession {
   volume: number;
 }
 
+const getInitialSession = (): StoredFocusSession | null => {
+  if (typeof window === 'undefined') return null;
+  const saved = localStorage.getItem(STORAGE_KEY);
+  if (!saved) return null;
+  try {
+    const parsed: StoredFocusSession = JSON.parse(saved);
+    if (!parsed || !parsed.startTime || !parsed.bookId) {
+      localStorage.removeItem(STORAGE_KEY);
+      return null;
+    }
+    // Auto-purge sessions older than 24 hours to prevent orphaned stale storage
+    const isStale = Date.now() - parsed.startTime > 24 * 60 * 60 * 1000;
+    if (isStale) {
+      localStorage.removeItem(STORAGE_KEY);
+      return null;
+    }
+    return parsed;
+  } catch {
+    localStorage.removeItem(STORAGE_KEY);
+    return null;
+  }
+};
+
 export const FocusReadingRoomModal: React.FC = () => {
   const {
     books,
@@ -52,12 +75,35 @@ export const FocusReadingRoomModal: React.FC = () => {
     addToast,
   } = useLibraryStore();
 
-  const [selectedBookId, setSelectedBookId] = useState<string>('');
-  const [isRunning, setIsRunning] = useState<boolean>(true);
-  const [sessionStartTime, setSessionStartTime] = useState<number>(Date.now());
-  const [pausedAt, setPausedAt] = useState<number | null>(null);
-  const [totalPausedMs, setTotalPausedMs] = useState<number>(0);
-  const [elapsedSeconds, setElapsedSeconds] = useState<number>(0);
+  // Lazy initialize state directly from persisted localStorage session
+  const [selectedBookId, setSelectedBookId] = useState<string>(() => {
+    const s = getInitialSession();
+    return s?.bookId || '';
+  });
+  const [isRunning, setIsRunning] = useState<boolean>(() => {
+    const s = getInitialSession();
+    return s ? !s.pausedAt : true;
+  });
+  const [sessionStartTime, setSessionStartTime] = useState<number>(() => {
+    const s = getInitialSession();
+    return s?.startTime || Date.now();
+  });
+  const [pausedAt, setPausedAt] = useState<number | null>(() => {
+    const s = getInitialSession();
+    return s?.pausedAt ?? null;
+  });
+  const [totalPausedMs, setTotalPausedMs] = useState<number>(() => {
+    const s = getInitialSession();
+    return s?.totalPausedMs || 0;
+  });
+  const [elapsedSeconds, setElapsedSeconds] = useState<number>(() => {
+    const s = getInitialSession();
+    if (!s) return 0;
+    if (s.pausedAt) {
+      return Math.max(0, Math.floor((s.pausedAt - s.startTime - s.totalPausedMs) / 1000));
+    }
+    return Math.max(0, Math.floor((Date.now() - s.startTime - s.totalPausedMs) / 1000));
+  });
 
   // Screen Wake Lock state (Defaults to Normal Sleep to prioritize battery saving)
   const [wakeLockSupported, setWakeLockSupported] = useState<boolean>(true);
@@ -65,12 +111,24 @@ export const FocusReadingRoomModal: React.FC = () => {
   const wakeLockSentinelRef = useRef<any>(null);
 
   // Soundscape state (defaults to mute for pure silence)
-  const [soundscape, setSoundscape] = useState<SoundscapeType>('mute');
-  const [volume, setVolume] = useState<number>(0.35);
+  const [soundscape, setSoundscape] = useState<SoundscapeType>(() => {
+    const s = getInitialSession();
+    return s?.soundscape || 'mute';
+  });
+  const [volume, setVolume] = useState<number>(() => {
+    const s = getInitialSession();
+    return s?.volume ?? 0.35;
+  });
 
   // Physical page logging state
-  const [startPage, setStartPage] = useState<number>(0);
-  const [endPage, setEndPage] = useState<number>(0);
+  const [startPage, setStartPage] = useState<number>(() => {
+    const s = getInitialSession();
+    return s?.startPage || 0;
+  });
+  const [endPage, setEndPage] = useState<number>(() => {
+    const s = getInitialSession();
+    return s?.startPage || 0;
+  });
   const [sessionNote, setSessionNote] = useState<string>('');
   const [finishFlowActive, setFinishFlowActive] = useState<boolean>(false);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
@@ -115,90 +173,77 @@ export const FocusReadingRoomModal: React.FC = () => {
     setWakeLockActive(false);
   };
 
-  // 1. Initialize or restore session
+  // 1. Initialize or restore session when modal opens
   useEffect(() => {
     if (!focusRoomOpen) return;
 
     // Check localStorage for active session
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) {
-      try {
-        const parsed: StoredFocusSession = JSON.parse(saved);
+    const currentSession = getInitialSession();
 
-        // Auto-purge sessions older than 24 hours to prevent orphaned stale storage
-        const isStale = Date.now() - parsed.startTime > 24 * 60 * 60 * 1000;
-        if (isStale) {
+    if (currentSession) {
+      // If the user explicitly launched Focus Room for a DIFFERENT book from shelf
+      if (focusRoomBook && focusRoomBook.book_id !== currentSession.bookId) {
+        const oldBook = books.find((b) => b.book_id === currentSession.bookId);
+        const oldTitle = oldBook ? `"${oldBook.title}"` : 'previous book';
+        const discardOld = window.confirm(
+          `You have an active reading session for ${oldTitle}. Discard it and start fresh for "${focusRoomBook.title}"?`
+        );
+        if (discardOld) {
           localStorage.removeItem(STORAGE_KEY);
-          setHasActiveFocusTimer(false);
+          // Fall through to start fresh session for the new book below
         } else {
-          // Verify book still exists
-          const exists = books.some((b) => b.book_id === parsed.bookId);
-          if (exists) {
-            // If the user explicitly launched Focus Room for a DIFFERENT book from shelf
-            if (focusRoomBook && focusRoomBook.book_id !== parsed.bookId) {
-              const oldBook = books.find((b) => b.book_id === parsed.bookId);
-              const oldTitle = oldBook ? `"${oldBook.title}"` : 'previous book';
-              const discardOld = window.confirm(
-                `You have an active reading session for ${oldTitle}. Discard it and start fresh for "${focusRoomBook.title}"?`
-              );
-              if (discardOld) {
-                localStorage.removeItem(STORAGE_KEY);
-                // Fall through to start fresh session for the new book
-              } else {
-                // Resume previous book
-                setSelectedBookId(parsed.bookId);
-                setSessionStartTime(parsed.startTime);
-                setTotalPausedMs(parsed.totalPausedMs);
-                setStartPage(parsed.startPage);
-                setEndPage(parsed.startPage);
-                setSoundscape(parsed.soundscape || 'mute');
-                setVolume(parsed.volume ?? 0.35);
+          // Resume previous book
+          setSelectedBookId(currentSession.bookId);
+          setSessionStartTime(currentSession.startTime);
+          setTotalPausedMs(currentSession.totalPausedMs);
+          setStartPage(currentSession.startPage);
+          setEndPage(currentSession.startPage);
+          setSoundscape(currentSession.soundscape || 'mute');
+          setVolume(currentSession.volume ?? 0.35);
 
-                if (parsed.pausedAt) {
-                  setPausedAt(parsed.pausedAt);
-                  setIsRunning(false);
-                  const nowElapsed = Math.floor((parsed.pausedAt - parsed.startTime - parsed.totalPausedMs) / 1000);
-                  setElapsedSeconds(Math.max(0, nowElapsed));
-                } else {
-                  setIsRunning(true);
-                  setPausedAt(null);
-                  const nowElapsed = Math.floor((Date.now() - parsed.startTime - parsed.totalPausedMs) / 1000);
-                  setElapsedSeconds(Math.max(0, nowElapsed));
-                }
-                return;
-              }
-            } else {
-              setSelectedBookId(parsed.bookId);
-              setSessionStartTime(parsed.startTime);
-              setTotalPausedMs(parsed.totalPausedMs);
-              setStartPage(parsed.startPage);
-              setEndPage(parsed.startPage);
-              setSoundscape(parsed.soundscape || 'mute');
-              setVolume(parsed.volume ?? 0.35);
-
-              if (parsed.pausedAt) {
-                setPausedAt(parsed.pausedAt);
-                setIsRunning(false);
-                const nowElapsed = Math.floor((parsed.pausedAt - parsed.startTime - parsed.totalPausedMs) / 1000);
-                setElapsedSeconds(Math.max(0, nowElapsed));
-              } else {
-                setIsRunning(true);
-                setPausedAt(null);
-                const nowElapsed = Math.floor((Date.now() - parsed.startTime - parsed.totalPausedMs) / 1000);
-                setElapsedSeconds(Math.max(0, nowElapsed));
-              }
-
-              if (parsed.soundscape && parsed.soundscape !== 'mute') {
-                playAmbientSound(parsed.soundscape, parsed.volume ?? 0.35);
-              }
-              return;
-            }
+          if (currentSession.pausedAt) {
+            setPausedAt(currentSession.pausedAt);
+            setIsRunning(false);
+            const nowElapsed = Math.floor((currentSession.pausedAt - currentSession.startTime - currentSession.totalPausedMs) / 1000);
+            setElapsedSeconds(Math.max(0, nowElapsed));
+          } else {
+            setIsRunning(true);
+            setPausedAt(null);
+            const nowElapsed = Math.floor((Date.now() - currentSession.startTime - currentSession.totalPausedMs) / 1000);
+            setElapsedSeconds(Math.max(0, nowElapsed));
           }
+
+          if (currentSession.soundscape && currentSession.soundscape !== 'mute') {
+            playAmbientSound(currentSession.soundscape, currentSession.volume ?? 0.35);
+          }
+          return;
         }
-      } catch (err) {
-        console.warn('Failed to parse focus session:', err);
-        localStorage.removeItem(STORAGE_KEY);
-        setHasActiveFocusTimer(false);
+      } else {
+        // Resume saved session (either focusRoomBook is null, or matches currentSession.bookId)
+        setSelectedBookId(currentSession.bookId);
+        setSessionStartTime(currentSession.startTime);
+        setTotalPausedMs(currentSession.totalPausedMs);
+        setStartPage(currentSession.startPage);
+        setEndPage(currentSession.startPage);
+        setSoundscape(currentSession.soundscape || 'mute');
+        setVolume(currentSession.volume ?? 0.35);
+
+        if (currentSession.pausedAt) {
+          setPausedAt(currentSession.pausedAt);
+          setIsRunning(false);
+          const nowElapsed = Math.floor((currentSession.pausedAt - currentSession.startTime - currentSession.totalPausedMs) / 1000);
+          setElapsedSeconds(Math.max(0, nowElapsed));
+        } else {
+          setIsRunning(true);
+          setPausedAt(null);
+          const nowElapsed = Math.floor((Date.now() - currentSession.startTime - currentSession.totalPausedMs) / 1000);
+          setElapsedSeconds(Math.max(0, nowElapsed));
+        }
+
+        if (currentSession.soundscape && currentSession.soundscape !== 'mute') {
+          playAmbientSound(currentSession.soundscape, currentSession.volume ?? 0.35);
+        }
+        return;
       }
     }
 
@@ -242,7 +287,7 @@ export const FocusReadingRoomModal: React.FC = () => {
     }
 
     // Default to Normal Sleep (no automatic wakeLock request to save maximum battery)
-  }, [focusRoomOpen]);
+  }, [focusRoomOpen, focusRoomBook]);
 
   // 2. Persist active session to localStorage whenever state changes
   useEffect(() => {
@@ -516,12 +561,27 @@ export const FocusReadingRoomModal: React.FC = () => {
                 </button>
               )}
 
-              {/* Close / Minimize */}
+              {/* Minimize (Keep timer running in background) */}
+              <button
+                type="button"
+                onClick={() => {
+                  closeFocusRoom();
+                  addToast('Focus session is running in the background', 'info');
+                }}
+                className="p-1.5 rounded-full text-ink-muted hover:text-ink dark:hover:text-ink-dark hover:bg-surface-raised dark:hover:bg-surface-dark-raised transition-colors cursor-pointer"
+                title="Minimize (Keep timer running in background)"
+                aria-label="Minimize Focus Room"
+              >
+                <Minimize2 size={16} />
+              </button>
+
+              {/* Discard Timer & Exit */}
               <button
                 type="button"
                 onClick={handleDiscardSession}
                 className="p-1.5 rounded-full text-ink-muted hover:text-ink dark:hover:text-ink-dark hover:bg-surface-raised dark:hover:bg-surface-dark-raised transition-colors cursor-pointer"
-                title="Exit Focus Room"
+                title="Discard Timer & Exit"
+                aria-label="Discard Focus Session"
               >
                 <X size={18} />
               </button>
