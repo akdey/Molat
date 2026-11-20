@@ -123,11 +123,11 @@ export const FocusReadingRoomModal: React.FC = () => {
   // Physical page logging state
   const [startPage, setStartPage] = useState<number>(() => {
     const s = getInitialSession();
-    return s?.startPage || 0;
+    return s?.startPage || 1;
   });
   const [endPage, setEndPage] = useState<number>(() => {
     const s = getInitialSession();
-    return s?.startPage || 0;
+    return s?.startPage || 1;
   });
   const [sessionNote, setSessionNote] = useState<string>('');
   const [finishFlowActive, setFinishFlowActive] = useState<boolean>(false);
@@ -273,16 +273,17 @@ export const FocusReadingRoomModal: React.FC = () => {
         .then((logs) => {
           if (logs && logs.length > 0) {
             const lastEnd = logs[0].end_page;
-            setStartPage(lastEnd);
-            setEndPage(lastEnd);
+            const nextStart = lastEnd > 0 ? lastEnd + 1 : 1;
+            setStartPage(nextStart);
+            setEndPage(nextStart);
           } else {
-            setStartPage(0);
-            setEndPage(0);
+            setStartPage(1);
+            setEndPage(1);
           }
         })
         .catch(() => {
-          setStartPage(0);
-          setEndPage(0);
+          setStartPage(1);
+          setEndPage(1);
         });
     }
 
@@ -412,8 +413,8 @@ export const FocusReadingRoomModal: React.FC = () => {
     setFinishFlowActive(true);
   };
 
-  // Deterministic Page Calculation
-  const pagesRead = Math.max(0, endPage - startPage);
+  // Deterministic Page Calculation (Inclusive page counting: start to end)
+  const pagesRead = endPage >= startPage ? (endPage - startPage) + 1 : 0;
   const sessionMinutes = Math.max(1, Math.round(elapsedSeconds / 60));
   const readingPace = pagesRead > 0 ? (pagesRead / (elapsedSeconds / 60)).toFixed(2) : '0';
   const minsPerPage = pagesRead > 0 ? ((elapsedSeconds / 60) / pagesRead).toFixed(1) : '—';
@@ -436,6 +437,10 @@ export const FocusReadingRoomModal: React.FC = () => {
     e.preventDefault();
     if (!selectedBookId) {
       setErrorMsg('Please select a book.');
+      return;
+    }
+    if (startPage < 1) {
+      setErrorMsg(`Starting page (${startPage}) must be at least 1.`);
       return;
     }
     if (endPage < startPage) {
@@ -496,16 +501,17 @@ export const FocusReadingRoomModal: React.FC = () => {
       .then((logs) => {
         if (logs && logs.length > 0) {
           const lastEnd = logs[0].end_page;
-          setStartPage(lastEnd);
-          setEndPage(lastEnd);
+          const nextStart = lastEnd > 0 ? lastEnd + 1 : 1;
+          setStartPage(nextStart);
+          setEndPage(nextStart);
         } else {
-          setStartPage(0);
-          setEndPage(0);
+          setStartPage(1);
+          setEndPage(1);
         }
       })
       .catch(() => {
-        setStartPage(0);
-        setEndPage(0);
+        setStartPage(1);
+        setEndPage(1);
       });
   };
 
@@ -814,34 +820,39 @@ export const FocusReadingRoomModal: React.FC = () => {
                   </div>
 
                   {/* Page Inputs Grid */}
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-1">
-                      <label className="text-3xs uppercase tracking-wider text-ink-muted font-medium">
-                        Started At Page
-                      </label>
-                      <input
-                        type="number"
-                        min="0"
-                        value={startPage || ''}
-                        onChange={(e) => setStartPage(parseInt(e.target.value) || 0)}
-                        className="w-full p-2.5 rounded-xl border border-rule dark:border-rule-dark bg-canvas dark:bg-canvas-dark text-ink dark:text-ink-dark font-mono text-sm focus:outline-none focus:border-accent"
-                      />
-                    </div>
+                  <div className="space-y-1.5">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <label className="text-3xs uppercase tracking-wider text-ink-muted font-medium">
+                          Started At Page
+                        </label>
+                        <input
+                          type="number"
+                          min="1"
+                          value={startPage || ''}
+                          onChange={(e) => setStartPage(Math.max(1, parseInt(e.target.value) || 1))}
+                          className="w-full p-2.5 rounded-xl border border-rule dark:border-rule-dark bg-canvas dark:bg-canvas-dark text-ink dark:text-ink-dark font-mono text-sm focus:outline-none focus:border-accent"
+                        />
+                      </div>
 
-                    <div className="space-y-1">
-                      <label className="text-3xs uppercase tracking-wider text-ink-muted font-medium">
-                        Ended At Page
-                      </label>
-                      <input
-                        type="number"
-                        min="0"
-                        autoFocus
-                        value={endPage || ''}
-                        onChange={(e) => setEndPage(parseInt(e.target.value) || 0)}
-                        className="w-full p-2.5 rounded-xl border border-accent bg-canvas dark:bg-canvas-dark text-ink dark:text-ink-dark font-mono text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-accent/20"
-                        placeholder="Bookmark page"
-                      />
+                      <div className="space-y-1">
+                        <label className="text-3xs uppercase tracking-wider text-ink-muted font-medium">
+                          Ended At Page
+                        </label>
+                        <input
+                          type="number"
+                          min={startPage}
+                          autoFocus
+                          value={endPage || ''}
+                          onChange={(e) => setEndPage(Math.max(1, parseInt(e.target.value) || 1))}
+                          className="w-full p-2.5 rounded-xl border border-accent bg-canvas dark:bg-canvas-dark text-ink dark:text-ink-dark font-mono text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-accent/20"
+                          placeholder="Bookmark page"
+                        />
+                      </div>
                     </div>
+                    <p className="text-3xs text-ink-muted leading-tight">
+                      Enter the last fully completed page (if you stopped mid-page, log the previous page).
+                    </p>
                   </div>
 
                   {/* Quick Stepper Pills to advance bookmark */}

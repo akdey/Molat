@@ -310,7 +310,7 @@ class GoogleSheetsRepository:
             else:
                 clean_date = datetime.now(IST).strftime("%Y-%m-%d")
 
-            pages = data.pages_read if data.pages_read is not None else max(0, data.end_page - data.start_page)
+            pages = data.pages_read if data.pages_read is not None else max(1, (data.end_page - data.start_page) + 1)
             today_str = datetime.now(IST).strftime("%Y-%m-%d")
 
             new_log = ReadingLog(

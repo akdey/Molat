@@ -16,7 +16,7 @@ def make_dummy_log(log_id: str, session_date: str, pages_read: int) -> ReadingLo
         log_id=log_id,
         book_id="BOOK-001",
         session_date=session_date,
-        start_page=0,
+        start_page=1,
         end_page=pages_read,
         pages_read=pages_read,
         duration_minutes=30,
@@ -168,7 +168,7 @@ async def test_api_log_reading_auto_transition_unread_to_reading():
     assert res.status_code == 201
     log_data = res.json()
     assert log_data["book_id"] == new_book.book_id
-    assert log_data["pages_read"] == 44
+    assert log_data["pages_read"] == 45
     assert "session_date" in log_data
 
     # 3. Verify book status transitioned to READING
@@ -207,4 +207,48 @@ async def test_api_log_reading_auto_transition_to_completed_with_rating():
     assert updated_book is not None
     assert updated_book.reading_status == ReadingStatus.COMPLETED
     assert updated_book.rating == 5
+
+
+@pytest.mark.anyio
+async def test_api_log_reading_inclusive_page_counting_samples():
+    new_book = await sheets_repo.create_book(
+        BookCreate(title="Inclusive Pages Novel", purchase_price=150.0, rp=300.0)
+    )
+
+    # Sample 1: start_page = 48, end_page = 52 -> pages_read = 5
+    res1 = client.post(
+        "/api/v1/reading/logs",
+        json={"book_id": new_book.book_id, "start_page": 48, "end_page": 52},
+        headers=AUTH_HEADERS,
+    )
+    assert res1.status_code == 201
+    assert res1.json()["pages_read"] == 5
+
+    # Sample 2: start_page = 100, end_page = 100 -> pages_read = 1
+    res2 = client.post(
+        "/api/v1/reading/logs",
+        json={"book_id": new_book.book_id, "start_page": 100, "end_page": 100},
+        headers=AUTH_HEADERS,
+    )
+    assert res2.status_code == 201
+    assert res2.json()["pages_read"] == 1
+
+
+def test_api_log_reading_validation_errors():
+    # Sample 3: start_page = 55, end_page = 50 -> validation error (422)
+    res_inverted = client.post(
+        "/api/v1/reading/logs",
+        json={"book_id": "BOOK-001", "start_page": 55, "end_page": 50},
+        headers=AUTH_HEADERS,
+    )
+    assert res_inverted.status_code == 422
+
+    # Sample 4: start_page < 1 -> validation error (422)
+    res_zero_start = client.post(
+        "/api/v1/reading/logs",
+        json={"book_id": "BOOK-001", "start_page": 0, "end_page": 50},
+        headers=AUTH_HEADERS,
+    )
+    assert res_zero_start.status_code == 422
+
 

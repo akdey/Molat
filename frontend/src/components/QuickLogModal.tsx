@@ -31,8 +31,8 @@ export const QuickLogModal: React.FC = () => {
   } = useLibraryStore();
 
   const [selectedBookId, setSelectedBookId] = useState<string>('');
-  const [startPage, setStartPage] = useState<number>(0);
-  const [endPage, setEndPage] = useState<number>(0);
+  const [startPage, setStartPage] = useState<number>(1);
+  const [endPage, setEndPage] = useState<number>(1);
   const [durationMinutes, setDurationMinutes] = useState<number>(0);
   const [sessionNote, setSessionNote] = useState<string>('');
   const [finishedBook, setFinishedBook] = useState<boolean>(false);
@@ -86,7 +86,7 @@ export const QuickLogModal: React.FC = () => {
     }
   }, [quickLogBook, books]);
 
-  // When book selection changes, auto-prefill startPage with the latest logged end_page
+  // When book selection changes, auto-prefill startPage with the latest logged end_page + 1
   useEffect(() => {
     if (!selectedBookId) return;
     let isCancelled = false;
@@ -95,10 +95,12 @@ export const QuickLogModal: React.FC = () => {
       .then((pastLogs) => {
         if (!isCancelled && pastLogs && pastLogs.length > 0) {
           const maxEnd = Math.max(...pastLogs.map((l) => l.end_page || 0));
-          if (maxEnd > 0) {
-            setStartPage(maxEnd);
-            setEndPage(maxEnd);
-          }
+          const nextStart = maxEnd > 0 ? maxEnd + 1 : 1;
+          setStartPage(nextStart);
+          setEndPage(nextStart);
+        } else {
+          setStartPage(1);
+          setEndPage(1);
         }
       })
       .catch(() => {
@@ -218,7 +220,7 @@ export const QuickLogModal: React.FC = () => {
     }
   };
 
-  const pagesRead = Math.max(0, endPage - startPage);
+  const pagesRead = endPage >= startPage ? (endPage - startPage) + 1 : 0;
 
   const handleIncrement = (inc: number) => {
     setEndPage((prev) => Math.max(startPage, prev + inc));
@@ -228,6 +230,10 @@ export const QuickLogModal: React.FC = () => {
     e.preventDefault();
     if (!selectedBookId) {
       setErrorMsg('Please select a book.');
+      return;
+    }
+    if (startPage < 1) {
+      setErrorMsg('Start page must be at least 1.');
       return;
     }
     if (endPage < startPage) {
@@ -393,31 +399,36 @@ export const QuickLogModal: React.FC = () => {
           </div>
 
           {/* Page Range Inputs */}
-          <div className="grid grid-cols-2 gap-2.5">
-            <div className="space-y-1">
-              <label className="text-3xs uppercase tracking-wider font-medium text-ink-muted">
-                Start Page
-              </label>
-              <input
-                type="number"
-                min="0"
-                value={startPage}
-                onChange={(e) => setStartPage(Math.max(0, parseInt(e.target.value) || 0))}
-                className="w-full px-2.5 py-1.5 rounded-lg border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark text-xs font-mono focus:outline-none focus:border-accent"
-              />
+          <div className="space-y-1.5">
+            <div className="grid grid-cols-2 gap-2.5">
+              <div className="space-y-1">
+                <label className="text-3xs uppercase tracking-wider font-medium text-ink-muted">
+                  Start Page
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  value={startPage}
+                  onChange={(e) => setStartPage(Math.max(1, parseInt(e.target.value) || 1))}
+                  className="w-full px-2.5 py-1.5 rounded-lg border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark text-xs font-mono focus:outline-none focus:border-accent"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-3xs uppercase tracking-wider font-medium text-ink-muted">
+                  End Page ({pagesRead} pgs)
+                </label>
+                <input
+                  type="number"
+                  min={startPage}
+                  value={endPage}
+                  onChange={(e) => setEndPage(Math.max(1, parseInt(e.target.value) || 1))}
+                  className="w-full px-2.5 py-1.5 rounded-lg border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark text-xs font-mono focus:outline-none focus:border-accent"
+                />
+              </div>
             </div>
-            <div className="space-y-1">
-              <label className="text-3xs uppercase tracking-wider font-medium text-ink-muted">
-                End Page ({pagesRead} pgs)
-              </label>
-              <input
-                type="number"
-                min={startPage}
-                value={endPage}
-                onChange={(e) => setEndPage(Math.max(0, parseInt(e.target.value) || 0))}
-                className="w-full px-2.5 py-1.5 rounded-lg border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark text-xs font-mono focus:outline-none focus:border-accent"
-              />
-            </div>
+            <p className="text-3xs text-ink-muted leading-tight">
+              Enter the last fully completed page (if you stopped mid-page, log the previous page).
+            </p>
           </div>
 
           {/* Duration in Minutes */}

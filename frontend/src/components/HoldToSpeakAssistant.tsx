@@ -289,7 +289,9 @@ export const HoldToSpeakAssistant: React.FC<HoldToSpeakAssistantProps> = ({
 
       const pages =
         res.actionPayload.pagesRead ||
-        Math.max(0, (res.actionPayload.endPage ?? 0) - (res.actionPayload.startPage ?? 0));
+        (res.actionPayload.endPage !== undefined && res.actionPayload.startPage !== undefined && res.actionPayload.endPage >= res.actionPayload.startPage
+          ? (res.actionPayload.endPage - res.actionPayload.startPage) + 1
+          : 0);
 
       let seconds = 4;
       setUndoSecondsLeft(seconds);

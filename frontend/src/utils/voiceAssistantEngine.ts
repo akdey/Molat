@@ -328,9 +328,9 @@ export function processVoiceAssistantCommand(
 
   if (matched && parsedRange) {
     const book = matched.book;
-    const startP = parsedRange.startPage ?? 0;
-    const endP = parsedRange.endPage ?? startP + (parsedRange.pagesRead ?? 0);
-    const pages = Math.max(0, endP - startP);
+    const startP = parsedRange.startPage ?? 1;
+    const endP = parsedRange.endPage ?? (parsedRange.pagesRead ? startP + parsedRange.pagesRead - 1 : startP);
+    const pages = parsedRange.pagesRead ?? (endP >= startP ? (endP - startP) + 1 : 0);
 
     return {
       intent: 'LOG_READING',

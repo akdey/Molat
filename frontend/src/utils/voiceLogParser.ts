@@ -122,7 +122,7 @@ export function parseVoiceLogCommand(rawSpeech: string, currentStartPage: number
     const p2 = parseInt(rangeMatch[2], 10);
     startPage = Math.min(p1, p2);
     endPage = Math.max(p1, p2);
-    pagesRead = endPage - startPage;
+    pagesRead = (endPage - startPage) + 1;
   } else {
     // 6. Check for delta pages: "add 5 pages", "add 5pages", "read 25 pages", "logged 30 pages", "30 pages"
     const deltaMatch =
@@ -131,7 +131,7 @@ export function parseVoiceLogCommand(rawSpeech: string, currentStartPage: number
     if (deltaMatch) {
       pagesRead = parseInt(deltaMatch[1], 10);
       startPage = currentStartPage;
-      endPage = currentStartPage + pagesRead;
+      endPage = pagesRead > 0 ? currentStartPage + pagesRead - 1 : currentStartPage;
     } else {
       // 7. Check for single end target: "up to page 80", "until page 80", "reached page 80", "finished at page 80", "page 80"
       const singleTargetMatch = preprocessed.match(/\b(?:up\s+to|until|reached|finished\s+at|at|ended\s+at|to|through)\s*(?:page)?\s*(\d+)\b/i) ||
@@ -141,12 +141,12 @@ export function parseVoiceLogCommand(rawSpeech: string, currentStartPage: number
         if (target >= currentStartPage) {
           startPage = currentStartPage;
           endPage = target;
-          pagesRead = endPage - startPage;
+          pagesRead = (endPage - startPage) + 1;
         } else {
           // If smaller than currentStartPage, maybe it was a delta
           pagesRead = target;
           startPage = currentStartPage;
-          endPage = currentStartPage + target;
+          endPage = target > 0 ? currentStartPage + target - 1 : currentStartPage;
         }
       }
     }
