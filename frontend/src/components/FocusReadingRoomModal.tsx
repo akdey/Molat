@@ -18,6 +18,9 @@ import {
   Coffee,
   Clock,
   Minimize2,
+  Waves,
+  Trees,
+  Wind,
 } from 'lucide-react';
 import { useLibraryStore } from '../store/useLibraryStore';
 import { fetchReadingLogs } from '../api/client';
@@ -748,53 +751,33 @@ export const FocusReadingRoomModal: React.FC = () => {
 
                   {/* Soundscape Pills */}
                   <div className="grid grid-cols-4 gap-1.5">
-                    <button
-                      type="button"
-                      onClick={() => handleSelectSoundscape('mute')}
-                      className={`py-2 px-1 rounded-xl text-xs font-medium flex flex-col items-center gap-1 transition-all cursor-pointer ${soundscape === 'mute'
-                        ? 'bg-accent text-white shadow-xs'
-                        : 'bg-canvas dark:bg-canvas-dark text-ink-muted hover:text-ink border border-rule/50 dark:border-rule-dark/50'
-                        }`}
-                    >
-                      <VolumeX size={15} />
-                      <span className="text-3xs">Silence</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => handleSelectSoundscape('rain')}
-                      className={`py-2 px-1 rounded-xl text-xs font-medium flex flex-col items-center gap-1 transition-all cursor-pointer ${soundscape === 'rain'
-                        ? 'bg-accent text-white shadow-xs'
-                        : 'bg-canvas dark:bg-canvas-dark text-ink-muted hover:text-ink border border-rule/50 dark:border-rule-dark/50'
-                        }`}
-                    >
-                      <CloudRain size={15} />
-                      <span className="text-3xs">Soft Rain</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => handleSelectSoundscape('fireplace')}
-                      className={`py-2 px-1 rounded-xl text-xs font-medium flex flex-col items-center gap-1 transition-all cursor-pointer ${soundscape === 'fireplace'
-                        ? 'bg-accent text-white shadow-xs'
-                        : 'bg-canvas dark:bg-canvas-dark text-ink-muted hover:text-ink border border-rule/50 dark:border-rule-dark/50'
-                        }`}
-                    >
-                      <Flame size={15} />
-                      <span className="text-3xs">Fireplace</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => handleSelectSoundscape('cafe')}
-                      className={`py-2 px-1 rounded-xl text-xs font-medium flex flex-col items-center gap-1 transition-all cursor-pointer ${soundscape === 'cafe'
-                        ? 'bg-accent text-white shadow-xs'
-                        : 'bg-canvas dark:bg-canvas-dark text-ink-muted hover:text-ink border border-rule/50 dark:border-rule-dark/50'
-                        }`}
-                    >
-                      <Coffee size={15} />
-                      <span className="text-3xs">Warm Cafe</span>
-                    </button>
+                    {[
+                      { id: 'mute' as SoundscapeType, label: 'Silence', icon: <VolumeX size={15} /> },
+                      { id: 'rain' as SoundscapeType, label: 'Soft Rain', icon: <CloudRain size={15} /> },
+                      { id: 'fireplace' as SoundscapeType, label: 'Fireplace', icon: <Flame size={15} /> },
+                      { id: 'cafe' as SoundscapeType, label: 'Warm Cafe', icon: <Coffee size={15} /> },
+                      { id: 'ocean' as SoundscapeType, label: 'Ocean Waves', icon: <Waves size={15} /> },
+                      { id: 'forest' as SoundscapeType, label: 'Forest', icon: <Trees size={15} /> },
+                      { id: 'night' as SoundscapeType, label: 'Night Sky', icon: <Moon size={15} /> },
+                      { id: 'brown' as SoundscapeType, label: 'Deep Brown', icon: <Wind size={15} /> },
+                    ].map((item) => {
+                      const isSelected = soundscape === item.id;
+                      return (
+                        <button
+                          key={item.id}
+                          type="button"
+                          onClick={() => handleSelectSoundscape(item.id)}
+                          className={`py-2 px-1 rounded-xl text-xs font-medium flex flex-col items-center gap-1 transition-all cursor-pointer ${
+                            isSelected
+                              ? 'bg-accent text-white shadow-xs'
+                              : 'bg-canvas dark:bg-canvas-dark text-ink-muted hover:text-ink border border-rule/50 dark:border-rule-dark/50'
+                          }`}
+                        >
+                          {item.icon}
+                          <span className="text-3xs truncate max-w-full">{item.label}</span>
+                        </button>
+                      );
+                    })}
                   </div>
 
                   {/* Volume Slider if sound is playing */}
