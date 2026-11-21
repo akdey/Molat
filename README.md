@@ -32,7 +32,7 @@ Whether cataloguing a multi-hundred volume collection, scanning new arrivals at 
 ### 🎙️ 100% On-Device AI Voice Assistant (Hold-to-Talk)
 - **Hold-to-Talk Siri-Style Gesture**: Press and hold the elevated center `+` button from anywhere in the app to activate the ambient AI assistant with tactile haptic feedback.
 - **Zero Cloud & Zero Cost (0ms Latency)**: Runs 100% locally on your device using the browser's hardware-accelerated Web Speech API and an in-memory fuzzy title matching engine. Zero audio or transcripts sent to external servers.
-- **Continuous Speech & Natural Pause Detection**: Uses continuous speech recognition with natural pause detection (~1.5s of silence), preventing premature cutoff while speaking complex book titles or ranges, with live "Pause detected • Processing..." feedback and an instant "Run Now" bypass.
+- **Natural Pause Processing**: Waits naturally until you finish speaking and pause before taking action, keeping the interface completely quiet and unobtrusive.
 - **Hands-Free Reading Log Submissions**: Say *"Log reading for The Fourth Protocol from page 45 to 80"* or *"Read 35 pages of Atomic Habits"*—automatically matches the volume, calculates pages read, updates the Google Sheets ledger, and advances your streak.
 - **Voice-Activated Focus Reading Launch**: Say *"Start focus timer"*, *"Start focus room"*, or *"Focus on Dune"*—the assistant automatically opens the Focus Reading Room for that volume with ambient soundscapes and battery-saving timers.
 - **Physical Shelf Locator**: Say *"Where is Dune?"* to immediately locate the exact room and shelf rack without browsing menus.

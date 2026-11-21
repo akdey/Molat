@@ -744,7 +744,7 @@ export const FocusReadingRoomModal: React.FC = () => {
                   <div className="flex items-center justify-between text-xs text-ink-secondary dark:text-ink-dark-secondary">
                     <span className="flex items-center gap-1.5 font-medium">
                       {soundscape === 'mute' ? <VolumeX size={14} /> : <Volume2 size={14} className="text-accent" />}
-                      <span>Ambient Soundscape{!isRunning && soundscape !== 'mute' ? ' (Paused)' : ''}</span>
+                      <span>Ambient Soundscape</span>
                     </span>
                     <span className="text-3xs text-ink-muted">Web Audio &bull; Offline</span>
                   </div>
