@@ -1075,7 +1075,7 @@ export default function App() {
                 </div>
               </button>
 
-              {/* 3. Lend a Book */}
+              {/* 4. Lend a Book */}
               <button
                 onClick={() => {
                   setCenterMenuOpen(false);
@@ -1089,6 +1089,23 @@ export default function App() {
                 <div>
                   <div className="font-medium text-ink dark:text-ink-dark">Lend a Book</div>
                   <div className="text-3xs text-ink-muted">Record borrower, due date & WhatsApp reminder</div>
+                </div>
+              </button>
+
+              {/* 5. Acquisitions Wishlist */}
+              <button
+                onClick={() => {
+                  setCenterMenuOpen(false);
+                  switchTab('wishlist');
+                }}
+                className="w-full flex items-center gap-3 p-3 rounded-2xl bg-surface dark:bg-surface-dark border border-rule/60 dark:border-rule-dark/60 text-xs font-medium text-ink dark:text-ink-dark text-left transition-colors hover:bg-surface-raised dark:hover:bg-surface-dark-raised active:scale-[0.99]"
+              >
+                <div className="w-9 h-9 rounded-xl bg-accent/10 text-accent flex items-center justify-center shrink-0">
+                  <ShoppingBag size={18} />
+                </div>
+                <div>
+                  <div className="font-medium text-ink dark:text-ink-dark">Acquisitions Wishlist</div>
+                  <div className="text-3xs text-ink-muted">Track planned purchases & price targets</div>
                 </div>
               </button>
             </motion.div>
@@ -1158,16 +1175,18 @@ export default function App() {
           <span className="text-3xs mt-1">Streak</span>
         </button>
 
-        {/* 5. Wishlist */}
+        {/* 5. Insights */}
         <button
-          onClick={() => switchTab('wishlist')}
-          className={`flex flex-col items-center justify-center min-w-[56px] min-h-[48px] rounded-xl transition-colors ${activeTab === 'wishlist'
+          onClick={() => switchTab('insights')}
+          className={`flex flex-col items-center justify-center min-w-[56px] min-h-[48px] rounded-xl transition-colors ${activeTab === 'insights'
               ? 'text-accent dark:text-accent-dark font-semibold'
               : 'text-ink-secondary hover:text-ink'
             }`}
+          title="Library Insights & Analytics"
+          aria-label="Insights"
         >
-          <ShoppingBag size={19} />
-          <span className="text-3xs mt-1">Wishlist</span>
+          <PieChart size={19} />
+          <span className="text-3xs mt-1">Insights</span>
         </button>
       </nav>
 
