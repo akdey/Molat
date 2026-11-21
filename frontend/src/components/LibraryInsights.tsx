@@ -55,7 +55,7 @@ export const LibraryInsights: React.FC<LibraryInsightsProps> = ({
   portfolio,
   streakSummary,
 }) => {
-  const { setSelectedBook, setActiveTab, setSelectedGenres } = useLibraryStore();
+  const { setSelectedBook, setActiveTab, setSelectedGenres, setSearch } = useLibraryStore();
   const [hoveredGenre, setHoveredGenre] = useState<string | null>(null);
   const [growthViewMode, setGrowthViewMode] = useState<'combo' | 'annual' | 'cumulative'>('combo');
   const [hoveredWaveIndex, setHoveredWaveIndex] = useState<number | null>(null);
@@ -141,14 +141,20 @@ export const LibraryInsights: React.FC<LibraryInsightsProps> = ({
       .slice(0, 5);
   }, [books]);
 
-  // 4. Title Anatomy & Recurring Themes (Natural NLP title analysis)
+  // 4. Title & Description Lexicon (Natural NLP word cloud from title + subtitle + short description/notes)
   const titleAnatomy = React.useMemo(() => {
     const STOP_WORDS = new Set([
       'the', 'of', 'and', 'in', 'a', 'to', 'for', 'on', 'with', 'at', 'by', 'from', 'an', 'as',
       'into', 'about', 'is', 'it', 'or', 'part', 'vol', 'volume', 'collection', 'edition', 'book',
       'my', 'your', 'his', 'her', 'their', 'our', 'all', 'one', 'two', 'three', 'four', 'five',
       'that', 'this', 'how', 'what', 'who', 'not', 'be', 'are', 'was', 'were', 'complete', 'stories',
-      'selected', 'best', 'short', 'new', 'series', 'tales'
+      'selected', 'best', 'short', 'new', 'series', 'tales', 'have', 'has', 'had', 'been', 'which',
+      'when', 'where', 'there', 'they', 'them', 'then', 'than', 'some', 'any', 'each', 'more',
+      'most', 'other', 'its', 'also', 'such', 'only', 'can', 'will', 'just', 'should', 'would',
+      'could', 'may', 'might', 'must', 'after', 'before', 'between', 'under', 'over', 'through',
+      'during', 'without', 'again', 'further', 'once', 'here', 'why', 'while', 'both', 'very',
+      'own', 'same', 'out', 'down', 'nor', 'too', 'well', 'much', 'many', 'like', 'life', 'get',
+      'got', 'see', 'seen', 'way', 'make', 'made', 'first', 'last', 'good', 'great', 'take', 'took'
     ]);
 
     const wordCounts: Record<string, { count: number; sampleTitle: string }> = {};
@@ -156,15 +162,23 @@ export const LibraryInsights: React.FC<LibraryInsightsProps> = ({
 
     books.forEach((book) => {
       if (!book.title) return;
-      const rawWords = book.title
+      totalWords += book.title.trim().split(/\s+/).length;
+
+      // Extract text sources: title + subtitle + notes (short description if present)
+      const textSources = [book.title, book.subtitle, book.notes]
+        .filter(Boolean)
+        .join(' ');
+
+      const rawWords = textSources
         .replace(/[^\w\s]/g, ' ')
         .split(/\s+/)
         .map((w) => w.trim().toLowerCase())
-        .filter((w) => w.length > 2 && !STOP_WORDS.has(w));
+        .filter((w) => w.length >= 3 && !STOP_WORDS.has(w) && !/^\d+$/.test(w));
 
-      totalWords += book.title.trim().split(/\s+/).length;
+      // Use a Set per book so one long description doesn't artificially skew frequency counts
+      const uniqueWordsInBook = new Set(rawWords);
 
-      rawWords.forEach((w) => {
+      uniqueWordsInBook.forEach((w) => {
         const displayWord = w.charAt(0).toUpperCase() + w.slice(1);
         if (!wordCounts[displayWord]) {
           wordCounts[displayWord] = { count: 0, sampleTitle: book.title };
@@ -173,14 +187,15 @@ export const LibraryInsights: React.FC<LibraryInsightsProps> = ({
       });
     });
 
-    const topKeywords = Object.entries(wordCounts)
-      .sort((a, b) => b[1].count - a[1].count)
-      .slice(0, 8)
-      .map(([word, data]) => ({
-        word,
-        count: data.count,
-        sampleTitle: data.sampleTitle,
-      }));
+    const sortedWords = Object.entries(wordCounts).sort((a, b) => b[1].count - a[1].count);
+    const topKeywords = sortedWords.slice(0, 24).map(([word, data]) => ({
+      word,
+      count: data.count,
+      sampleTitle: data.sampleTitle,
+    }));
+
+    const maxCount = topKeywords.length > 0 ? topKeywords[0].count : 1;
+    const minCount = topKeywords.length > 0 ? topKeywords[topKeywords.length - 1].count : 1;
 
     const avgTitleLength = books.length > 0 ? (totalWords / books.length).toFixed(1) : '0';
 
@@ -191,6 +206,8 @@ export const LibraryInsights: React.FC<LibraryInsightsProps> = ({
 
     return {
       topKeywords,
+      maxCount,
+      minCount,
       avgTitleLength,
       shortestBook,
       longestBook,
@@ -973,38 +990,57 @@ export const LibraryInsights: React.FC<LibraryInsightsProps> = ({
           </div>
         </div>
 
-        {/* Title Anatomy & Recurring Themes (Natural NLP title analysis) */}
+        {/* Title & Synopsis Lexicon (Thematic Word Cloud) */}
         <div className="p-5 rounded-2xl border border-rule dark:border-rule-dark bg-surface-raised dark:bg-surface-dark-raised space-y-3 shadow-xs">
           <div className="flex items-center justify-between">
             <h3 className="font-serif text-sm font-medium text-ink dark:text-ink-dark flex items-center gap-1.5">
-              <Tag size={15} className="text-accent" />
-              <span>Title Anatomy & Themes</span>
+              <Sparkles size={15} className="text-accent" />
+              <span>Lexicon & Word Cloud</span>
             </h3>
             <span className="text-3xs font-mono px-2 py-0.5 rounded-full bg-accent/10 text-accent font-medium">
               Avg {titleAnatomy.avgTitleLength} wds/title
             </span>
           </div>
           <p className="text-3xs text-ink-muted">
-            Recurring literary motifs detected across {books.length} catalogued titles
+            Thematic motifs parsed across titles, subtitles, and short descriptions &bull; Tap word to search shelf
           </p>
 
-          <div className="flex flex-wrap gap-1.5 pt-1">
+          {/* Organic Thematic Word Cloud */}
+          <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-2.5 py-3 px-2 rounded-xl bg-surface/50 dark:bg-surface-dark/50 border border-rule/30 dark:border-rule-dark/30 min-h-[140px]">
             {titleAnatomy.topKeywords.length > 0 ? (
-              titleAnatomy.topKeywords.map(({ word, count, sampleTitle }) => (
-                <div
-                  key={word}
-                  title={`Found in "${sampleTitle}" and ${count - 1} other titles`}
-                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-2xs font-mono font-medium border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark hover:border-accent/40 text-ink dark:text-ink-dark transition-colors cursor-default"
-                >
-                  <span className="text-accent dark:text-accent-dark font-semibold">#{word}</span>
-                  <span className="text-3xs text-ink-muted bg-surface-raised dark:bg-surface-dark-raised px-1.5 py-0.2 rounded-full font-sans">
-                    {count}
-                  </span>
-                </div>
-              ))
+              titleAnatomy.topKeywords.map(({ word, count, sampleTitle }) => {
+                const range = Math.max(1, titleAnatomy.maxCount - titleAnatomy.minCount);
+                const ratio = (count - titleAnatomy.minCount) / range;
+
+                let sizeClass = 'text-2xs text-ink-muted font-normal';
+                if (ratio >= 0.75) {
+                  sizeClass = 'text-base sm:text-lg font-serif font-bold text-accent dark:text-accent-dark';
+                } else if (ratio >= 0.45) {
+                  sizeClass = 'text-xs sm:text-sm font-serif font-semibold text-ink dark:text-ink-dark';
+                } else if (ratio >= 0.2) {
+                  sizeClass = 'text-2xs sm:text-xs font-medium text-ink-secondary dark:text-ink-dark-secondary';
+                }
+
+                return (
+                  <button
+                    key={word}
+                    onClick={() => {
+                      setSearch(word);
+                      setActiveTab('shelf');
+                    }}
+                    title={`Found in "${sampleTitle}" and ${count - 1} other books. Click to search shelf.`}
+                    className={`inline-flex items-baseline gap-1 px-1.5 py-0.5 rounded-md hover:bg-accent/10 hover:text-accent transition-all duration-200 hover:scale-105 active:scale-95 cursor-pointer ${sizeClass}`}
+                  >
+                    <span>{word}</span>
+                    <span className="text-[9px] font-mono opacity-50 font-normal">
+                      {count}
+                    </span>
+                  </button>
+                );
+              })
             ) : (
               <p className="text-2xs text-ink-muted italic py-3 text-center">
-                Add titles to your library to see recurring thematic motifs.
+                Add titles, subtitles, or descriptions to see thematic word cloud.
               </p>
             )}
           </div>
