@@ -39,6 +39,22 @@ export function stopAmbientSound() {
   currentSoundscape = 'mute';
 }
 
+export function pauseAmbientSound() {
+  if (audioCtx && audioCtx.state === 'running') {
+    audioCtx.suspend().catch(() => {});
+  }
+}
+
+export function resumeAmbientSound() {
+  if (audioCtx && audioCtx.state === 'suspended' && currentSoundscape !== 'mute') {
+    audioCtx.resume().catch(() => {});
+  }
+}
+
+export function isAmbientSoundPlaying(): boolean {
+  return !!audioCtx && audioCtx.state === 'running' && currentSoundscape !== 'mute';
+}
+
 export function setAmbientVolume(volume: number) {
   if (masterGain && audioCtx) {
     const clamped = Math.max(0, Math.min(1, volume));

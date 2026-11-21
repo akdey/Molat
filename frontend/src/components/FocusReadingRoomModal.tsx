@@ -26,6 +26,8 @@ import {
   playAmbientSound,
   setAmbientVolume,
   stopAmbientSound,
+  pauseAmbientSound,
+  resumeAmbientSound,
   SoundscapeType,
 } from '../utils/ambientSound';
 
@@ -215,6 +217,9 @@ export const FocusReadingRoomModal: React.FC = () => {
 
           if (currentSession.soundscape && currentSession.soundscape !== 'mute') {
             playAmbientSound(currentSession.soundscape, currentSession.volume ?? 0.35);
+            if (currentSession.pausedAt) {
+              pauseAmbientSound();
+            }
           }
           return;
         }
@@ -242,6 +247,9 @@ export const FocusReadingRoomModal: React.FC = () => {
 
         if (currentSession.soundscape && currentSession.soundscape !== 'mute') {
           playAmbientSound(currentSession.soundscape, currentSession.volume ?? 0.35);
+          if (currentSession.pausedAt) {
+            pauseAmbientSound();
+          }
         }
         return;
       }
@@ -363,6 +371,7 @@ export const FocusReadingRoomModal: React.FC = () => {
       // Pause
       setIsRunning(false);
       setPausedAt(now);
+      pauseAmbientSound();
     } else {
       // Resume
       if (pausedAt) {
@@ -371,6 +380,7 @@ export const FocusReadingRoomModal: React.FC = () => {
       }
       setPausedAt(null);
       setIsRunning(true);
+      resumeAmbientSound();
     }
   };
 
@@ -382,12 +392,20 @@ export const FocusReadingRoomModal: React.FC = () => {
     setTotalPausedMs(0);
     setIsRunning(true);
     setElapsedSeconds(0);
+    resumeAmbientSound();
   };
 
   // Soundscape switch
   const handleSelectSoundscape = (type: SoundscapeType) => {
     setSoundscape(type);
-    playAmbientSound(type, volume);
+    if (type === 'mute') {
+      stopAmbientSound();
+    } else {
+      playAmbientSound(type, volume);
+      if (!isRunning) {
+        pauseAmbientSound();
+      }
+    }
   };
 
   const handleVolumeChange = (newVol: number) => {
@@ -723,7 +741,7 @@ export const FocusReadingRoomModal: React.FC = () => {
                   <div className="flex items-center justify-between text-xs text-ink-secondary dark:text-ink-dark-secondary">
                     <span className="flex items-center gap-1.5 font-medium">
                       {soundscape === 'mute' ? <VolumeX size={14} /> : <Volume2 size={14} className="text-accent" />}
-                      <span>Ambient Soundscape</span>
+                      <span>Ambient Soundscape{!isRunning && soundscape !== 'mute' ? ' (Paused)' : ''}</span>
                     </span>
                     <span className="text-3xs text-ink-muted">Web Audio &bull; Offline</span>
                   </div>
