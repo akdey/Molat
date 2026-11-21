@@ -56,6 +56,7 @@ export const HoldToSpeakAssistant: React.FC<HoldToSpeakAssistantProps> = ({
   const [activeBookLastEndPage, setActiveBookLastEndPage] = useState<number | null>(null);
   const [bookLastPages, setBookLastPages] = useState<Record<string, number>>({});
   const [undoSecondsLeft, setUndoSecondsLeft] = useState<number | null>(null);
+  const [isWaitingForPause, setIsWaitingForPause] = useState<boolean>(false);
 
   const holdTimerRef = useRef<any>(null);
   const didTriggerHoldRef = useRef<boolean>(false);
@@ -176,6 +177,7 @@ export const HoldToSpeakAssistant: React.FC<HoldToSpeakAssistantProps> = ({
       recognitionRef.current = null;
     }
     setIsListening(false);
+    setIsWaitingForPause(false);
   };
 
   const closeOverlay = () => {
@@ -187,6 +189,7 @@ export const HoldToSpeakAssistant: React.FC<HoldToSpeakAssistantProps> = ({
     setVoiceAssistantOpen(false);
     setLiveTranscript('');
     setUnderstoodResult(null);
+    setIsWaitingForPause(false);
   };
 
   const commitPendingLog = async (logRes: AssistantResult) => {
@@ -360,10 +363,11 @@ export const HoldToSpeakAssistant: React.FC<HoldToSpeakAssistantProps> = ({
     setLiveTranscript('');
     latestTranscriptRef.current = '';
     setUnderstoodResult(null);
+    setIsWaitingForPause(false);
 
     try {
       const recognition = new SpeechRecognitionAPI();
-      recognition.continuous = false;
+      recognition.continuous = true;
       recognition.interimResults = true;
       recognition.lang = navigator.language || 'en-US';
 
@@ -374,7 +378,7 @@ export const HoldToSpeakAssistant: React.FC<HoldToSpeakAssistantProps> = ({
 
       recognition.onresult = (event: any) => {
         let transcript = '';
-        for (let i = event.resultIndex; i < event.results.length; ++i) {
+        for (let i = 0; i < event.results.length; ++i) {
           transcript += event.results[i][0].transcript;
         }
         transcript = transcript.trim();
@@ -394,18 +398,24 @@ export const HoldToSpeakAssistant: React.FC<HoldToSpeakAssistantProps> = ({
           setUnderstoodResult(preview);
         }
 
-        // Auto execute on natural pause of 1.4s
+        // Show pause indicator while waiting for silence
+        setIsWaitingForPause(true);
+
+        // Auto execute ONLY after user pauses (1.5s of uninterrupted silence)
         if (silenceTimeoutRef.current) clearTimeout(silenceTimeoutRef.current);
         silenceTimeoutRef.current = setTimeout(() => {
-          if (transcript.trim() && !hasExecutedRef.current) {
-            handleExecuteCommand(transcript);
+          setIsWaitingForPause(false);
+          const currentSpoken = latestTranscriptRef.current;
+          if (currentSpoken && currentSpoken.trim() && !hasExecutedRef.current) {
+            handleExecuteCommand(currentSpoken);
           }
-        }, 1400);
+        }, 1500);
       };
 
       recognition.onerror = (event: any) => {
         console.warn('Speech recognition error:', event.error);
         setIsListening(false);
+        setIsWaitingForPause(false);
         if (event.error === 'not-allowed') {
           addToast('Microphone access denied. Please allow microphone permissions.', 'error');
         }
@@ -413,9 +423,19 @@ export const HoldToSpeakAssistant: React.FC<HoldToSpeakAssistantProps> = ({
 
       recognition.onend = () => {
         setIsListening(false);
-        const spoken = latestTranscriptRef.current;
-        if (spoken && spoken.trim() && !hasExecutedRef.current) {
-          handleExecuteCommand(spoken);
+        if (!hasExecutedRef.current) {
+          const spoken = latestTranscriptRef.current;
+          if (spoken && spoken.trim()) {
+            if (!silenceTimeoutRef.current) {
+              setIsWaitingForPause(true);
+              silenceTimeoutRef.current = setTimeout(() => {
+                setIsWaitingForPause(false);
+                if (!hasExecutedRef.current) {
+                  handleExecuteCommand(spoken);
+                }
+              }, 400);
+            }
+          }
         }
       };
 
@@ -424,6 +444,7 @@ export const HoldToSpeakAssistant: React.FC<HoldToSpeakAssistantProps> = ({
     } catch (err) {
       console.error('Speech recognition start failed:', err);
       setIsListening(false);
+      setIsWaitingForPause(false);
     }
   };
 
@@ -446,12 +467,9 @@ export const HoldToSpeakAssistant: React.FC<HoldToSpeakAssistantProps> = ({
     }
 
     if (didTriggerHoldRef.current) {
-      // User held to talk; if they spoke, execute what was heard
+      // User held to talk: overlay is open, continuous recognition stays active
+      // and waits for the user to finish speaking and pause before taking actions.
       triggerHaptic(30);
-      const spoken = latestTranscriptRef.current;
-      if (spoken && spoken.trim()) {
-        handleExecuteCommand(spoken);
-      }
     } else {
       // Short tap:
       if (overlayOpen) {
@@ -716,15 +734,53 @@ export const HoldToSpeakAssistant: React.FC<HoldToSpeakAssistantProps> = ({
                     </div>
 
                     {/* Transcript & Retry Button */}
-                    <div className="min-h-[48px] flex items-center justify-center px-2 pt-0.5">
+                    <div className="min-h-[48px] flex flex-col items-center justify-center px-2 pt-0.5 gap-2">
                       {liveTranscript ? (
-                        <p
-                          className={`font-serif text-lg sm:text-xl font-medium italic tracking-tight leading-relaxed ${
-                            isDark ? 'text-white drop-shadow-md' : 'text-slate-900 drop-shadow-xs'
-                          }`}
-                        >
-                          &ldquo;{liveTranscript}&rdquo;
-                        </p>
+                        <>
+                          <p
+                            className={`font-serif text-lg sm:text-xl font-medium italic tracking-tight leading-relaxed text-center ${
+                              isDark ? 'text-white drop-shadow-md' : 'text-slate-900 drop-shadow-xs'
+                            }`}
+                          >
+                            &ldquo;{liveTranscript}&rdquo;
+                          </p>
+
+                          {/* Pause detected & Processing Indicator */}
+                          {isWaitingForPause && !isSubmitting && (
+                            <motion.div
+                              initial={{ opacity: 0, y: 4 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              className="flex items-center gap-2"
+                            >
+                              <span
+                                className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium backdrop-blur-md transition-all shadow-xs ${
+                                  isDark
+                                    ? 'bg-cyan-500/20 text-cyan-200 border border-cyan-400/30'
+                                    : 'bg-sky-100 text-sky-800 border border-sky-300/60'
+                                }`}
+                              >
+                                <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
+                                <span>Pause detected &bull; Processing...</span>
+                              </span>
+
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (latestTranscriptRef.current) {
+                                    handleExecuteCommand(latestTranscriptRef.current);
+                                  }
+                                }}
+                                className={`px-2.5 py-1 rounded-full text-3xs font-semibold uppercase tracking-wider transition-all cursor-pointer ${
+                                  isDark
+                                    ? 'bg-white/15 hover:bg-white/25 text-white border border-white/20'
+                                    : 'bg-slate-900 text-white hover:bg-slate-800 shadow-xs'
+                                }`}
+                              >
+                                Run Now
+                              </button>
+                            </motion.div>
+                          )}
+                        </>
                       ) : isListening ? (
                         <p
                           className={`text-xs sm:text-sm font-serif italic animate-pulse ${
