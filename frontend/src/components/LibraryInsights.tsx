@@ -54,7 +54,8 @@ export const LibraryInsights: React.FC<LibraryInsightsProps> = ({
 }) => {
   const { setSelectedBook, setActiveTab, setSelectedGenres } = useLibraryStore();
   const [hoveredGenre, setHoveredGenre] = useState<string | null>(null);
-  const [growthViewMode, setGrowthViewMode] = useState<'annual' | 'cumulative'>('annual');
+  const [growthViewMode, setGrowthViewMode] = useState<'combo' | 'annual' | 'cumulative'>('combo');
+  const [hoveredWaveIndex, setHoveredWaveIndex] = useState<number | null>(null);
 
   const totalBooks = books.length;
 
@@ -380,6 +381,234 @@ export const LibraryInsights: React.FC<LibraryInsightsProps> = ({
         />
       );
     });
+  };
+
+  // Dual-Axis Combo Chart: Bar Graph (Annual Intake & YoY Dips/Surges) + Line Graph (Cumulative Collection)
+  const renderAcquisitionComboChart = () => {
+    const { timeline, maxCount } = acquisitionWaves;
+    if (timeline.length === 0) return null;
+
+    const width = 640;
+    const height = 210;
+    const padding = { top: 32, right: 38, bottom: 44, left: 38 };
+    const chartWidth = width - padding.left - padding.right;
+    const chartHeight = height - padding.top - padding.bottom;
+
+    const maxBar = Math.max(maxCount * 1.25, 1);
+    const maxLine = Math.max(books.length * 1.05, 1);
+    const n = timeline.length;
+    const step = chartWidth / n;
+    const barWidth = Math.min(36, step * 0.52);
+
+    // Calculate bar and line coordinates
+    const points = timeline.map((wave, idx) => {
+      const cx = padding.left + (idx + 0.5) * step;
+      const barH = (wave.count / maxBar) * chartHeight;
+      const barY = padding.top + chartHeight - barH;
+      const barX = cx - barWidth / 2;
+      const lineY = padding.top + chartHeight - (wave.cumulativeCount / maxLine) * chartHeight;
+      return { wave, idx, cx, barX, barY, barH, lineY };
+    });
+
+    // Generate smooth line path for cumulative curve
+    let linePath = '';
+    let areaPath = '';
+    if (points.length > 0) {
+      linePath = `M ${points[0].cx} ${points[0].lineY}`;
+      areaPath = `M ${points[0].cx} ${padding.top + chartHeight} L ${points[0].cx} ${points[0].lineY}`;
+      for (let i = 0; i < points.length - 1; i++) {
+        const curr = points[i];
+        const next = points[i + 1];
+        const cpX1 = curr.cx + (next.cx - curr.cx) / 2;
+        const cpY1 = curr.lineY;
+        const cpX2 = curr.cx + (next.cx - curr.cx) / 2;
+        const cpY2 = next.lineY;
+        linePath += ` C ${cpX1} ${cpY1}, ${cpX2} ${cpY2}, ${next.cx} ${next.lineY}`;
+        areaPath += ` C ${cpX1} ${cpY1}, ${cpX2} ${cpY2}, ${next.cx} ${next.lineY}`;
+      }
+      areaPath += ` L ${points[points.length - 1].cx} ${padding.top + chartHeight} Z`;
+    }
+
+    return (
+      <div className="w-full space-y-3 pt-1">
+        {/* Chart Legend */}
+        <div className="flex flex-wrap items-center justify-between gap-2 px-1 text-2xs">
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-1.5">
+              <span className="w-3 h-3 rounded-xs bg-accent dark:bg-accent-dark inline-block" />
+              <span className="text-ink-secondary dark:text-ink-dark-secondary font-medium">Annual Additions (Bars)</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="w-3.5 h-0.5 bg-emerald-600 dark:bg-emerald-400 rounded-full inline-block" />
+              <span className="w-2 h-2 rounded-full bg-emerald-600 dark:bg-emerald-400 -ml-1.5 inline-block" />
+              <span className="text-ink-secondary dark:text-ink-dark-secondary font-medium">Cumulative Total (Line)</span>
+            </div>
+          </div>
+          <span className="text-3xs text-ink-muted">Hover/tap points for volume trajectory</span>
+        </div>
+
+        {/* Responsive SVG Chart */}
+        <div className="w-full overflow-x-auto">
+          <svg
+            viewBox={`0 0 ${width} ${height}`}
+            className="w-full h-auto min-w-[500px] overflow-visible select-none"
+          >
+            <defs>
+              <linearGradient id="cumulAreaGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#10B981" stopOpacity="0.18" />
+                <stop offset="100%" stopColor="#10B981" stopOpacity="0.0" />
+              </linearGradient>
+            </defs>
+
+            {/* Subtle horizontal grid lines */}
+            {[0, 0.25, 0.5, 0.75, 1].map((pct) => {
+              const y = padding.top + chartHeight * (1 - pct);
+              return (
+                <line
+                  key={pct}
+                  x1={padding.left}
+                  y1={y}
+                  x2={width - padding.right}
+                  y2={y}
+                  stroke="currentColor"
+                  strokeDasharray="3 3"
+                  className="text-rule/40 dark:text-rule-dark/40"
+                  strokeWidth="0.8"
+                />
+              );
+            })}
+
+            {/* Cumulative Area Fill */}
+            {areaPath && <path d={areaPath} fill="url(#cumulAreaGrad)" />}
+
+            {/* Annual Addition Bars */}
+            {points.map((pt) => {
+              const isHovered = hoveredWaveIndex === pt.idx;
+              return (
+                <g
+                  key={pt.wave.year}
+                  className="cursor-pointer"
+                  onMouseEnter={() => setHoveredWaveIndex(pt.idx)}
+                  onMouseLeave={() => setHoveredWaveIndex(null)}
+                >
+                  {/* Bar */}
+                  <rect
+                    x={pt.barX}
+                    y={pt.barY}
+                    width={barWidth}
+                    height={Math.max(4, pt.barH)}
+                    rx={5}
+                    className={`transition-all duration-200 ${
+                      isHovered
+                        ? 'fill-accent dark:fill-accent-dark opacity-100'
+                        : 'fill-accent/80 hover:fill-accent opacity-90'
+                    }`}
+                  />
+
+                  {/* Bar Top Value Label */}
+                  <text
+                    x={pt.cx}
+                    y={pt.barY - 6}
+                    textAnchor="middle"
+                    className="font-mono text-[11px] font-bold fill-ink dark:fill-ink-dark"
+                  >
+                    +{pt.wave.count}
+                  </text>
+
+                  {/* X Axis Year Label */}
+                  <text
+                    x={pt.cx}
+                    y={padding.top + chartHeight + 17}
+                    textAnchor="middle"
+                    className={`font-mono text-[10px] tracking-wider transition-colors ${
+                      isHovered
+                        ? 'font-bold fill-accent dark:fill-accent-dark'
+                        : 'fill-ink-muted'
+                    }`}
+                  >
+                    {pt.wave.year}
+                  </text>
+
+                  {/* YoY Delta Subtext (Rise / Fall) */}
+                  {pt.wave.yoyTrend === 'up' && pt.wave.yoyPct !== null && (
+                    <text
+                      x={pt.cx}
+                      y={padding.top + chartHeight + 29}
+                      textAnchor="middle"
+                      className="font-mono text-[9px] font-semibold fill-emerald-600 dark:fill-emerald-400"
+                    >
+                      +{pt.wave.yoyPct}%
+                    </text>
+                  )}
+                  {pt.wave.yoyTrend === 'down' && pt.wave.yoyPct !== null && (
+                    <text
+                      x={pt.cx}
+                      y={padding.top + chartHeight + 29}
+                      textAnchor="middle"
+                      className="font-mono text-[9px] font-semibold fill-rose-600 dark:fill-rose-400"
+                    >
+                      {pt.wave.yoyPct}%
+                    </text>
+                  )}
+                  {pt.wave.year === 'Pre-App Era' && (
+                    <text
+                      x={pt.cx}
+                      y={padding.top + chartHeight + 29}
+                      textAnchor="middle"
+                      className="text-[9px] fill-ink-muted"
+                    >
+                      Base
+                    </text>
+                  )}
+                </g>
+              );
+            })}
+
+            {/* Cumulative Spline Line */}
+            {linePath && (
+              <path
+                d={linePath}
+                fill="none"
+                stroke="#10B981"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            )}
+
+            {/* Cumulative Data Points */}
+            {points.map((pt) => {
+              const isHovered = hoveredWaveIndex === pt.idx;
+              return (
+                <g
+                  key={`pt-${pt.wave.year}`}
+                  className="cursor-pointer"
+                  onMouseEnter={() => setHoveredWaveIndex(pt.idx)}
+                  onMouseLeave={() => setHoveredWaveIndex(null)}
+                >
+                  <circle
+                    cx={pt.cx}
+                    cy={pt.lineY}
+                    r={isHovered ? 6 : 4}
+                    className="fill-canvas dark:fill-canvas-dark stroke-emerald-600 dark:stroke-emerald-400 stroke-2 transition-all"
+                  />
+                  {(isHovered || pt.idx === points.length - 1) && (
+                    <text
+                      x={pt.cx}
+                      y={pt.lineY - 9}
+                      textAnchor="middle"
+                      className="font-mono text-[10px] font-bold fill-emerald-700 dark:fill-emerald-400"
+                    >
+                      {pt.wave.cumulativeCount} vols
+                    </text>
+                  )}
+                </g>
+              );
+            })}
+          </svg>
+        </div>
+      </div>
+    );
   };
 
   return (
@@ -754,8 +983,20 @@ export const LibraryInsights: React.FC<LibraryInsightsProps> = ({
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            {/* View Mode Toggle: Annual Additions (with YoY dip/rise) vs Cumulative Collection Size */}
+            {/* View Mode Toggle: Combo Chart vs Annual Cohorts vs Cumulative Total */}
             <div className="inline-flex items-center p-0.5 rounded-xl bg-surface dark:bg-surface-dark border border-rule/60 dark:border-rule-dark/60 text-xs">
+              <button
+                onClick={() => setGrowthViewMode('combo')}
+                className={`flex items-center gap-1 px-2.5 py-1 rounded-lg transition-all ${
+                  growthViewMode === 'combo'
+                    ? 'bg-canvas dark:bg-canvas-dark text-accent dark:text-accent-dark font-medium shadow-2xs'
+                    : 'text-ink-secondary hover:text-ink dark:hover:text-ink-dark'
+                }`}
+                title="Unified Bar (Annual) + Line (Cumulative) graph"
+              >
+                <Sparkles size={12} />
+                <span>Combo Chart</span>
+              </button>
               <button
                 onClick={() => setGrowthViewMode('annual')}
                 className={`flex items-center gap-1 px-2.5 py-1 rounded-lg transition-all ${
@@ -766,7 +1007,7 @@ export const LibraryInsights: React.FC<LibraryInsightsProps> = ({
                 title="View annual net additions with rise/dip comparisons"
               >
                 <BarChart3 size={12} />
-                <span>Annual Additions (YoY)</span>
+                <span>Annual Additions</span>
               </button>
               <button
                 onClick={() => setGrowthViewMode('cumulative')}
@@ -778,7 +1019,7 @@ export const LibraryInsights: React.FC<LibraryInsightsProps> = ({
                 title="View cumulative collection growth trajectory"
               >
                 <Layers size={12} />
-                <span>Cumulative Total</span>
+                <span>Cumulative</span>
               </button>
             </div>
 
@@ -793,8 +1034,60 @@ export const LibraryInsights: React.FC<LibraryInsightsProps> = ({
           </div>
         </div>
 
-        {/* 1. Annual Additions View with Explicit Rise / Fall (YoY Dips & Surges) */}
-        {growthViewMode === 'annual' ? (
+        {/* 1. Combo View (Unified Bar Graph + Line Graph) */}
+        {growthViewMode === 'combo' && (
+          <div className="space-y-4">
+            {renderAcquisitionComboChart()}
+
+            {/* Quick Cohort Summary Cards Beneath Combo Graph */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2 pt-2 border-t border-rule/40 dark:border-rule-dark/40">
+              {acquisitionWaves.timeline.map((wave, idx) => {
+                const isHovered = hoveredWaveIndex === idx;
+                return (
+                  <div
+                    key={wave.year}
+                    onMouseEnter={() => setHoveredWaveIndex(idx)}
+                    onMouseLeave={() => setHoveredWaveIndex(null)}
+                    className={`p-2.5 rounded-xl border transition-all cursor-pointer ${
+                      isHovered
+                        ? 'border-accent bg-accent/5 dark:bg-accent/10'
+                        : 'border-rule/50 dark:border-rule-dark/50 bg-surface/60 dark:bg-surface-dark/60'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between text-3xs font-mono">
+                      <span className="text-ink-muted uppercase font-semibold">{wave.year}</span>
+                      <span className="font-bold text-ink dark:text-ink-dark">+{wave.count}</span>
+                    </div>
+                    <div className="flex items-center justify-between mt-1 text-3xs">
+                      {wave.yoyTrend === 'up' && wave.yoyPct !== null && (
+                        <span className="text-emerald-700 dark:text-emerald-400 font-semibold flex items-center gap-0.5">
+                          <TrendingUp size={9} />+{wave.yoyPct}%
+                        </span>
+                      )}
+                      {wave.yoyTrend === 'down' && wave.yoyPct !== null && (
+                        <span className="text-rose-700 dark:text-rose-400 font-semibold flex items-center gap-0.5">
+                          <TrendingDown size={9} />{wave.yoyPct}%
+                        </span>
+                      )}
+                      {wave.yoyTrend === 'same' && (
+                        <span className="text-ink-muted flex items-center gap-0.5">
+                          <Minus size={9} />0%
+                        </span>
+                      )}
+                      {wave.year === 'Pre-App Era' && (
+                        <span className="text-ink-muted">Base</span>
+                      )}
+                      <span className="text-ink-muted font-mono">{wave.cumulativeCount} total</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* 2. Annual Additions View with Explicit Rise / Fall (YoY Dips & Surges) */}
+        {growthViewMode === 'annual' && (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 pt-2">
             {acquisitionWaves.timeline.map((wave) => (
               <div
@@ -853,17 +1146,15 @@ export const LibraryInsights: React.FC<LibraryInsightsProps> = ({
                 {/* Wave Meta Footer */}
                 <div className="pt-2 border-t border-rule/40 dark:border-rule-dark/40 flex items-center justify-between text-3xs text-ink-muted font-mono">
                   <span>{wave.pct}% of peak</span>
-                  {wave.spend > 0 && (
-                    <span className="text-ink dark:text-ink-dark font-medium">
-                      ₹{Math.round(wave.spend).toLocaleString()}
-                    </span>
-                  )}
+                  <span>{wave.cumulativeCount} cum.</span>
                 </div>
               </div>
             ))}
           </div>
-        ) : (
-          /* 2. Cumulative Growth Trajectory (The Library Mountain) */
+        )}
+
+        {/* 3. Cumulative Growth Trajectory (The Library Mountain) */}
+        {growthViewMode === 'cumulative' && (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 pt-2">
             {acquisitionWaves.timeline.map((wave) => (
               <div
@@ -891,39 +1182,8 @@ export const LibraryInsights: React.FC<LibraryInsightsProps> = ({
                     <span>{wave.cumulativePct}% of library</span>
                   </div>
                 </div>
-
-                {wave.spend > 0 && (
-                  <div className="pt-1.5 border-t border-rule/30 dark:border-rule-dark/30 text-3xs text-ink-muted flex items-center justify-between font-mono">
-                    <span>Wave Spend:</span>
-                    <span className="text-ink dark:text-ink-dark font-medium">₹{Math.round(wave.spend).toLocaleString()}</span>
-                  </div>
-                )}
               </div>
             ))}
-          </div>
-        )}
-
-        {/* Portfolio Valuation & Lifetime Savings Strip (if financial data exists) */}
-        {portfolio && portfolio.total_rp > 0 && (
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 border-t border-rule/50 dark:border-rule-dark/50">
-            <div className="p-2.5 rounded-xl bg-surface/70 dark:bg-surface-dark/70 flex items-center justify-between text-xs">
-              <span className="text-ink-secondary">Replacement Worth (MRP)</span>
-              <span className="font-mono font-bold text-ink dark:text-ink-dark">
-                ₹{portfolio.total_rp.toLocaleString()}
-              </span>
-            </div>
-            <div className="p-2.5 rounded-xl bg-surface/70 dark:bg-surface-dark/70 flex items-center justify-between text-xs">
-              <span className="text-ink-secondary">Actual Investment (CP)</span>
-              <span className="font-mono font-bold text-accent dark:text-accent-dark">
-                ₹{portfolio.total_cp.toLocaleString()}
-              </span>
-            </div>
-            <div className="p-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200/50 dark:border-emerald-800/40 flex items-center justify-between text-xs text-emerald-800 dark:text-emerald-300">
-              <span className="font-medium">Lifetime Savings</span>
-              <span className="font-mono font-bold">
-                ₹{portfolio.total_saved.toLocaleString()} ({portfolio.discount_pct}%)
-              </span>
-            </div>
           </div>
         )}
       </div>
