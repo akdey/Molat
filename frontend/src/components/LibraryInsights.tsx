@@ -11,7 +11,6 @@ import {
   PauseCircle,
   MapPin,
   Sparkles,
-  Award,
   Layers,
   ArrowUpRight,
   Library,
@@ -278,40 +277,7 @@ export const LibraryInsights: React.FC<LibraryInsightsProps> = ({
     };
   }, [books]);
 
-  // 7. Author Read-Through & Completionist Ratio (Owned vs Completed)
-  const authorCompletionData = React.useMemo(() => {
-    const stats: Record<string, { total: number; completed: number; reading: number }> = {};
-
-    books.forEach((b) => {
-      if (!b.authors) return;
-      const primaryAuthor = b.authors.split(',')[0].trim();
-      if (!primaryAuthor) return;
-
-      if (!stats[primaryAuthor]) {
-        stats[primaryAuthor] = { total: 0, completed: 0, reading: 0 };
-      }
-      stats[primaryAuthor].total += 1;
-      if (b.reading_status === 'COMPLETED') {
-        stats[primaryAuthor].completed += 1;
-      } else if (b.reading_status === 'READING') {
-        stats[primaryAuthor].reading += 1;
-      }
-    });
-
-    return Object.entries(stats)
-      .filter(([, s]) => s.total >= 2)
-      .sort((a, b) => b[1].total - a[1].total)
-      .slice(0, 6)
-      .map(([author, s]) => ({
-        author,
-        total: s.total,
-        completed: s.completed,
-        reading: s.reading,
-        completionPct: Math.round((s.completed / s.total) * 100),
-      }));
-  }, [books]);
-
-  // 8. The Reader's Clock: Day-of-Week & Pacing Rhythm
+  // 7. The Reader's Clock: Day-of-Week & Pacing Rhythm
   const readingRhythmData = React.useMemo(() => {
     const dayTotals = [0, 0, 0, 0, 0, 0, 0]; // Sun to Sat
     const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -1121,60 +1087,75 @@ export const LibraryInsights: React.FC<LibraryInsightsProps> = ({
 
       {/* Row 3: Literary Houses & The Reader's Clock */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-        {/* Literary Houses & Publishing Imprints */}
-        <div className="p-5 rounded-2xl border border-rule dark:border-rule-dark bg-surface-raised dark:bg-surface-dark-raised space-y-4 shadow-xs">
-          <div className="flex items-center justify-between">
+        {/* Literary Houses & Publishing Imprints (Mobile-First Ergonomic Layout) */}
+        <div className="p-4 sm:p-5 rounded-2xl border border-rule dark:border-rule-dark bg-surface-raised dark:bg-surface-dark-raised space-y-3 shadow-xs">
+          <div className="flex items-center justify-between gap-2">
             <div>
-              <h3 className="font-serif text-base font-medium text-ink dark:text-ink-dark flex items-center gap-2">
-                <Building2 size={17} className="text-accent" />
+              <h3 className="font-serif text-sm sm:text-base font-medium text-ink dark:text-ink-dark flex items-center gap-1.5 sm:gap-2">
+                <Building2 size={16} className="text-accent" />
                 <span>Literary Houses & Imprints</span>
               </h3>
-              <p className="text-2xs text-ink-muted">
-                Publishing presses, trade imprints, and editorial houses defining your shelf
+              <p className="text-3xs sm:text-2xs text-ink-muted">
+                Publishing presses and editorial houses shaping your shelf
               </p>
             </div>
             {publisherData.topPublisher && (
-              <span className="text-3xs font-mono px-2.5 py-1 rounded-full bg-accent/10 border border-accent/20 text-accent dark:text-accent-dark font-medium shrink-0">
-                Top: {publisherData.topPublisher.name} ({publisherData.topPublisher.count})
+              <span className="text-3xs font-mono px-2 py-0.5 rounded-full bg-accent/10 border border-accent/20 text-accent dark:text-accent-dark font-medium shrink-0">
+                Top: {publisherData.topPublisher.name}
               </span>
             )}
           </div>
 
-          <div className="space-y-2.5 pt-1">
-            {publisherData.top.length > 0 ? (
-              publisherData.top.map(([pub, data]) => {
-                const pct = Math.round((data.count / (books.length || 1)) * 100);
-                return (
-                  <div
-                    key={pub}
-                    className="p-3 rounded-xl border border-rule/50 dark:border-rule-dark/50 bg-surface dark:bg-surface-dark space-y-1.5"
-                  >
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="font-serif font-medium text-ink dark:text-ink-dark truncate pr-2">
-                        {pub}
-                      </span>
-                      <span className="font-mono text-2xs font-semibold text-accent dark:text-accent-dark shrink-0">
-                        {data.count} {data.count === 1 ? 'vol' : 'vols'} ({pct}%)
+          {publisherData.top.length > 0 ? (
+            <div className="space-y-2.5 pt-0.5">
+              {/* Segmented Proportions Ribbon */}
+              <div className="w-full h-2 rounded-full overflow-hidden flex bg-surface dark:bg-surface-dark border border-rule/50">
+                {publisherData.top.map(([pub, data], idx) => {
+                  const pct = Math.round((data.count / (publisherData.totalWithPublisher || 1)) * 100);
+                  const colors = ['#C2410C', '#0D9488', '#D97706', '#1E3A8A', '#7C3AED', '#64748B'];
+                  return (
+                    <div
+                      key={pub}
+                      style={{ width: `${pct}%`, backgroundColor: colors[idx % colors.length] }}
+                      className="h-full transition-all"
+                      title={`${pub}: ${data.count} vols (${pct}%)`}
+                    />
+                  );
+                })}
+              </div>
+
+              {/* Compact Mobile-Friendly Imprint Pills Grid */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 sm:gap-2">
+                {publisherData.top.map(([pub, data], idx) => {
+                  const pct = Math.round((data.count / (books.length || 1)) * 100);
+                  const colors = ['#C2410C', '#0D9488', '#D97706', '#1E3A8A', '#7C3AED', '#64748B'];
+                  return (
+                    <div
+                      key={pub}
+                      className="p-2 sm:p-2.5 rounded-xl border border-rule/50 dark:border-rule-dark/50 bg-surface dark:bg-surface-dark flex items-center justify-between gap-1.5 transition-colors"
+                    >
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <span
+                          className="w-2 h-2 rounded-full shrink-0"
+                          style={{ backgroundColor: colors[idx % colors.length] }}
+                        />
+                        <span className="font-serif text-2xs sm:text-xs font-medium text-ink dark:text-ink-dark truncate" title={pub}>
+                          {pub}
+                        </span>
+                      </div>
+                      <span className="font-mono text-3xs font-semibold text-accent dark:text-accent-dark shrink-0">
+                        {data.count} <span className="hidden sm:inline font-normal text-ink-muted">({pct}%)</span>
                       </span>
                     </div>
-                    <div className="w-full h-1.5 rounded-full bg-surface-raised dark:bg-surface-dark-raised overflow-hidden">
-                      <div
-                        style={{ width: `${(data.count / publisherData.maxCount) * 100}%` }}
-                        className="h-full rounded-full bg-accent dark:bg-accent-dark transition-all duration-300"
-                      />
-                    </div>
-                    <p className="text-[10px] text-ink-muted truncate italic">
-                      e.g., "{data.sampleTitle}"
-                    </p>
-                  </div>
-                );
-              })
-            ) : (
-              <p className="text-2xs text-ink-muted italic py-6 text-center">
-                Scan or add book publisher metadata to see literary imprint distribution.
-              </p>
-            )}
-          </div>
+                  );
+                })}
+              </div>
+            </div>
+          ) : (
+            <p className="text-2xs text-ink-muted italic py-4 text-center">
+              Scan or add book publisher metadata to see literary imprint distribution.
+            </p>
+          )}
         </div>
 
         {/* The Reader's Clock & Day-of-Week Rhythm */}
@@ -1468,70 +1449,6 @@ export const LibraryInsights: React.FC<LibraryInsightsProps> = ({
           </div>
         )}
       </div>
-
-      {/* Author Read-Through & Completionist Ratio */}
-      {authorCompletionData.length > 0 && (
-        <div className="p-5 rounded-2xl border border-rule dark:border-rule-dark bg-surface-raised dark:bg-surface-dark-raised space-y-4 shadow-xs">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="font-serif text-base font-medium text-ink dark:text-ink-dark flex items-center gap-2">
-                <Award size={17} className="text-accent" />
-                <span>Author Read-Through & Completionist Ratio</span>
-              </h3>
-              <p className="text-2xs text-ink-muted">
-                Completion loyalty and tsundoku balance for authors where you own multiple volumes
-              </p>
-            </div>
-            <span className="text-3xs font-mono text-ink-muted">Multi-Book Authors</span>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 pt-1">
-            {authorCompletionData.map(({ author, total, completed, reading, completionPct }) => (
-              <div
-                key={author}
-                className="p-3.5 rounded-xl border border-rule/50 dark:border-rule-dark/50 bg-surface dark:bg-surface-dark space-y-2"
-              >
-                <div className="flex items-center justify-between">
-                  <span className="font-serif text-xs font-medium text-ink dark:text-ink-dark truncate pr-2">
-                    {author}
-                  </span>
-                  <span
-                    className={`text-2xs font-mono font-bold ${
-                      completionPct === 100
-                        ? 'text-emerald-700 dark:text-emerald-400'
-                        : completionPct >= 50
-                        ? 'text-accent dark:text-accent-dark'
-                        : 'text-ink-muted'
-                    }`}
-                  >
-                    {completionPct}%
-                  </span>
-                </div>
-
-                <div className="w-full h-1.5 rounded-full bg-surface-raised dark:bg-surface-dark-raised overflow-hidden">
-                  <div
-                    style={{ width: `${completionPct}%` }}
-                    className={`h-full rounded-full transition-all duration-300 ${
-                      completionPct === 100
-                        ? 'bg-emerald-600'
-                        : 'bg-accent dark:bg-accent-dark'
-                    }`}
-                  />
-                </div>
-
-                <div className="flex items-center justify-between text-3xs font-mono text-ink-muted">
-                  <span>{completed} of {total} read</span>
-                  {reading > 0 ? (
-                    <span className="text-accent dark:text-accent-dark font-medium">({reading} in progress)</span>
-                  ) : completionPct === 100 ? (
-                    <span className="text-emerald-600 dark:text-emerald-400 font-semibold">100% Complete</span>
-                  ) : null}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
 
       {/* Tertiary Row: Shelf Locations & Languages */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
