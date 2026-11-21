@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import {
   PieChart as PieChartIcon,
   TrendingUp,
+  TrendingDown,
+  Minus,
   Bookmark,
   BookOpen,
   CheckCircle2,
@@ -52,6 +54,7 @@ export const LibraryInsights: React.FC<LibraryInsightsProps> = ({
 }) => {
   const { setSelectedBook, setActiveTab, setSelectedGenres } = useLibraryStore();
   const [hoveredGenre, setHoveredGenre] = useState<string | null>(null);
+  const [growthViewMode, setGrowthViewMode] = useState<'annual' | 'cumulative'>('annual');
 
   const totalBooks = books.length;
 
@@ -232,37 +235,69 @@ export const LibraryInsights: React.FC<LibraryInsightsProps> = ({
 
   // 6. Library Growth & Acquisition Waves (Timeline grouping by purchase_date / created_at)
   const acquisitionWaves = React.useMemo(() => {
-    const yearCounts: Record<string, number> = {};
+    const yearData: Record<string, { count: number; spend: number; rp: number }> = {};
 
     books.forEach((b) => {
       const rawDate = b.purchase_date || b.created_at;
       let yr = 'Pre-App Era';
       if (rawDate) {
         const match = rawDate.match(/^(\d{4})/);
-        if (match && parseInt(match[1], 10) >= 2000 && parseInt(match[1], 10) <= 2030) {
+        if (match && parseInt(match[1], 10) >= 1990 && parseInt(match[1], 10) <= 2035) {
           yr = match[1];
         }
       }
-      yearCounts[yr] = (yearCounts[yr] || 0) + 1;
+      if (!yearData[yr]) {
+        yearData[yr] = { count: 0, spend: 0, rp: 0 };
+      }
+      yearData[yr].count += 1;
+      yearData[yr].spend += b.purchase_price || 0;
+      yearData[yr].rp += b.rp || 0;
     });
 
-    const sorted = Object.entries(yearCounts).sort((a, b) => {
+    const sorted = Object.entries(yearData).sort((a, b) => {
       if (a[0] === 'Pre-App Era') return -1;
       if (b[0] === 'Pre-App Era') return 1;
       return a[0].localeCompare(b[0]);
     });
 
-    const maxCount = Math.max(...sorted.map(([, c]) => c), 1);
-    const peak = [...sorted].sort((a, b) => b[1] - a[1])[0];
+    const maxCount = Math.max(...sorted.map(([, d]) => d.count), 1);
+    const peak = [...sorted].sort((a, b) => b[1].count - a[1].count)[0];
+
+    let runningTotal = 0;
+    const timeline = sorted.map(([year, data], idx) => {
+      runningTotal += data.count;
+      const prev = idx > 0 ? sorted[idx - 1][1].count : null;
+      let yoyPct: number | null = null;
+      let yoyTrend: 'up' | 'down' | 'same' | null = null;
+      if (prev !== null && prev > 0 && year !== 'Pre-App Era') {
+        const diff = data.count - prev;
+        yoyPct = Math.round((diff / prev) * 100);
+        yoyTrend = diff > 0 ? 'up' : diff < 0 ? 'down' : 'same';
+      }
+
+      return {
+        year,
+        count: data.count,
+        spend: data.spend,
+        rp: data.rp,
+        pct: Math.round((data.count / maxCount) * 100),
+        cumulativeCount: runningTotal,
+        cumulativePct: Math.round((runningTotal / (books.length || 1)) * 100),
+        yoyPct,
+        yoyTrend,
+      };
+    });
+
+    const datedWaves = timeline.filter((w) => w.year !== 'Pre-App Era');
+    const avgPerYear = datedWaves.length > 0 ? Math.round(books.length / datedWaves.length) : books.length;
 
     return {
-      timeline: sorted.map(([year, count]) => ({
-        year,
-        count,
-        pct: Math.round((count / maxCount) * 100),
-      })),
+      timeline,
       peakYear: peak ? peak[0] : null,
-      peakCount: peak ? peak[1] : 0,
+      peakCount: peak ? peak[1].count : 0,
+      maxCount,
+      avgPerYear,
+      totalYears: datedWaves.length,
     };
   }, [books]);
 
@@ -707,54 +742,166 @@ export const LibraryInsights: React.FC<LibraryInsightsProps> = ({
 
       {/* Library Growth & Acquisition Waves (Timeline of Additions + Financial Investment) */}
       <div className="p-5 rounded-2xl border border-rule dark:border-rule-dark bg-surface-raised dark:bg-surface-dark-raised space-y-4 shadow-xs">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <h3 className="font-serif text-base font-medium text-ink dark:text-ink-dark flex items-center gap-2">
               <BarChart3 size={17} className="text-accent" />
               <span>Library Growth & Acquisition Waves</span>
             </h3>
             <p className="text-2xs text-ink-muted">
-              Chronological acquisition cohorts and catalogue expansion pacing over time
+              Chronological acquisition cohorts, annual acceleration/dips, and catalogue expansion pacing
             </p>
           </div>
 
-          {acquisitionWaves.peakYear && (
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-accent/10 border border-accent/20 text-accent dark:text-accent-dark text-xs font-medium self-start sm:self-auto shrink-0">
-              <TrendingUp size={13} />
-              <span>
-                Peak Wave: <strong>{acquisitionWaves.peakYear}</strong> ({acquisitionWaves.peakCount} vols)
-              </span>
+          <div className="flex flex-wrap items-center gap-2">
+            {/* View Mode Toggle: Annual Additions (with YoY dip/rise) vs Cumulative Collection Size */}
+            <div className="inline-flex items-center p-0.5 rounded-xl bg-surface dark:bg-surface-dark border border-rule/60 dark:border-rule-dark/60 text-xs">
+              <button
+                onClick={() => setGrowthViewMode('annual')}
+                className={`flex items-center gap-1 px-2.5 py-1 rounded-lg transition-all ${
+                  growthViewMode === 'annual'
+                    ? 'bg-canvas dark:bg-canvas-dark text-accent dark:text-accent-dark font-medium shadow-2xs'
+                    : 'text-ink-secondary hover:text-ink dark:hover:text-ink-dark'
+                }`}
+                title="View annual net additions with rise/dip comparisons"
+              >
+                <BarChart3 size={12} />
+                <span>Annual Additions (YoY)</span>
+              </button>
+              <button
+                onClick={() => setGrowthViewMode('cumulative')}
+                className={`flex items-center gap-1 px-2.5 py-1 rounded-lg transition-all ${
+                  growthViewMode === 'cumulative'
+                    ? 'bg-canvas dark:bg-canvas-dark text-accent dark:text-accent-dark font-medium shadow-2xs'
+                    : 'text-ink-secondary hover:text-ink dark:hover:text-ink-dark'
+                }`}
+                title="View cumulative collection growth trajectory"
+              >
+                <Layers size={12} />
+                <span>Cumulative Total</span>
+              </button>
             </div>
-          )}
+
+            {acquisitionWaves.peakYear && (
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-accent/10 border border-accent/20 text-accent dark:text-accent-dark text-xs font-medium shrink-0">
+                <TrendingUp size={13} />
+                <span>
+                  Peak: <strong>{acquisitionWaves.peakYear}</strong> ({acquisitionWaves.peakCount} vols)
+                </span>
+              </div>
+            )}
+          </div>
         </div>
 
-        {/* Growth Histogram Bars */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-2.5 pt-2">
-          {acquisitionWaves.timeline.map((wave) => (
-            <div
-              key={wave.year}
-              className="p-3 rounded-xl border border-rule/50 dark:border-rule-dark/50 bg-surface dark:bg-surface-dark flex flex-col justify-between space-y-2"
-            >
-              <div className="flex items-center justify-between">
-                <span className="text-3xs uppercase tracking-wider font-mono text-ink-muted font-medium">
-                  {wave.year}
-                </span>
-                <span className="font-mono text-xs font-bold text-ink dark:text-ink-dark">
-                  {wave.count}
-                </span>
+        {/* 1. Annual Additions View with Explicit Rise / Fall (YoY Dips & Surges) */}
+        {growthViewMode === 'annual' ? (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 pt-2">
+            {acquisitionWaves.timeline.map((wave) => (
+              <div
+                key={wave.year}
+                className="p-3.5 rounded-xl border border-rule/50 dark:border-rule-dark/50 bg-surface dark:bg-surface-dark flex flex-col justify-between space-y-3"
+              >
+                {/* Year Header & YoY Rise/Fall Badge */}
+                <div className="flex items-center justify-between gap-1">
+                  <span className="text-3xs uppercase tracking-wider font-mono text-ink-muted font-semibold truncate">
+                    {wave.year}
+                  </span>
+                  {wave.yoyTrend === 'up' && wave.yoyPct !== null && (
+                    <span
+                      className="inline-flex items-center gap-0.5 text-[10px] font-semibold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-1.5 py-0.5 rounded-md border border-emerald-500/20 shrink-0"
+                      title={`Purchases increased by ${wave.yoyPct}% compared to previous period`}
+                    >
+                      <TrendingUp size={10} />+{wave.yoyPct}%
+                    </span>
+                  )}
+                  {wave.yoyTrend === 'down' && wave.yoyPct !== null && (
+                    <span
+                      className="inline-flex items-center gap-0.5 text-[10px] font-semibold text-rose-700 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/40 px-1.5 py-0.5 rounded-md border border-rose-500/20 shrink-0"
+                      title={`Purchases declined by ${Math.abs(wave.yoyPct)}% compared to previous period`}
+                    >
+                      <TrendingDown size={10} />{wave.yoyPct}%
+                    </span>
+                  )}
+                  {wave.yoyTrend === 'same' && (
+                    <span className="inline-flex items-center gap-0.5 text-[10px] text-ink-muted bg-surface-raised dark:bg-surface-dark-raised px-1.5 py-0.5 rounded-md shrink-0">
+                      <Minus size={10} />0%
+                    </span>
+                  )}
+                  {wave.year === 'Pre-App Era' && (
+                    <span className="text-[10px] text-ink-muted font-medium shrink-0">
+                      Foundation
+                    </span>
+                  )}
+                </div>
+
+                {/* Vertical Column Bar Visualization */}
+                <div className="h-24 flex items-end justify-center py-1">
+                  <div className="w-full flex flex-col items-center gap-1.5 h-full justify-end">
+                    <span className="font-mono text-xs font-bold text-ink dark:text-ink-dark">
+                      +{wave.count}
+                    </span>
+                    <div className="w-full max-w-[48px] h-full flex items-end">
+                      <div
+                        style={{ height: `${Math.max(12, wave.pct)}%` }}
+                        className="w-full rounded-t-lg bg-accent/90 hover:bg-accent dark:bg-accent dark:hover:bg-accent-hover transition-all duration-300"
+                        title={`${wave.year}: ${wave.count} books added (${wave.pct}% of peak wave)`}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Wave Meta Footer */}
+                <div className="pt-2 border-t border-rule/40 dark:border-rule-dark/40 flex items-center justify-between text-3xs text-ink-muted font-mono">
+                  <span>{wave.pct}% of peak</span>
+                  {wave.spend > 0 && (
+                    <span className="text-ink dark:text-ink-dark font-medium">
+                      ₹{Math.round(wave.spend).toLocaleString()}
+                    </span>
+                  )}
+                </div>
               </div>
-              <div className="w-full h-2 rounded-full bg-surface-raised dark:bg-surface-dark-raised overflow-hidden">
-                <div
-                  style={{ width: `${wave.pct}%` }}
-                  className="h-full rounded-full bg-accent dark:bg-accent-dark transition-all duration-300"
-                />
+            ))}
+          </div>
+        ) : (
+          /* 2. Cumulative Growth Trajectory (The Library Mountain) */
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 pt-2">
+            {acquisitionWaves.timeline.map((wave) => (
+              <div
+                key={wave.year}
+                className="p-3.5 rounded-xl border border-rule/50 dark:border-rule-dark/50 bg-surface dark:bg-surface-dark flex flex-col justify-between space-y-2.5"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-3xs uppercase tracking-wider font-mono text-ink-muted font-semibold">
+                    Through {wave.year}
+                  </span>
+                  <span className="font-mono text-xs font-bold text-accent dark:text-accent-dark">
+                    {wave.cumulativeCount} vols
+                  </span>
+                </div>
+
+                <div className="space-y-1">
+                  <div className="w-full h-2 rounded-full bg-surface-raised dark:bg-surface-dark-raised overflow-hidden">
+                    <div
+                      style={{ width: `${wave.cumulativePct}%` }}
+                      className="h-full rounded-full bg-accent dark:bg-accent-dark transition-all duration-300"
+                    />
+                  </div>
+                  <div className="flex items-center justify-between text-3xs text-ink-muted font-mono">
+                    <span>+{wave.count} this wave</span>
+                    <span>{wave.cumulativePct}% of library</span>
+                  </div>
+                </div>
+
+                {wave.spend > 0 && (
+                  <div className="pt-1.5 border-t border-rule/30 dark:border-rule-dark/30 text-3xs text-ink-muted flex items-center justify-between font-mono">
+                    <span>Wave Spend:</span>
+                    <span className="text-ink dark:text-ink-dark font-medium">₹{Math.round(wave.spend).toLocaleString()}</span>
+                  </div>
+                )}
               </div>
-              <span className="text-3xs text-ink-muted block text-right font-mono">
-                {wave.pct}% of peak
-              </span>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
 
         {/* Portfolio Valuation & Lifetime Savings Strip (if financial data exists) */}
         {portfolio && portfolio.total_rp > 0 && (
