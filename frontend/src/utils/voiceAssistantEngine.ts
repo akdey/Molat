@@ -310,9 +310,11 @@ export function processVoiceAssistantCommand(
   const matched = fuzzyMatchBook(speech, context.books);
 
   // Determine current start page from matched book's last logged page or active reading book
-  let currentStart = 0;
+  // (In inclusive counting, the next session starts at last_completed_end_page + 1)
+  let currentStart = 1;
   if (matched?.book?.book_id && context.bookLastPages) {
-    currentStart = context.bookLastPages[matched.book.book_id] || 0;
+    const lastEnd = context.bookLastPages[matched.book.book_id] || 0;
+    currentStart = lastEnd > 0 ? lastEnd + 1 : 1;
   } else {
     const lastActiveId = typeof window !== 'undefined' ? localStorage.getItem('molat_last_active_book_id') : null;
     const lastActiveBook = lastActiveId
@@ -320,7 +322,8 @@ export function processVoiceAssistantCommand(
       : null;
     const activeBook = lastActiveBook || context.books.find((b) => b.reading_status === 'READING');
     if (activeBook?.book_id && context.bookLastPages) {
-      currentStart = context.bookLastPages[activeBook.book_id] || 0;
+      const lastEnd = context.bookLastPages[activeBook.book_id] || 0;
+      currentStart = lastEnd > 0 ? lastEnd + 1 : 1;
     }
   }
 
