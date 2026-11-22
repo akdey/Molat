@@ -50,7 +50,7 @@ A mobile-first, installable Progressive Web App (PWA) for cataloguing, visually 
 - `POST /api/v1/books`: Validates ISBN/title, checks duplicates, appends new `BOOK-XXX` to `Books` sheet, invalidates cache.
 - `PATCH /api/v1/books/{book_id}`: Updates status, condition, location, rating, or notes by `book_id`.
 - `POST /api/v1/books/enrich-covers`: Server-side background job that resolves missing `cover_url` cells via Google Books API -> Apple Books India -> Open Library `cover_i`.
-- `GET /api/v1/reading/streak-summary`: Computes `current_streak_days`, `longest_streak_days`, `streak_at_risk`, `today_pages`, `daily_goal_pages`, `reading_velocity`, and `heatmap_365` in `Asia/Kolkata` timezone.
+- `GET /api/v1/reading/streak-summary`: Computes `current_streak_days`, `longest_streak_days`, `streak_at_risk`, `today_pages`, `daily_goal_pages`, `grace_freeze_used`, `frozen_dates`, `reading_velocity`, and `heatmap_365` in `Asia/Kolkata` timezone with adaptive goal-tied freeze thresholding.
 - `POST /api/v1/reading/logs`: Appends a reading session to `Reading_Logs` and auto-transitions `Books.reading_status` (`UNREAD` -> `READING`, or `COMPLETED` if finished).
 - `GET /api/v1/wishlist` & `POST /api/v1/wishlist/{wishlist_id}/acquire`: Manages wishlist and one-click migration into `Books`.
 - `GET /api/v1/lending`: Returns active and past loans, overdue calculations, and borrower contacts.

@@ -45,7 +45,7 @@ Whether cataloguing a multi-hundred volume collection, scanning new arrivals at 
 - **Zero Battery Drain by Default (Normal Sleep)**: Built with battery preservation as a first-class priority. Defaults to Normal Sleep so your phone can lock and sleep normally with **0% extra battery drain**—no active background CPU loops or wake-lock power waste.
 - **Wall-Clock Epoch Arithmetic**: Solves the browser backgrounding drift problem. Calculates elapsed duration via wall-clock timestamps (`Date.now() - startTime - pausedMs`) re-synchronized on `visibilitychange` and window `focus`. Even if your phone is locked or asleep for an hour, the timer remains 100% accurate down to the exact second when unlocked.
 - **Self-Cleaning Ephemeral Storage**: Active sessions are safely mirrored under a single constant key in `localStorage` (`molat_active_focus_session_v1`) to survive accidental browser tab restarts. Automatically self-purges sessions older than 24 hours to prevent stale storage accumulation, and deletes immediately upon logging or discarding.
-- **Physical Bookmark Page Logging (No Guessing)**: Pre-fills your starting page from past logs, asks for your ending bookmark page upon finishing, and deterministically computes pages read, reading velocity ($\text{pgs/min}$), and pace ($\text{min/page}$) before saving directly to Google Sheets with a 4-second Undo buffer.
+- **Physical Bookmark Page Logging (No Guessing)**: Pre-fills your starting page with your latest bookmark + 1 from database logs, asks for your ending bookmark page upon finishing, and deterministically computes pages read, reading velocity ($\text{pgs/min}$), and pace ($\text{min/page}$) before saving directly to Google Sheets with a 4-second Undo buffer.
 - **Timer-Synchronized Web Audio Soundscapes (8 Synthesizers)**: 100% offline, on-device ambient synthesizers including *Soft Rain on Glass*, *Cozy Fireplace Crackle*, *Warm Cafe Murmur*, *Rolling Ocean Waves*, *Forest Breeze & Soft Chirps*, *Summer Night Crickets*, and *Deep Brown Noise* (1/f² low-frequency focus waterfall). Pausing or resuming the reading timer cleanly freezes/thaws audio synthesis with 0% CPU overhead. Defaults to pure silence (mute).
 - **Optional Desk Clock Mode (Screen Wake Lock)**: Toggleable Screen Wake Lock (`navigator.wakeLock`) keeps the display awake beside your book as an ambient desk clock when desired.
 
@@ -78,7 +78,7 @@ Whether cataloguing a multi-hundred volume collection, scanning new arrivals at 
 ### 🔥 Duolingo-Style Reading Streak Tracker
 - **Timezone-Aware Calculations**: Daily streak engine running in `Asia/Kolkata` time.
 - **Active Reading Progress Card**: Displays current reading session progress, daily goal completion, and automated reading velocity (pages/day).
-- **Grace Freeze Bridging**: Qualified reading bridging that prevents an accidental streak loss if a user read heavily earlier in the week (up to 1 freeze every 14 days).
+- **Adaptive Grace Freeze Bridging**: Automatically cushions an accidental streak loss if life gets busy, provided you maintained momentum earlier in the week ($\ge 5 \times \text{daily\_goal}$ pages read in prior 7 days, min 20 pages; up to 1 freeze per 14-day rolling window). Tracks all historical and active `frozen_dates`.
 - **Streak-At-Risk Alerts**: Visual ambient warnings when today's reading goal hasn't been logged yet.
 - **365-Day Contribution Heatmap**: Interactive GitHub-style reading heatmap mapping page count intensity across every day of the calendar year.
 
