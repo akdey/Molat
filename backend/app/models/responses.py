@@ -1,5 +1,5 @@
 from typing import List, Optional, Dict, Any
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from app.models.book import Book
 
 
@@ -30,6 +30,7 @@ class StreakSummaryResponse(BaseModel):
     today_pages: int
     daily_goal_pages: int = 20
     grace_freeze_used: bool
+    frozen_dates: List[str] = Field(default_factory=list)
     reading_velocity_pages_per_day: float
     heatmap_365: Dict[str, int]
 

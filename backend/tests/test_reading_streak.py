@@ -108,6 +108,23 @@ def test_grace_freeze_rejected_used_within_14_days():
     assert summary.grace_freeze_used is True
 
 
+def test_grace_freeze_adaptive_goal_and_frozen_dates():
+    ref_date = date(2026, 10, 30)
+    # Daily goal = 10 pages -> adaptive freeze threshold = max(20, 10 * 5) = 50 pages in prior 7 days
+    # Day 0 (today): 10 pages
+    # Day 1: missed (0) -> requires freeze
+    # Days 2..6: 12 pages each (60 pages total > 50 pages required for goal 10)
+    logs = [make_dummy_log("LOG-0", ref_date.strftime("%Y-%m-%d"), 10)]
+    for d in range(2, 7):
+        logs.append(make_dummy_log(f"LOG-{d}", (ref_date - timedelta(days=d)).strftime("%Y-%m-%d"), 12))
+
+    summary = calculate_streak_summary(logs, daily_goal_pages=10, reference_date=ref_date)
+    assert summary.current_streak_days == 6
+    assert summary.grace_freeze_used is True
+    missed_day_str = (ref_date - timedelta(days=1)).strftime("%Y-%m-%d")
+    assert missed_day_str in summary.frozen_dates
+
+
 def test_velocity_and_heatmap_365():
     ref_date = date(2026, 10, 30)
     # 14 days of 10 pages each = 140 / 14 = 10.0 velocity

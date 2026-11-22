@@ -61,16 +61,19 @@ def calculate_streak_summary(
         heatmap_365[target_d.strftime("%Y-%m-%d")] = intensity
 
     # 4. Helper: Check if a missed day qualifies for grace freeze
+    # Adaptive threshold: 5 days of daily goal achieved in prior 7 days (minimum 20 pages)
+    freeze_threshold = max(20, daily_goal_pages * 5)
+
     def can_grace_freeze(missed_date: date, used_freeze_dates: Set[date]) -> bool:
         # Check if another freeze was used within 14 days
         for fd in used_freeze_dates:
             if abs((missed_date - fd).days) < 14:
                 return False
-        # Check if prior 7 days have sum >= 100 pages
+        # Check if prior 7 days have sum >= adaptive freeze_threshold
         prior_7_sum = sum(
             daily_pages.get(missed_date - timedelta(days=d), 0) for d in range(1, 8)
         )
-        return prior_7_sum >= 100
+        return prior_7_sum >= freeze_threshold
 
     # 5. Current Streak & Risk Calculation
     current_streak = 0
@@ -118,10 +121,10 @@ def calculate_streak_summary(
     # 6. Longest Streak Calculation (Global historical scan)
     all_dates = sorted(daily_pages.keys())
     longest_streak = 0
+    historical_freezes: Set[date] = set()
     if all_dates:
         earliest_date = all_dates[0]
         scan_end = today
-        historical_freezes: Set[date] = set()
         running_streak = 0
 
         scan_d = earliest_date
@@ -142,6 +145,10 @@ def calculate_streak_summary(
 
     longest_streak = max(longest_streak, current_streak)
 
+    all_frozen_dates = sorted(
+        list(set(d.strftime("%Y-%m-%d") for d in (used_freezes | historical_freezes)))
+    )
+
     return StreakSummaryResponse(
         current_streak_days=current_streak,
         longest_streak_days=longest_streak,
@@ -149,6 +156,7 @@ def calculate_streak_summary(
         today_pages=today_pages,
         daily_goal_pages=daily_goal_pages,
         grace_freeze_used=grace_freeze_used_in_current,
+        frozen_dates=all_frozen_dates,
         reading_velocity_pages_per_day=reading_velocity,
         heatmap_365=heatmap_365,
     )
