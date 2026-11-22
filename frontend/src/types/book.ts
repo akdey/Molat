@@ -69,6 +69,10 @@ export interface StreakSummary {
   today_pages: number;
   daily_goal_pages: number;
   grace_freeze_used: boolean;
+  grace_freeze_available?: boolean;
+  freeze_cooldown_days_left?: number;
+  freeze_prior_pages?: number;
+  freeze_required_pages?: number;
   frozen_dates?: string[];
   reading_velocity_pages_per_day: number;
   heatmap_365: Record<string, number>;

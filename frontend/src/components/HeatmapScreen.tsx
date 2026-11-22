@@ -4,6 +4,7 @@ import {
   Trophy,
   TrendingUp,
   ShieldCheck,
+  Snowflake,
   Info,
   ChevronDown,
   Sparkles,
@@ -17,6 +18,7 @@ export type HeatmapLayout = 'continuous' | 'quarters';
 interface DayItem {
   date: string; // YYYY-MM-DD
   intensity: number; // 0..4
+  isFrozen?: boolean;
   dayOfWeek: number; // 0 (Sun) to 6 (Sat)
   inRange: boolean;
   dayOfMonth: number;
@@ -59,7 +61,10 @@ function formatDisplayDate(ymd: string): string {
   });
 }
 
-function getIntensityLabel(intensity: number): string {
+function getIntensityLabel(intensity: number, isFrozen?: boolean): string {
+  if (isFrozen) {
+    return '❄️ Grace Freeze Applied (Streak Protected)';
+  }
   switch (intensity) {
     case 1:
       return '1–9 pages read (Level 1)';
@@ -74,8 +79,11 @@ function getIntensityLabel(intensity: number): string {
   }
 }
 
-// GitHub canonical green scale (high contrast against light wheatish cream & dark canvas)
-export function getIntensityClass(intensity: number): string {
+// GitHub canonical green scale + Ice-Blue Freeze style
+export function getIntensityClass(intensity: number, isFrozen?: boolean): string {
+  if (isFrozen) {
+    return 'bg-sky-300 dark:bg-sky-600 border border-sky-400 dark:border-sky-400 shadow-[0_0_6px_rgba(56,189,248,0.45)]';
+  }
   switch (intensity) {
     case 1:
       return 'bg-[#9be9a8] dark:bg-[#0e4429] border border-[#7bc96f]/40 dark:border-[#006d32]/30';
@@ -136,6 +144,7 @@ export const HeatmapScreen: React.FC = () => {
     if (activeDates.length === 0 || !streakSummary?.heatmap_365) return [];
 
     const heatmap = streakSummary.heatmap_365;
+    const frozenDates = streakSummary.frozen_dates || [];
     const firstStr = activeDates[0];
     const lastStr = activeDates[activeDates.length - 1];
 
@@ -165,6 +174,7 @@ export const HeatmapScreen: React.FC = () => {
 
         const inRange = activeDates.includes(ymd);
         const intensity = inRange ? (heatmap[ymd] || 0) : 0;
+        const isFrozen = inRange && frozenDates.includes(ymd);
 
         // Candidate month label when 1st of month falls in this week
         if (d === 1 && !monthLabelForWeek) {
@@ -174,6 +184,7 @@ export const HeatmapScreen: React.FC = () => {
         days.push({
           date: ymd,
           intensity,
+          isFrozen,
           dayOfWeek: dow,
           inRange,
           dayOfMonth: d,
@@ -212,7 +223,7 @@ export const HeatmapScreen: React.FC = () => {
     });
 
     return result;
-  }, [activeDates, streakSummary?.heatmap_365]);
+  }, [activeDates, streakSummary?.heatmap_365, streakSummary?.frozen_dates]);
 
   // Partition weeks into Quarters for multi-row wrap mode
   const quarterGroups = useMemo<QuarterGroup[]>(() => {
@@ -292,6 +303,10 @@ export const HeatmapScreen: React.FC = () => {
     streak_at_risk,
     daily_goal_pages,
     grace_freeze_used,
+    grace_freeze_available,
+    freeze_cooldown_days_left,
+    freeze_prior_pages,
+    freeze_required_pages,
     reading_velocity_pages_per_day,
     heatmap_365,
   } = streakSummary;
@@ -364,13 +379,27 @@ export const HeatmapScreen: React.FC = () => {
 
         <div className="p-4 rounded-xl border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark space-y-1">
           <div className="flex items-center gap-1.5 text-2xs uppercase tracking-wider text-ink-muted font-medium">
-            <ShieldCheck size={13} className="text-sky-600" />
+            <Snowflake size={13} className="text-cyan-500" />
             <span>Grace Freeze</span>
           </div>
           <p className="font-serif text-2xl font-medium text-ink dark:text-ink-dark">
-            {grace_freeze_used ? 'Active' : 'Ready'}
+            {grace_freeze_used
+              ? 'Active'
+              : grace_freeze_available
+              ? 'Ready'
+              : freeze_cooldown_days_left && freeze_cooldown_days_left > 0
+              ? 'Cooldown'
+              : 'In Progress'}
           </p>
-          <span className="text-3xs text-ink-muted">1 day per 14-day window</span>
+          <span className="text-3xs text-ink-muted">
+            {grace_freeze_used
+              ? 'Streak bridged automatically'
+              : grace_freeze_available
+              ? 'Armed • 1 miss cushioned'
+              : freeze_cooldown_days_left && freeze_cooldown_days_left > 0
+              ? `${freeze_cooldown_days_left}d left in 14d window`
+              : `${freeze_prior_pages || 0} / ${freeze_required_pages || 100} pgs in 7 days`}
+          </span>
         </div>
       </div>
 
@@ -399,11 +428,12 @@ export const HeatmapScreen: React.FC = () => {
                 <div className="flex items-center gap-1.5 text-ink dark:text-ink-dark font-medium">
                   <span
                     className={`w-2 h-2 rounded-xs inline-block shrink-0 ${getIntensityClass(
-                      currentInspectDay.intensity
+                      currentInspectDay.intensity,
+                      currentInspectDay.isFrozen
                     )}`}
                   />
                   <span>
-                    {formatDisplayDate(currentInspectDay.date)}: {getIntensityLabel(currentInspectDay.intensity)}
+                    {formatDisplayDate(currentInspectDay.date)}: {getIntensityLabel(currentInspectDay.intensity, currentInspectDay.isFrozen)}
                   </span>
                   {selectedDay && !hoveredDay && (
                     <button
@@ -566,14 +596,15 @@ export const HeatmapScreen: React.FC = () => {
                             }}
                             title={
                               day.inRange
-                                ? `${formatDisplayDate(day.date)}: ${getIntensityLabel(day.intensity)}`
+                                ? `${formatDisplayDate(day.date)}: ${getIntensityLabel(day.intensity, day.isFrozen)}`
                                 : undefined
                             }
                             className={`w-[11px] h-[11px] rounded-[2px] transition-transform ${
                               !day.inRange
                                 ? 'opacity-0 pointer-events-none'
                                 : `${getIntensityClass(
-                                    day.intensity
+                                    day.intensity,
+                                    day.isFrozen
                                   )} hover:scale-125 hover:ring-1 hover:ring-accent cursor-pointer z-0 hover:z-20`
                             } ${isSelected ? 'ring-2 ring-accent z-10 scale-125' : ''}`}
                           />
@@ -653,14 +684,15 @@ export const HeatmapScreen: React.FC = () => {
                                 }}
                                 title={
                                   day.inRange
-                                    ? `${formatDisplayDate(day.date)}: ${getIntensityLabel(day.intensity)}`
+                                    ? `${formatDisplayDate(day.date)}: ${getIntensityLabel(day.intensity, day.isFrozen)}`
                                     : undefined
                                 }
                                 className={`w-3 h-3 sm:w-3.5 sm:h-3.5 rounded-[2px] transition-transform ${
                                   !day.inRange
                                     ? 'opacity-0 pointer-events-none'
                                     : `${getIntensityClass(
-                                        day.intensity
+                                        day.intensity,
+                                        day.isFrozen
                                       )} hover:scale-125 hover:ring-1 hover:ring-accent cursor-pointer z-0 hover:z-20`
                                 } ${isSelected ? 'ring-2 ring-accent z-10 scale-125' : ''}`}
                               />
@@ -690,17 +722,23 @@ export const HeatmapScreen: React.FC = () => {
             />
           </button>
 
-          {/* GitHub Classic Green Legend */}
-          <div className="flex items-center gap-1.5 self-end sm:self-auto font-sans">
-            <span className="text-3xs">Less</span>
-            {[0, 1, 2, 3, 4].map((lvl) => (
-              <span
-                key={lvl}
-                title={`Level ${lvl}`}
-                className={`w-[11px] h-[11px] rounded-[2px] ${getIntensityClass(lvl)}`}
-              />
-            ))}
-            <span className="text-3xs">More</span>
+          {/* GitHub Classic Green Legend + Ice Freeze */}
+          <div className="flex items-center gap-3 self-end sm:self-auto font-sans">
+            <div className="flex items-center gap-1.5" title="Grace Freeze: Streak protected on missed day">
+              <span className={`w-[11px] h-[11px] rounded-[2px] ${getIntensityClass(0, true)}`} />
+              <span className="text-3xs text-sky-600 dark:text-sky-400 font-medium">Grace Freeze</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="text-3xs">Less</span>
+              {[0, 1, 2, 3, 4].map((lvl) => (
+                <span
+                  key={lvl}
+                  title={`Level ${lvl}`}
+                  className={`w-[11px] h-[11px] rounded-[2px] ${getIntensityClass(lvl)}`}
+                />
+              ))}
+              <span className="text-3xs">More</span>
+            </div>
           </div>
         </div>
 
@@ -732,7 +770,7 @@ export const HeatmapScreen: React.FC = () => {
             <p className="text-3xs text-ink-muted pt-1 border-t border-rule/40 dark:border-rule-dark/40">
               • Target daily reading goal: <strong>{daily_goal_pages || 20} pages</strong>.<br />
               • Streak preservation cut-off: <strong>23:59:59 IST (Asia/Kolkata)</strong>.<br />
-              • Grace Freeze: Automatically saves your streak if you miss a single day (1 freeze per 14-day window with ≥100 prior pages).
+              • Grace Freeze: Automatically cushions your streak if you miss a single day (requires ≥5× daily goal pages in prior 7 days; 1 freeze per 14-day rolling window).
             </p>
           </div>
         )}

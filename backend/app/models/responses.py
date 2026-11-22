@@ -30,6 +30,10 @@ class StreakSummaryResponse(BaseModel):
     today_pages: int
     daily_goal_pages: int = 20
     grace_freeze_used: bool
+    grace_freeze_available: bool = False
+    freeze_cooldown_days_left: int = 0
+    freeze_prior_pages: int = 0
+    freeze_required_pages: int = 100
     frozen_dates: List[str] = Field(default_factory=list)
     reading_velocity_pages_per_day: float
     heatmap_365: Dict[str, int]

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Flame, AlertTriangle, ShieldCheck, Plus, CheckCircle2 } from 'lucide-react';
+import { Flame, AlertTriangle, ShieldCheck, Snowflake, Plus, CheckCircle2 } from 'lucide-react';
 import { useLibraryStore } from '../store/useLibraryStore';
 
 export const StreakBanner: React.FC = () => {
@@ -14,6 +14,10 @@ export const StreakBanner: React.FC = () => {
     today_pages,
     daily_goal_pages,
     grace_freeze_used,
+    grace_freeze_available,
+    freeze_cooldown_days_left,
+    freeze_prior_pages,
+    freeze_required_pages,
     reading_velocity_pages_per_day,
   } = streakSummary;
 
@@ -41,12 +45,28 @@ export const StreakBanner: React.FC = () => {
                   At Risk Today
                 </span>
               )}
-              {grace_freeze_used && (
+              {grace_freeze_used ? (
                 <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-2xs font-medium bg-sky-100 dark:bg-sky-950/40 text-sky-800 dark:text-sky-400 border border-sky-300 dark:border-sky-800/40">
                   <ShieldCheck size={11} />
                   Grace Freeze Active
                 </span>
-              )}
+              ) : grace_freeze_available ? (
+                <span
+                  className="flex items-center gap-1 px-2 py-0.5 rounded-full text-2xs font-medium bg-cyan-100 dark:bg-cyan-950/40 text-cyan-800 dark:text-cyan-300 border border-cyan-300 dark:border-cyan-800/40"
+                  title={`Freeze Protected: 1 missed day cushioned (${freeze_prior_pages || 0}/${freeze_required_pages || 100} pgs read in past 7 days)`}
+                >
+                  <Snowflake size={11} className="text-cyan-600 dark:text-cyan-400" />
+                  Freeze Protected
+                </span>
+              ) : freeze_cooldown_days_left && freeze_cooldown_days_left > 0 ? (
+                <span
+                  className="flex items-center gap-1 px-2 py-0.5 rounded-full text-2xs font-medium bg-stone-100 dark:bg-stone-800/60 text-stone-600 dark:text-stone-400 border border-stone-200 dark:border-stone-700"
+                  title={`Freeze Cooldown: ${freeze_cooldown_days_left} days remaining before next freeze`}
+                >
+                  <ShieldCheck size={11} className="text-stone-400" />
+                  Cooldown ({freeze_cooldown_days_left}d)
+                </span>
+              ) : null}
             </div>
             <p className="text-2xs text-ink-secondary dark:text-ink-dark-secondary">
               Personal Record: <strong className="font-medium text-ink dark:text-ink-dark">{longest_streak_days} days</strong> • Velocity: <strong className="font-medium text-ink dark:text-ink-dark">{reading_velocity_pages_per_day} pgs/day</strong>

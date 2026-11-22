@@ -149,6 +149,25 @@ def calculate_streak_summary(
         list(set(d.strftime("%Y-%m-%d") for d in (used_freezes | historical_freezes)))
     )
 
+    # 7. Check if Grace Freeze is available right now for today
+    prior_7_pages = sum(
+        daily_pages.get(today - timedelta(days=d), 0) for d in range(1, 8)
+    )
+    all_freezes = used_freezes | historical_freezes
+    days_since_latest_freeze = None
+    for fd in all_freezes:
+        delta = (today - fd).days
+        if delta >= 0 and (days_since_latest_freeze is None or delta < days_since_latest_freeze):
+            days_since_latest_freeze = delta
+
+    freeze_cooldown_days_left = 0
+    if days_since_latest_freeze is not None and days_since_latest_freeze < 14:
+        freeze_cooldown_days_left = 14 - days_since_latest_freeze
+
+    grace_freeze_available = (
+        freeze_cooldown_days_left == 0 and prior_7_pages >= freeze_threshold
+    )
+
     return StreakSummaryResponse(
         current_streak_days=current_streak,
         longest_streak_days=longest_streak,
@@ -156,6 +175,10 @@ def calculate_streak_summary(
         today_pages=today_pages,
         daily_goal_pages=daily_goal_pages,
         grace_freeze_used=grace_freeze_used_in_current,
+        grace_freeze_available=grace_freeze_available,
+        freeze_cooldown_days_left=freeze_cooldown_days_left,
+        freeze_prior_pages=prior_7_pages,
+        freeze_required_pages=freeze_threshold,
         frozen_dates=all_frozen_dates,
         reading_velocity_pages_per_day=reading_velocity,
         heatmap_365=heatmap_365,
