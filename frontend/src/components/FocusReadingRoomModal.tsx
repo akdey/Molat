@@ -278,13 +278,13 @@ export const FocusReadingRoomModal: React.FC = () => {
     setElapsedSeconds(0);
     setFinishFlowActive(false);
 
-    // Fetch last known page for this book
+    // Fetch last known page for this book (bookmark + 1)
     if (bookId) {
       fetchReadingLogs(bookId)
         .then((logs) => {
           if (logs && logs.length > 0) {
-            const lastEnd = logs[0].end_page;
-            const nextStart = lastEnd > 0 ? lastEnd + 1 : 1;
+            const maxEnd = Math.max(...logs.map((l) => l.end_page || 0));
+            const nextStart = maxEnd > 0 ? maxEnd + 1 : 1;
             setStartPage(nextStart);
             setEndPage(nextStart);
           } else {
@@ -431,6 +431,19 @@ export const FocusReadingRoomModal: React.FC = () => {
     if (isRunning) {
       handleTogglePause();
     }
+    // Refresh and prepopulate startPage with latest bookmark + 1
+    if (selectedBookId) {
+      fetchReadingLogs(selectedBookId)
+        .then((logs) => {
+          if (logs && logs.length > 0) {
+            const maxEnd = Math.max(...logs.map((l) => l.end_page || 0));
+            const nextStart = maxEnd > 0 ? maxEnd + 1 : 1;
+            setStartPage(nextStart);
+            setEndPage((prev) => (prev < nextStart ? nextStart : prev));
+          }
+        })
+        .catch(() => {});
+    }
     setFinishFlowActive(true);
   };
 
@@ -517,12 +530,12 @@ export const FocusReadingRoomModal: React.FC = () => {
       localStorage.setItem('molat_last_active_book_id', newBookId);
     }
 
-    // Update start and end pages for the newly selected book
+    // Update start and end pages for the newly selected book (bookmark + 1)
     fetchReadingLogs(newBookId)
       .then((logs) => {
         if (logs && logs.length > 0) {
-          const lastEnd = logs[0].end_page;
-          const nextStart = lastEnd > 0 ? lastEnd + 1 : 1;
+          const maxEnd = Math.max(...logs.map((l) => l.end_page || 0));
+          const nextStart = maxEnd > 0 ? maxEnd + 1 : 1;
           setStartPage(nextStart);
           setEndPage(nextStart);
         } else {
@@ -863,7 +876,14 @@ export const FocusReadingRoomModal: React.FC = () => {
                       <button
                         key={inc}
                         type="button"
-                        onClick={() => setEndPage((prev) => Math.max(startPage, prev) + inc)}
+                        onClick={() =>
+                          setEndPage((prev) => {
+                            if (prev <= startPage) {
+                              return startPage + inc - 1;
+                            }
+                            return prev + inc;
+                          })
+                        }
                         className="px-2 py-1 rounded-lg bg-surface-raised dark:bg-surface-dark-raised border border-rule dark:border-rule-dark text-xs font-mono font-medium hover:border-accent hover:text-accent transition-colors cursor-pointer"
                       >
                         +{inc}
