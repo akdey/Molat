@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.config import settings
-from app.routers import health, books, reading, wishlist, auth, lending
+from app.routers import health, books, reading, wishlist, auth, lending, settings as settings_router
 
 logging.basicConfig(
     level=logging.INFO if not settings.DEBUG else logging.DEBUG,
@@ -56,6 +56,7 @@ app.include_router(books.router, prefix="/api/v1")
 app.include_router(reading.router, prefix="/api/v1")
 app.include_router(wishlist.router, prefix="/api/v1")
 app.include_router(lending.router, prefix="/api/v1")
+app.include_router(settings_router.router, prefix="/api/v1")
 
 
 @app.get("/")

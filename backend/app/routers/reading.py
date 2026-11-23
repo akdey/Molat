@@ -11,13 +11,16 @@ router = APIRouter(prefix="/reading", tags=["Reading & Streak Engine"])
 
 @router.get("/streak-summary", response_model=StreakSummaryResponse)
 async def get_streak_summary(
-    goal: int = Query(20, ge=1, description="Daily reading goal in pages"),
+    goal: Optional[int] = Query(None, ge=1, description="Daily reading goal in pages (defaults to database setting)"),
 ):
     """
     Computes current streak, longest streak, risk state, grace freeze,
     velocity (14-day rolling avg), and 365-day heatmap normalized to Asia/Kolkata (IST).
     """
     logs = await sheets_repo.list_reading_logs()
+    if goal is None:
+        user_settings = await sheets_repo.get_settings()
+        goal = user_settings.daily_goal_pages
     return calculate_streak_summary(logs=logs, daily_goal_pages=goal)
 
 

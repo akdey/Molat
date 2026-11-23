@@ -28,6 +28,8 @@ export const QuickLogModal: React.FC = () => {
     setKeyModalOpen,
     libraryKey,
     authToken,
+    activeBookId,
+    setActiveBookId,
   } = useLibraryStore();
 
   const [selectedBookId, setSelectedBookId] = useState<string>('');
@@ -77,14 +79,14 @@ export const QuickLogModal: React.FC = () => {
     if (quickLogBook) {
       setSelectedBookId(quickLogBook.book_id);
     } else if (books.length > 0) {
-      const lastActiveId = typeof window !== 'undefined' ? localStorage.getItem('molat_last_active_book_id') : null;
-      const lastActiveBook = lastActiveId
-        ? books.find((b) => b.book_id === lastActiveId && b.reading_status === 'READING')
+      const targetId = activeBookId || (typeof window !== 'undefined' ? localStorage.getItem('molat_last_active_book_id') : null);
+      const lastActiveBook = targetId
+        ? books.find((b) => b.book_id === targetId && b.reading_status === 'READING')
         : null;
       const active = lastActiveBook || books.find((b) => b.reading_status === 'READING');
       setSelectedBookId(active ? active.book_id : books[0].book_id);
     }
-  }, [quickLogBook, books]);
+  }, [quickLogBook, books, activeBookId]);
 
   // When book selection changes, auto-prefill startPage with the latest logged end_page + 1
   useEffect(() => {
@@ -326,9 +328,7 @@ export const QuickLogModal: React.FC = () => {
               value={selectedBookId}
               onChange={(e) => {
                 setSelectedBookId(e.target.value);
-                if (typeof window !== 'undefined') {
-                  localStorage.setItem('molat_last_active_book_id', e.target.value);
-                }
+                setActiveBookId(e.target.value);
               }}
               className="w-full px-2.5 py-1.5 rounded-lg border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark text-xs text-ink dark:text-ink-dark focus:outline-none focus:border-accent"
             >

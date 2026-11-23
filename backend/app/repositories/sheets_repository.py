@@ -12,10 +12,12 @@ from app.models.book import Book, BookCreate, BookUpdate, BOOKS_SCHEMA_COLUMNS, 
 from app.models.reading_log import ReadingLog, ReadingLogCreate, READING_LOGS_COLUMNS
 from app.models.wishlist import WishlistItem, WishlistItemCreate, WishlistAcquireRequest, WISHLIST_COLUMNS
 from app.models.lending import LendingRecord, LendingRecordCreate, LendingRecordReturn, LendingStatus, LENDING_COLUMNS
+from app.models.settings import UserSettings, UserSettingsUpdate
 from app.models.responses import PortfolioSummary
 
 logger = logging.getLogger(__name__)
 IST = ZoneInfo("Asia/Kolkata")
+SETTINGS_COLUMNS = ["key", "value", "updated_at"]
 
 # Sanitization regex for preventing spreadsheet formula injection
 FORMULA_PREFIX_REGEX = re.compile(r"^[=+\-@\t\r]")
@@ -39,6 +41,10 @@ class GoogleSheetsRepository:
         self._memory_logs: List[ReadingLog] = []
         self._memory_wishlist: List[WishlistItem] = []
         self._memory_lending: List[LendingRecord] = []
+        self._memory_settings: Dict[str, str] = {
+            "daily_goal_pages": "15",
+            "theme": "light",
+        }
 
     @property
     def is_bridge_configured(self) -> bool:
@@ -736,6 +742,127 @@ class GoogleSheetsRepository:
     async def get_active_lending_for_book(self, book_id: str) -> Optional[LendingRecord]:
         active_list = await self.list_lending(status="ACTIVE")
         return next((r for r in active_list if r.book_id == book_id), None)
+
+    # ==================== SETTINGS ====================
+
+    async def get_settings(self, force_refresh: bool = False) -> UserSettings:
+        cache_key = "settings:all"
+        if not force_refresh and cache_key in self.cache:
+            return self.cache[cache_key]
+
+        settings_dict: Dict[str, str] = dict(self._memory_settings)
+        latest_updated_at: Optional[str] = None
+
+        if self.is_bridge_configured:
+            params = {"table": "Settings"}
+            if settings.BRIDGE_TOKEN:
+                params["token"] = settings.BRIDGE_TOKEN
+
+            try:
+                async with self._client(timeout=15.0) as client:
+                    resp = await client.get(settings.GOOGLE_SHEETS_BRIDGE_URL, params=params)
+                    resp.raise_for_status()
+                    data = resp.json()
+                    if data.get("success"):
+                        rows = data.get("rows") or []
+                        for r in rows:
+                            k = r.get("key")
+                            v = r.get("value")
+                            u = r.get("updated_at")
+                            if k:
+                                settings_dict[k] = str(v) if v is not None else ""
+                                if u:
+                                    latest_updated_at = u
+            except Exception as e:
+                logger.warning(f"Failed to fetch settings from bridge, using memory fallback: {e}")
+
+        # Parse daily goal
+        try:
+            daily_goal = int(settings_dict.get("daily_goal_pages", 15))
+            if daily_goal < 1:
+                daily_goal = 15
+        except (ValueError, TypeError):
+            daily_goal = 15
+
+        # Determine active book ID: explicit in settings -> or inferred from latest reading log -> or first 'READING' book
+        active_book_id = settings_dict.get("active_book_id") or None
+        if not active_book_id:
+            logs = await self.list_reading_logs()
+            if logs:
+                active_book_id = logs[0].book_id
+            else:
+                books = await self.list_books()
+                current_reading = next((b for b in books if b.reading_status == ReadingStatus.READING), None)
+                if current_reading:
+                    active_book_id = current_reading.book_id
+
+        theme = settings_dict.get("theme", "light")
+        if theme not in ("light", "dark"):
+            theme = "light"
+
+        user_settings = UserSettings(
+            daily_goal_pages=daily_goal,
+            active_book_id=active_book_id,
+            theme=theme,
+            updated_at=latest_updated_at,
+        )
+        self.cache[cache_key] = user_settings
+        return user_settings
+
+    async def update_settings(self, updates: UserSettingsUpdate) -> UserSettings:
+        async with self.write_lock:
+            current = await self.get_settings()
+            now_str = datetime.now(IST).strftime("%Y-%m-%d %H:%M:%S")
+
+            changes: Dict[str, str] = {}
+            if updates.daily_goal_pages is not None:
+                clamped = max(1, min(500, updates.daily_goal_pages))
+                changes["daily_goal_pages"] = str(clamped)
+            if updates.active_book_id is not None:
+                changes["active_book_id"] = str(updates.active_book_id)
+            if updates.theme is not None:
+                theme_val = "dark" if updates.theme == "dark" else "light"
+                changes["theme"] = theme_val
+
+            # Apply to memory
+            for k, v in changes.items():
+                self._memory_settings[k] = v
+
+            # Sync to Google Sheets
+            if self.is_bridge_configured and changes:
+                for key, val in changes.items():
+                    record = {
+                        "key": key,
+                        "value": sanitize_cell_value(val),
+                        "updated_at": now_str,
+                    }
+                    # Try update first, fallback to append
+                    payload_update = {
+                        "token": settings.BRIDGE_TOKEN or "",
+                        "action": "update",
+                        "table": "Settings",
+                        "keyField": "key",
+                        "keyValue": key,
+                        "record": record,
+                    }
+                    try:
+                        async with self._client(timeout=15.0) as client:
+                            resp = await client.post(settings.GOOGLE_SHEETS_BRIDGE_URL, json=payload_update)
+                            data = resp.json()
+                            if not data.get("success"):
+                                # If update failed (record didn't exist yet), append it
+                                payload_append = {
+                                    "token": settings.BRIDGE_TOKEN or "",
+                                    "action": "append",
+                                    "table": "Settings",
+                                    "record": record,
+                                }
+                                await client.post(settings.GOOGLE_SHEETS_BRIDGE_URL, json=payload_append)
+                    except Exception as err:
+                        logger.warning(f"Could not persist setting {key} to Google Sheets bridge: {err}")
+
+            self.cache.clear()
+            return await self.get_settings(force_refresh=True)
 
 
 sheets_repo = GoogleSheetsRepository()

@@ -78,6 +78,8 @@ export const FocusReadingRoomModal: React.FC = () => {
     setHasActiveFocusTimer,
     submitReadingLog,
     addToast,
+    activeBookId,
+    setActiveBookId,
   } = useLibraryStore();
 
   // Lazy initialize state directly from persisted localStorage session
@@ -258,18 +260,18 @@ export const FocusReadingRoomModal: React.FC = () => {
       }
     }
 
-    // Fresh session: prioritize explicit focusRoomBook -> lastActiveBook from localStorage -> first 'READING' book
-    const lastActiveId = typeof window !== 'undefined' ? localStorage.getItem('molat_last_active_book_id') : null;
-    const lastActiveBook = lastActiveId
-      ? books.find((b) => b.book_id === lastActiveId && b.reading_status === 'READING')
+    // Fresh session: prioritize explicit focusRoomBook -> activeBook from store/db -> first 'READING' book
+    const targetId = activeBookId || (typeof window !== 'undefined' ? localStorage.getItem('molat_last_active_book_id') : null);
+    const lastActiveBook = targetId
+      ? books.find((b) => b.book_id === targetId && b.reading_status === 'READING')
       : null;
     const targetBook = focusRoomBook || lastActiveBook || books.find((b) => b.reading_status === 'READING') || books[0];
     const bookId = targetBook ? targetBook.book_id : '';
     const now = Date.now();
 
     setSelectedBookId(bookId);
-    if (bookId && typeof window !== 'undefined') {
-      localStorage.setItem('molat_last_active_book_id', bookId);
+    if (bookId) {
+      setActiveBookId(bookId);
     }
     setSessionStartTime(now);
     setTotalPausedMs(0);
@@ -526,9 +528,7 @@ export const FocusReadingRoomModal: React.FC = () => {
     }
 
     setSelectedBookId(newBookId);
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('molat_last_active_book_id', newBookId);
-    }
+    setActiveBookId(newBookId);
 
     // Update start and end pages for the newly selected book (bookmark + 1)
     fetchReadingLogs(newBookId)

@@ -20,6 +20,7 @@ The application is a private single-owner digital library designed to manage phy
 2. **`Reading_Logs` (`A1:I1`)**: 9 columns (`log_id`, `book_id`, `session_date`, `start_page`, `end_page`, `pages_read`, `duration_minutes`, `session_note`, `created_at`).
 3. **`Wishlist` (`A1:J1`)**: 10 columns (`wishlist_id`, `title`, `authors`, `isbn_13`, `genre`, `expected_rp`, `target_price`, `priority`, `notes`, `created_at`).
 4. **`Lending` (`A1:J1`)**: 10 columns (`lending_id`, `book_id`, `borrower_name`, `borrower_contact`, `lent_date`, `due_date`, `returned_date`, `status`, `notes`, `created_at`).
+5. **`Settings` (`A1:C1`)**: 3 columns (`key`, `value`, `updated_at`). Manages cross-device user preferences (`daily_goal_pages`, `active_book_id`, `theme`).
 
 ## Invariant Rules
 - **Stable IDs**: Never compute row index as permanent ID. Always use stable generated IDs (`BOOK-XXX`, `LOG-XXX`, `WISH-XXX`, `LEND-XXX`).

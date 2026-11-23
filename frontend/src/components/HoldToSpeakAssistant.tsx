@@ -43,6 +43,8 @@ export const HoldToSpeakAssistant: React.FC<HoldToSpeakAssistantProps> = ({
     updateToast,
     removeToast,
     theme,
+    activeBookId,
+    setActiveBookId,
   } = useLibraryStore();
 
   const isDark = theme === 'dark';
@@ -70,14 +72,14 @@ export const HoldToSpeakAssistant: React.FC<HoldToSpeakAssistantProps> = ({
   const undoToastIdRef = useRef<string | null>(null);
   const pendingLogRef = useRef<AssistantResult | null>(null);
 
-  // Active book currently reading (prioritizing last active book from localStorage)
+  // Active book currently reading (prioritizing active book from store/database)
   const activeBook = useMemo(() => {
-    const lastActiveId = typeof window !== 'undefined' ? localStorage.getItem('molat_last_active_book_id') : null;
-    const lastActiveBook = lastActiveId
-      ? books.find((b) => b.book_id === lastActiveId && b.reading_status === 'READING')
+    const targetId = activeBookId || (typeof window !== 'undefined' ? localStorage.getItem('molat_last_active_book_id') : null);
+    const lastActiveBook = targetId
+      ? books.find((b) => b.book_id === targetId && b.reading_status === 'READING')
       : null;
     return lastActiveBook || books.find((b) => b.reading_status === 'READING') || (books.length > 0 ? books[0] : null);
-  }, [books]);
+  }, [books, activeBookId]);
 
   // Fetch highest end_page previously logged across all books & for the active book
   useEffect(() => {
@@ -289,8 +291,8 @@ export const HoldToSpeakAssistant: React.FC<HoldToSpeakAssistantProps> = ({
 
     setUnderstoodResult(res);
 
-    if (res.matchedBook?.book_id && typeof window !== 'undefined') {
-      localStorage.setItem('molat_last_active_book_id', res.matchedBook.book_id);
+    if (res.matchedBook?.book_id) {
+      setActiveBookId(res.matchedBook.book_id);
     }
 
     // If intent is LOG_READING, set up 4-second Undo Buffer before executing raw network call!

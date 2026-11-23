@@ -8,7 +8,8 @@ const SHEETS = {
   BOOKS: 'Books',
   LOGS: 'Reading_Logs',
   WISHLIST: 'Wishlist',
-  LENDING: 'Lending'
+  LENDING: 'Lending',
+  SETTINGS: 'Settings'
 };
 
 const SCHEMAS = {
@@ -29,6 +30,9 @@ const SCHEMAS = {
   Lending: [
     'lending_id', 'book_id', 'borrower_name', 'borrower_contact',
     'lent_date', 'due_date', 'returned_date', 'status', 'notes', 'created_at'
+  ],
+  Settings: [
+    'key', 'value', 'updated_at'
   ]
 };
 

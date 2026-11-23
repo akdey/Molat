@@ -39,16 +39,26 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({
   setSelectedBook,
   setActiveTab,
 }) => {
+  const { activeBookId, setActiveBookId, lendingRecords, setPickNextModalOpen, openFocusRoom } = useLibraryStore();
   const activeBooks = useMemo(() => books.filter((b) => b.reading_status === 'READING'), [books]);
 
-  // Selected active book index, defaulting to last active volume in localStorage
+  // Selected active book index, defaulting to database activeBookId or localStorage
   const [selectedActiveIndex, setSelectedActiveIndex] = useState(() => {
-    if (typeof window === 'undefined') return 0;
-    const lastId = localStorage.getItem('molat_last_active_book_id');
-    if (!lastId) return 0;
-    const idx = books.filter((b) => b.reading_status === 'READING').findIndex((b) => b.book_id === lastId);
+    const targetId = activeBookId || (typeof window !== 'undefined' ? localStorage.getItem('molat_last_active_book_id') : null);
+    if (!targetId) return 0;
+    const idx = books.filter((b) => b.reading_status === 'READING').findIndex((b) => b.book_id === targetId);
     return idx >= 0 ? idx : 0;
   });
+
+  // Keep index synchronized if activeBookId is loaded from database
+  useEffect(() => {
+    if (activeBookId) {
+      const idx = activeBooks.findIndex((b) => b.book_id === activeBookId);
+      if (idx >= 0 && idx !== selectedActiveIndex) {
+        setSelectedActiveIndex(idx);
+      }
+    }
+  }, [activeBookId, activeBooks]);
 
   const [slideDirection, setSlideDirection] = useState<number>(0);
   const [hasShakenOnLoad, setHasShakenOnLoad] = useState<boolean>(false);
@@ -180,20 +190,18 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({
       setSlideDirection(1);
       setSelectedActiveIndex((prev) => {
         const nextIdx = (prev + 1) % activeBooks.length;
-        localStorage.setItem('molat_last_active_book_id', activeBooks[nextIdx].book_id);
+        setActiveBookId(activeBooks[nextIdx].book_id);
         return nextIdx;
       });
     } else {
       setSlideDirection(-1);
       setSelectedActiveIndex((prev) => {
         const prevIdx = (prev - 1 + activeBooks.length) % activeBooks.length;
-        localStorage.setItem('molat_last_active_book_id', activeBooks[prevIdx].book_id);
+        setActiveBookId(activeBooks[prevIdx].book_id);
         return prevIdx;
       });
     }
   };
-
-  const { lendingRecords, setPickNextModalOpen, openFocusRoom } = useLibraryStore();
   const activeLentCount = lendingRecords.filter((r) => r.status === 'ACTIVE').length;
   const overdueLentCount = lendingRecords.filter((r) => r.status === 'ACTIVE' && r.is_overdue).length;
 
@@ -363,7 +371,7 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({
                     <button
                       type="button"
                       onClick={() => {
-                        localStorage.setItem('molat_last_active_book_id', primaryBook.book_id);
+                        setActiveBookId(primaryBook.book_id);
                         openFocusRoom(primaryBook);
                       }}
                       className="flex-1 min-w-0 flex items-center justify-center gap-1 py-1.5 px-2 rounded-xl border border-accent/40 bg-accent/10 dark:bg-accent/20 hover:bg-accent/20 text-accent dark:text-accent-dark text-[11px] sm:text-xs font-semibold shadow-xs transition-all active:scale-98 cursor-pointer"
@@ -376,7 +384,7 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({
                     <button
                       type="button"
                       onClick={() => {
-                        localStorage.setItem('molat_last_active_book_id', primaryBook.book_id);
+                        setActiveBookId(primaryBook.book_id);
                         openQuickLog(primaryBook);
                       }}
                       className="flex-1 min-w-0 flex items-center justify-center gap-1 py-1.5 px-2 rounded-xl bg-accent hover:bg-accent-hover text-white text-[11px] sm:text-xs font-semibold shadow-xs transition-all active:scale-98 cursor-pointer"
@@ -403,7 +411,7 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({
                     onClick={() => {
                       setSlideDirection(idx > safeActiveIndex ? 1 : -1);
                       setSelectedActiveIndex(idx);
-                      localStorage.setItem('molat_last_active_book_id', b.book_id);
+                      setActiveBookId(b.book_id);
                     }}
                     className={`h-1.5 rounded-full transition-all cursor-pointer ${isSelected
                         ? 'w-5 bg-accent shadow-[0_0_6px_rgba(251,191,36,0.6)]'

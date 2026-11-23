@@ -211,3 +211,38 @@ export async function loginUser(
     }
     return res.json();
   }
+
+  export interface UserSettings {
+    daily_goal_pages: number;
+    active_book_id: string | null;
+    theme: string;
+    updated_at?: string;
+  }
+
+  export interface UserSettingsUpdate {
+    daily_goal_pages?: number;
+    active_book_id?: string | null;
+    theme?: string;
+  }
+
+  export async function fetchSettings(): Promise<UserSettings> {
+    const res = await fetch(`${API_BASE}/settings`);
+    if (!res.ok) throw new Error(`Failed to fetch settings: ${res.status}`);
+    return res.json();
+  }
+
+  export async function updateSettings(
+    updates: UserSettingsUpdate,
+    tokenOrKey?: string
+  ): Promise<UserSettings> {
+    const res = await fetch(`${API_BASE}/settings`, {
+      method: 'PATCH',
+      headers: getAuthHeaders(tokenOrKey),
+      body: JSON.stringify(updates),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || `Failed to update settings: ${res.status}`);
+    }
+    return res.json();
+  }
