@@ -68,6 +68,10 @@ export interface StreakSummary {
   streak_at_risk: boolean;
   today_pages: number;
   daily_goal_pages: number;
+  freeze_bank_count?: number;
+  freeze_max_bank?: number;
+  freeze_progress_days?: number;
+  freeze_next_tier_required?: number;
   grace_freeze_used: boolean;
   grace_freeze_available?: boolean;
   freeze_cooldown_days_left?: number;

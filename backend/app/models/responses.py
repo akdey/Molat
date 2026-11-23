@@ -28,13 +28,17 @@ class StreakSummaryResponse(BaseModel):
     longest_streak_days: int
     streak_at_risk: bool
     today_pages: int
-    daily_goal_pages: int = 20
-    grace_freeze_used: bool
+    daily_goal_pages: int = 15
+    freeze_bank_count: int = 1
+    freeze_max_bank: int = 3
+    freeze_progress_days: int = 0
+    freeze_next_tier_required: int = 5
+    frozen_dates: List[str] = Field(default_factory=list)
+    grace_freeze_used: bool = False
     grace_freeze_available: bool = False
     freeze_cooldown_days_left: int = 0
     freeze_prior_pages: int = 0
-    freeze_required_pages: int = 100
-    frozen_dates: List[str] = Field(default_factory=list)
+    freeze_required_pages: int = 0
     reading_velocity_pages_per_day: float
     heatmap_365: Dict[str, int]
 

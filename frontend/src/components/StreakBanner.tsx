@@ -3,19 +3,21 @@ import {
   Flame,
   AlertTriangle,
   ShieldCheck,
-  Snowflake,
   Plus,
   CheckCircle2,
   Pencil,
   Check,
   X,
   Target,
+  Shield,
+  Info,
 } from 'lucide-react';
 import { useLibraryStore } from '../store/useLibraryStore';
 
 export const StreakBanner: React.FC = () => {
   const { streakSummary, openQuickLog, dailyGoal, setDailyGoal } = useLibraryStore();
   const [isEditingGoal, setIsEditingGoal] = useState<boolean>(false);
+  const [showFreezeModal, setShowFreezeModal] = useState<boolean>(false);
   const [customGoal, setCustomGoal] = useState<number>(dailyGoal || 15);
   const [savingGoal, setSavingGoal] = useState<boolean>(false);
 
@@ -28,10 +30,11 @@ export const StreakBanner: React.FC = () => {
     today_pages,
     daily_goal_pages,
     grace_freeze_used,
-    grace_freeze_available,
-    freeze_cooldown_days_left,
-    freeze_prior_pages,
-    freeze_required_pages,
+    freeze_bank_count = 1,
+    freeze_max_bank = 3,
+    freeze_progress_days = 0,
+    freeze_next_tier_required = 5,
+    frozen_dates = [],
     reading_velocity_pages_per_day,
   } = streakSummary;
 
@@ -59,7 +62,7 @@ export const StreakBanner: React.FC = () => {
             <Flame className="w-6 h-6 animate-pulse" />
           </div>
           <div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <h2 className="font-serif text-2xl font-medium tracking-tight text-ink dark:text-ink-dark tabular-nums">
                 {current_streak_days} Day{current_streak_days === 1 ? '' : 's'}
               </h2>
@@ -69,34 +72,58 @@ export const StreakBanner: React.FC = () => {
                   At Risk Today
                 </span>
               )}
-              {grace_freeze_used ? (
+              {grace_freeze_used && (
                 <span
                   className="flex items-center gap-1 px-2 py-0.5 rounded-full text-2xs font-medium bg-sky-100 dark:bg-sky-950/40 text-sky-800 dark:text-sky-400 border border-sky-300 dark:border-sky-800/40"
-                  title="Yesterday was cushioned by a grace freeze"
+                  title="Yesterday was cushioned by a banked freeze"
                 >
                   <ShieldCheck size={11} />
                   Yesterday Protected
                 </span>
-              ) : grace_freeze_available ? (
-                <span
-                  className="flex items-center gap-1 px-2 py-0.5 rounded-full text-2xs font-medium bg-cyan-100 dark:bg-cyan-950/40 text-cyan-800 dark:text-cyan-300 border border-cyan-300 dark:border-cyan-800/40"
-                  title={`Freeze Armed: If you miss today, 1 grace freeze will protect your streak tomorrow morning (${freeze_prior_pages || 0}/${freeze_required_pages || 75} pgs in past 7 days)`}
-                >
-                  <Snowflake size={11} className="text-cyan-600 dark:text-cyan-400" />
-                  Freeze Armed
+              )}
+
+              {/* Progressive 3-Shield Freeze Bank Badge */}
+              <button
+                type="button"
+                onClick={() => setShowFreezeModal(true)}
+                className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-cyan-50 dark:bg-cyan-950/40 border border-cyan-200 dark:border-cyan-800/40 text-cyan-800 dark:text-cyan-300 hover:border-cyan-400 dark:hover:border-cyan-600 transition-all cursor-pointer text-2xs font-medium"
+                title="Click to view Freeze Bank details & progress"
+              >
+                <div className="flex items-center gap-0.5">
+                  {Array.from({ length: freeze_max_bank }).map((_, i) => {
+                    const slot = i + 1;
+                    const isFilled = slot <= freeze_bank_count;
+                    return (
+                      <span
+                        key={slot}
+                        className={`inline-block w-2.5 h-2.5 rounded-full transition-all ${
+                          isFilled
+                            ? 'bg-cyan-500 shadow-[0_0_5px_rgba(6,182,212,0.7)]'
+                            : 'border border-cyan-400/40 bg-transparent'
+                        }`}
+                      />
+                    );
+                  })}
+                </div>
+                <span>
+                  {freeze_bank_count}/{freeze_max_bank} Shield{freeze_bank_count === 1 ? '' : 's'}
                 </span>
-              ) : freeze_cooldown_days_left && freeze_cooldown_days_left > 0 ? (
-                <span
-                  className="flex items-center gap-1 px-2 py-0.5 rounded-full text-2xs font-medium bg-stone-100 dark:bg-stone-800/60 text-stone-600 dark:text-stone-400 border border-stone-200 dark:border-stone-700"
-                  title={`Freeze Cooldown: ${freeze_cooldown_days_left} days remaining before next freeze`}
-                >
-                  <ShieldCheck size={11} className="text-stone-400" />
-                  Cooldown ({freeze_cooldown_days_left}d)
-                </span>
-              ) : null}
+                <Info size={10} className="opacity-60" />
+              </button>
             </div>
-            <p className="text-2xs text-ink-secondary dark:text-ink-dark-secondary">
-              Personal Record: <strong className="font-medium text-ink dark:text-ink-dark">{longest_streak_days} days</strong> • Velocity: <strong className="font-medium text-ink dark:text-ink-dark">{reading_velocity_pages_per_day} pgs/day</strong>
+
+            <p className="text-2xs text-ink-secondary dark:text-ink-dark-secondary flex items-center gap-1.5 flex-wrap pt-0.5">
+              <span>Personal Record: <strong className="font-medium text-ink dark:text-ink-dark">{longest_streak_days} days</strong></span>
+              <span>•</span>
+              <span>Velocity: <strong className="font-medium text-ink dark:text-ink-dark">{reading_velocity_pages_per_day} pgs/day</strong></span>
+              {freeze_bank_count < freeze_max_bank && (
+                <>
+                  <span>•</span>
+                  <span className="text-cyan-700 dark:text-cyan-400">
+                    Next Shield: <strong>{freeze_progress_days}/{freeze_next_tier_required}</strong> days read
+                  </span>
+                </>
+              )}
             </p>
           </div>
         </div>
@@ -104,7 +131,7 @@ export const StreakBanner: React.FC = () => {
         {/* 1-Tap CTA */}
         <button
           onClick={() => openQuickLog()}
-          className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-accent hover:bg-accent-hover text-white text-xs font-medium shadow-sm transition-all active:scale-98 shrink-0"
+          className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-accent hover:bg-accent-hover text-white text-xs font-medium shadow-sm transition-all active:scale-98 shrink-0 cursor-pointer"
         >
           <Plus size={16} />
           <span>Log Today's Reading</span>
@@ -127,7 +154,7 @@ export const StreakBanner: React.FC = () => {
                 setCustomGoal(currentGoal);
                 setIsEditingGoal(!isEditingGoal);
               }}
-              className="group inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md hover:bg-stone-100 dark:hover:bg-stone-800 text-ink dark:text-ink-dark font-medium transition-colors"
+              className="group inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md hover:bg-stone-100 dark:hover:bg-stone-800 text-ink dark:text-ink-dark font-medium transition-colors cursor-pointer"
               title="Click to edit daily reading goal"
             >
               <span>{currentGoal} pages</span>
@@ -157,7 +184,7 @@ export const StreakBanner: React.FC = () => {
             <button
               type="button"
               onClick={() => setIsEditingGoal(false)}
-              className="text-ink-muted hover:text-ink dark:hover:text-ink-dark p-1 rounded-md"
+              className="text-ink-muted hover:text-ink dark:hover:text-ink-dark p-1 rounded-md cursor-pointer"
               title="Close"
             >
               <X size={14} />
@@ -172,7 +199,7 @@ export const StreakBanner: React.FC = () => {
                 type="button"
                 onClick={() => handleSaveGoal(preset)}
                 disabled={savingGoal}
-                className={`px-2.5 py-1 rounded-lg text-2xs font-medium transition-all ${
+                className={`px-2.5 py-1 rounded-lg text-2xs font-medium transition-all cursor-pointer ${
                   preset === currentGoal
                     ? 'bg-accent text-white shadow-xs'
                     : 'bg-surface dark:bg-surface-dark border border-rule dark:border-rule-dark text-ink dark:text-ink-dark hover:border-accent/40'
@@ -212,10 +239,136 @@ export const StreakBanner: React.FC = () => {
               <span>{savingGoal ? 'Saving...' : 'Apply'}</span>
             </button>
           </form>
+        </div>
+      )}
 
-          <p className="text-3xs text-ink-muted dark:text-ink-dark-muted">
-            💡 Streak freeze threshold automatically adapts to 5× daily goal ({customGoal * 5} pages in 7 rolling days).
-          </p>
+      {/* Freeze Bank Modal / Explainer */}
+      {showFreezeModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs animate-in fade-in duration-150">
+          <div className="w-full max-w-md p-5 rounded-2xl bg-surface dark:bg-surface-dark border border-rule dark:border-rule-dark shadow-xl space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="p-2 rounded-xl bg-cyan-100 dark:bg-cyan-950/60 text-cyan-700 dark:text-cyan-300">
+                  <Shield size={18} />
+                </div>
+                <div>
+                  <h3 className="font-serif text-base font-medium text-ink dark:text-ink-dark">
+                    Streak Freeze Bank
+                  </h3>
+                  <p className="text-2xs text-ink-muted">
+                    {freeze_bank_count} of 3 Shields Banked (Permanent Until Used)
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowFreezeModal(false)}
+                className="p-1 rounded-lg text-ink-muted hover:text-ink dark:hover:text-ink-dark cursor-pointer"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            {/* 3 Slots Visual */}
+            <div className="grid grid-cols-3 gap-2.5 pt-1">
+              {[
+                { slot: 1, name: 'Shield 1', desc: 'Fast Recovery', req: '3 Active Days' },
+                { slot: 2, name: 'Shield 2', desc: 'Weekend Safe', req: '+5 More Days' },
+                { slot: 3, name: 'Shield 3', desc: 'Vacation Vault', req: '+7 More Days' },
+              ].map((tier) => {
+                const isHeld = tier.slot <= freeze_bank_count;
+                const isNext = tier.slot === freeze_bank_count + 1;
+                return (
+                  <div
+                    key={tier.slot}
+                    className={`p-3 rounded-xl border text-center transition-all ${
+                      isHeld
+                        ? 'border-cyan-300 dark:border-cyan-700 bg-cyan-50/60 dark:bg-cyan-950/30'
+                        : isNext
+                        ? 'border-accent/40 bg-accent/5'
+                        : 'border-rule dark:border-rule-dark opacity-60'
+                    }`}
+                  >
+                    <div className="text-xl mb-1">{isHeld ? '🛡️' : isNext ? '⏳' : '⚪'}</div>
+                    <p className="text-xs font-medium text-ink dark:text-ink-dark">{tier.name}</p>
+                    <p className="text-3xs text-ink-muted">{tier.desc}</p>
+                    <span
+                      className={`inline-block mt-1 px-1.5 py-0.5 rounded-full text-3xs font-medium ${
+                        isHeld
+                          ? 'bg-cyan-200 dark:bg-cyan-900 text-cyan-900 dark:text-cyan-200'
+                          : isNext
+                          ? 'bg-accent/20 text-accent dark:text-accent-dark'
+                          : 'bg-stone-100 dark:bg-stone-800 text-stone-500'
+                      }`}
+                    >
+                      {isHeld ? 'Armed' : tier.req}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Progress Bar towards next tier */}
+            {freeze_bank_count < freeze_max_bank ? (
+              <div className="p-3 rounded-xl bg-stone-50 dark:bg-stone-900/60 border border-rule dark:border-rule-dark space-y-1.5">
+                <div className="flex items-center justify-between text-2xs">
+                  <span className="text-ink dark:text-ink-dark font-medium">
+                    Progress toward Shield #{freeze_bank_count + 1}
+                  </span>
+                  <span className="font-mono text-ink-muted">
+                    {freeze_progress_days} / {freeze_next_tier_required} days
+                  </span>
+                </div>
+                <div className="w-full h-1.5 rounded-full bg-rule/50 dark:bg-rule-dark overflow-hidden">
+                  <div
+                    className="h-full bg-cyan-500 rounded-full transition-all duration-500"
+                    style={{
+                      width: `${Math.min(100, Math.round((freeze_progress_days / freeze_next_tier_required) * 100))}%`,
+                    }}
+                  />
+                </div>
+                <p className="text-3xs text-ink-muted">
+                  Read {freeze_next_tier_required - freeze_progress_days} more day(s) to unlock this shield.
+                </p>
+              </div>
+            ) : (
+              <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/40 text-center">
+                <p className="text-xs font-medium text-emerald-800 dark:text-emerald-300">
+                  🎉 Maximum Protection Reached!
+                </p>
+                <p className="text-3xs text-emerald-700/80 dark:text-emerald-400/80 mt-0.5">
+                  You can safely absorb up to 3 consecutive missed days without breaking your streak.
+                </p>
+              </div>
+            )}
+
+            {/* Past Frozen Dates */}
+            {frozen_dates.length > 0 && (
+              <div className="pt-2 border-t border-rule dark:border-rule-dark">
+                <span className="text-3xs uppercase tracking-wider font-medium text-ink-muted block mb-1">
+                  Protected Days in Heatmap
+                </span>
+                <div className="flex flex-wrap gap-1">
+                  {frozen_dates.map((d) => (
+                    <span
+                      key={d}
+                      className="px-2 py-0.5 rounded-md bg-cyan-100 dark:bg-cyan-950 text-cyan-800 dark:text-cyan-300 font-mono text-3xs"
+                    >
+                      ❄️ {d}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <button
+              type="button"
+              onClick={() => setShowFreezeModal(false)}
+              className="w-full py-2 rounded-xl bg-surface dark:bg-surface-dark border border-rule dark:border-rule-dark hover:bg-rule/40 text-xs font-medium text-ink dark:text-ink-dark transition-all cursor-pointer"
+            >
+              Close
+            </button>
+          </div>
         </div>
       )}
     </section>

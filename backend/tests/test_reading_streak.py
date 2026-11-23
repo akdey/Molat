@@ -62,7 +62,7 @@ def test_grace_freeze_bridging_qualified():
     ref_date = date(2026, 10, 30)
     # Today active: 20 pages
     # Yesterday missed: 0 pages
-    # Prior 7 days before yesterday (days 2 to 8): 20 pages each day = 140 pages (>= 100)
+    # Prior 7 days before yesterday (days 2 to 8): 20 pages each day
     logs = [make_dummy_log("LOG-TODAY", ref_date.strftime("%Y-%m-%d"), 20)]
     for d in range(2, 9):
         logs.append(make_dummy_log(f"LOG-{d}", (ref_date - timedelta(days=d)).strftime("%Y-%m-%d"), 20))
@@ -73,41 +73,29 @@ def test_grace_freeze_bridging_qualified():
     assert summary.current_streak_days == 8
     assert summary.grace_freeze_used is True
     assert summary.streak_at_risk is False
+    assert (ref_date - timedelta(days=1)).strftime("%Y-%m-%d") in summary.frozen_dates
 
 
-def test_grace_freeze_rejected_insufficient_pages():
+def test_progressive_freeze_bank_weekend_cushion():
     ref_date = date(2026, 10, 30)
-    # Today active: 20 pages
-    # Yesterday missed: 0 pages
-    # Prior 7 days had only 10 pages total (< 100)
-    logs = [
-        make_dummy_log("LOG-TODAY", ref_date.strftime("%Y-%m-%d"), 20),
-        make_dummy_log("LOG-PAST", (ref_date - timedelta(days=2)).strftime("%Y-%m-%d"), 10),
-    ]
-    summary = calculate_streak_summary(logs, daily_goal_pages=20, reference_date=ref_date)
-    # Cannot bridge, streak is only today
-    assert summary.current_streak_days == 1
-    assert summary.grace_freeze_used is False
-
-
-def test_grace_freeze_rejected_used_within_14_days():
-    ref_date = date(2026, 10, 30)
-    # 2 missed days within 5 days of each other. Only 1 can be frozen per 14-day window.
-    # Day 0 (today): 20 pages
-    # Day 1: missed (0) -> requires freeze
-    # Days 2..8: 30 pages each (210 pages, qualifies for Day 1 freeze)
-    # Day 9: missed (0) -> would need freeze, but Day 1 was already frozen in window
-    logs = [make_dummy_log("LOG-0", ref_date.strftime("%Y-%m-%d"), 20)]
-    for d in range(2, 9):
-        logs.append(make_dummy_log(f"LOG-{d}", (ref_date - timedelta(days=d)).strftime("%Y-%m-%d"), 30))
-    for d in range(10, 16):
-        logs.append(make_dummy_log(f"LOG-{d}", (ref_date - timedelta(days=d)).strftime("%Y-%m-%d"), 30))
+    # 1. User reads 12 days (days 3..14):
+    # - Starts with 1 initial welcome shield.
+    # - Reads 5 days -> unlocks Shield 2.
+    # - Reads 7 more days -> unlocks Shield 3 (bank is max 3/3).
+    # 2. Misses 2 consecutive days (days 1 and 2).
+    # 3. Today (Day 0) reads 20 pages.
+    logs = [make_dummy_log("LOG-TODAY", ref_date.strftime("%Y-%m-%d"), 20)]
+    for d in range(3, 15):
+        logs.append(make_dummy_log(f"LOG-{d}", (ref_date - timedelta(days=d)).strftime("%Y-%m-%d"), 20))
 
     summary = calculate_streak_summary(logs, daily_goal_pages=20, reference_date=ref_date)
-    # Day 1 is frozen, but Day 9 cannot be frozen again within 14 days
-    # Streak should walk back through Day 1 to Day 8 and stop at Day 9.
-    # Count: Day 0 (1) + Days 2..8 (7) = 8 days
-    assert summary.current_streak_days == 8
+    # Both missed days (day 1 and day 2) cushioned by banked shields!
+    assert (ref_date - timedelta(days=1)).strftime("%Y-%m-%d") in summary.frozen_dates
+    assert (ref_date - timedelta(days=2)).strftime("%Y-%m-%d") in summary.frozen_dates
+    # Bank dropped from 3 to 1
+    assert summary.freeze_bank_count == 1
+    # Streak is intact: 12 past days + 1 today = 13 days!
+    assert summary.current_streak_days == 13
     assert summary.grace_freeze_used is True
 
 
