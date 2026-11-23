@@ -89,6 +89,7 @@ interface LibraryState {
   authUser: string | null;
   libraryKey: string;
   theme: 'light' | 'dark';
+  dailyGoal: number;
   
   // Setters & Actions
   setActiveTab: (tab: 'home' | 'shelf' | 'tracker' | 'wishlist' | 'maintenance' | 'insights' | 'lending') => void;
@@ -114,6 +115,7 @@ interface LibraryState {
   closeFocusRoom: () => void;
   setHasActiveFocusTimer: (has: boolean) => void;
   setLibraryKey: (key: string) => void;
+  setDailyGoal: (goal: number) => Promise<void>;
   loginOwner: (username: string, password: string) => Promise<void>;
   logoutOwner: () => void;
   toggleTheme: () => void;
@@ -178,6 +180,9 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
   authUser: localStorage.getItem('molat_auth_user') || null,
   libraryKey: localStorage.getItem('molat_library_key') || (import.meta.env.VITE_LIBRARY_KEY || ''),
   theme: (localStorage.getItem('molat_theme') as 'light' | 'dark') || 'light',
+  dailyGoal: typeof localStorage !== 'undefined'
+    ? parseInt(localStorage.getItem('molat_daily_goal_pages') || '15', 10)
+    : 15,
 
   setActiveTab: (tab) => set({ activeTab: tab }),
   setViewMode: (mode) => set({ viewMode: mode }),
@@ -228,6 +233,21 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
     localStorage.setItem('molat_library_key', key);
     set({ libraryKey: key });
     get().addToast('API Key saved locally', 'info');
+  },
+
+  setDailyGoal: async (goal: number) => {
+    const clamped = Math.max(1, Math.min(500, Math.round(goal)));
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem('molat_daily_goal_pages', String(clamped));
+    }
+    set({ dailyGoal: clamped });
+    try {
+      const updated = await fetchStreakSummary(clamped);
+      set({ streakSummary: updated });
+      get().addToast(`Daily goal updated to ${clamped} pages`, 'success');
+    } catch (err: any) {
+      console.warn('Failed to update streak with new goal:', err);
+    }
   },
 
   addToast: (
@@ -296,7 +316,7 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
     try {
       const [bookRes, streakRes, wishRes, lendRes] = await Promise.allSettled([
         fetchBooks(forceRefresh),
-        fetchStreakSummary(),
+        fetchStreakSummary(get().dailyGoal),
         fetchWishlist(),
         fetchLendingRecords(undefined, forceRefresh),
       ]);
@@ -332,7 +352,7 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
 
   loadStreak: async () => {
     try {
-      const streak = await fetchStreakSummary();
+      const streak = await fetchStreakSummary(get().dailyGoal);
       set({ streakSummary: streak });
     } catch (err: any) {
       console.warn('Failed to fetch streak summary:', err);

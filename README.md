@@ -78,6 +78,7 @@ Whether cataloguing a multi-hundred volume collection, scanning new arrivals at 
 ### 🔥 Duolingo-Style Reading Streak Tracker
 - **Timezone-Aware Calculations**: Daily streak engine running in `Asia/Kolkata` time.
 - **Active Reading Progress Card**: Displays current reading session progress, daily goal completion, and automated reading velocity (pages/day).
+- **Customizable Daily Goal & In-UI Editor**: Easily tweak your daily reading target directly from the Home Dashboard Streak Banner (default reduced to an approachable 15 pages). Includes 1-tap quick presets (`10`, `15`, `20`, `25`, `30`, `50` pages) or custom input with immediate `localStorage` persistence, dynamically recalculating completion percentages, reading velocity, and adaptive freeze thresholds.
 - **Adaptive Grace Freeze Bridging**: Automatically cushions an accidental streak loss if life gets busy, provided you maintained momentum earlier in the week ($\ge 5 \times \text{daily\_goal}$ pages read in prior 7 days, min 20 pages; up to 1 freeze per 14-day rolling window). Tracks all historical and active `frozen_dates`.
 - **Streak-At-Risk Alerts**: Visual ambient warnings when today's reading goal hasn't been logged yet.
 - **365-Day Contribution Heatmap**: Interactive GitHub-style reading heatmap mapping page count intensity across every day of the calendar year.

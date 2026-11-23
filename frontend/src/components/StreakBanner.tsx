@@ -1,9 +1,23 @@
-import React from 'react';
-import { Flame, AlertTriangle, ShieldCheck, Snowflake, Plus, CheckCircle2 } from 'lucide-react';
+import React, { useState } from 'react';
+import {
+  Flame,
+  AlertTriangle,
+  ShieldCheck,
+  Snowflake,
+  Plus,
+  CheckCircle2,
+  Pencil,
+  Check,
+  X,
+  Target,
+} from 'lucide-react';
 import { useLibraryStore } from '../store/useLibraryStore';
 
 export const StreakBanner: React.FC = () => {
-  const { streakSummary, openQuickLog } = useLibraryStore();
+  const { streakSummary, openQuickLog, dailyGoal, setDailyGoal } = useLibraryStore();
+  const [isEditingGoal, setIsEditingGoal] = useState<boolean>(false);
+  const [customGoal, setCustomGoal] = useState<number>(dailyGoal || 15);
+  const [savingGoal, setSavingGoal] = useState<boolean>(false);
 
   if (!streakSummary) return null;
 
@@ -21,7 +35,17 @@ export const StreakBanner: React.FC = () => {
     reading_velocity_pages_per_day,
   } = streakSummary;
 
-  const goalPercent = Math.min(100, Math.round((today_pages / (daily_goal_pages || 20)) * 100));
+  const currentGoal = daily_goal_pages || dailyGoal || 15;
+  const goalPercent = Math.min(100, Math.round((today_pages / currentGoal) * 100));
+
+  const PRESETS = [10, 15, 20, 25, 30, 50];
+
+  const handleSaveGoal = async (val: number) => {
+    setSavingGoal(true);
+    await setDailyGoal(val);
+    setSavingGoal(false);
+    setIsEditingGoal(false);
+  };
 
   return (
     <section
@@ -53,7 +77,7 @@ export const StreakBanner: React.FC = () => {
               ) : grace_freeze_available ? (
                 <span
                   className="flex items-center gap-1 px-2 py-0.5 rounded-full text-2xs font-medium bg-cyan-100 dark:bg-cyan-950/40 text-cyan-800 dark:text-cyan-300 border border-cyan-300 dark:border-cyan-800/40"
-                  title={`Freeze Protected: 1 missed day cushioned (${freeze_prior_pages || 0}/${freeze_required_pages || 100} pgs read in past 7 days)`}
+                  title={`Freeze Protected: 1 missed day cushioned (${freeze_prior_pages || 0}/${freeze_required_pages || 75} pgs read in past 7 days)`}
                 >
                   <Snowflake size={11} className="text-cyan-600 dark:text-cyan-400" />
                   Freeze Protected
@@ -87,24 +111,110 @@ export const StreakBanner: React.FC = () => {
       {/* Daily Goal Progress Bar */}
       <div className="space-y-1.5 pt-1 border-t border-rule/60 dark:border-rule-dark/60">
         <div className="flex items-center justify-between text-2xs">
-          <span className="text-ink-secondary dark:text-ink-dark-secondary flex items-center gap-1.5">
-            {today_pages >= daily_goal_pages ? (
+          <div className="text-ink-secondary dark:text-ink-dark-secondary flex items-center gap-1.5 flex-wrap">
+            {today_pages >= currentGoal ? (
               <CheckCircle2 size={13} className="text-emerald-600 dark:text-emerald-400" />
             ) : null}
-            Today's Progress: <strong className="font-medium text-ink dark:text-ink-dark">{today_pages}</strong> / {daily_goal_pages} pages
-          </span>
+            <span>
+              Today's Progress: <strong className="font-medium text-ink dark:text-ink-dark">{today_pages}</strong> /
+            </span>
+            <button
+              type="button"
+              onClick={() => {
+                setCustomGoal(currentGoal);
+                setIsEditingGoal(!isEditingGoal);
+              }}
+              className="group inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md hover:bg-stone-100 dark:hover:bg-stone-800 text-ink dark:text-ink-dark font-medium transition-colors"
+              title="Click to edit daily reading goal"
+            >
+              <span>{currentGoal} pages</span>
+              <Pencil size={11} className="text-ink-muted group-hover:text-accent transition-colors" />
+            </button>
+          </div>
           <span className="font-mono text-ink-muted">{goalPercent}%</span>
         </div>
         <div className="w-full h-2 rounded-full bg-rule/50 dark:bg-rule-dark overflow-hidden">
           <div
             className={`h-full transition-all duration-500 rounded-full ${
-              today_pages >= daily_goal_pages ? 'bg-emerald-600' : 'bg-accent'
+              today_pages >= currentGoal ? 'bg-emerald-600' : 'bg-accent'
             }`}
             style={{ width: `${goalPercent}%` }}
           />
         </div>
       </div>
+
+      {/* Inline Goal Editor */}
+      {isEditingGoal && (
+        <div className="p-3.5 rounded-xl border border-rule dark:border-rule-dark bg-stone-50/80 dark:bg-stone-900/60 space-y-3 transition-all animate-in fade-in duration-200">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-1.5 text-xs font-medium text-ink dark:text-ink-dark">
+              <Target size={14} className="text-accent" />
+              <span>Set Daily Reading Goal</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setIsEditingGoal(false)}
+              className="text-ink-muted hover:text-ink dark:hover:text-ink-dark p-1 rounded-md"
+              title="Close"
+            >
+              <X size={14} />
+            </button>
+          </div>
+
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className="text-2xs text-ink-secondary dark:text-ink-dark-secondary mr-1">Presets:</span>
+            {PRESETS.map((preset) => (
+              <button
+                key={preset}
+                type="button"
+                onClick={() => handleSaveGoal(preset)}
+                disabled={savingGoal}
+                className={`px-2.5 py-1 rounded-lg text-2xs font-medium transition-all ${
+                  preset === currentGoal
+                    ? 'bg-accent text-white shadow-xs'
+                    : 'bg-surface dark:bg-surface-dark border border-rule dark:border-rule-dark text-ink dark:text-ink-dark hover:border-accent/40'
+                }`}
+              >
+                {preset} pgs
+              </button>
+            ))}
+          </div>
+
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (customGoal > 0) handleSaveGoal(customGoal);
+            }}
+            className="flex items-center gap-2 pt-1 border-t border-rule/50 dark:border-rule-dark/50"
+          >
+            <label htmlFor="custom-goal-input" className="text-2xs text-ink-secondary dark:text-ink-dark-secondary shrink-0">
+              Custom goal:
+            </label>
+            <input
+              id="custom-goal-input"
+              type="number"
+              min={1}
+              max={500}
+              value={customGoal}
+              onChange={(e) => setCustomGoal(Math.max(1, parseInt(e.target.value, 10) || 1))}
+              className="w-20 px-2 py-1 text-xs rounded-lg border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark text-ink dark:text-ink-dark font-mono focus:outline-none focus:ring-1 focus:ring-accent"
+            />
+            <span className="text-2xs text-ink-muted">pages/day</span>
+            <button
+              type="submit"
+              disabled={savingGoal || customGoal === currentGoal}
+              className="ml-auto inline-flex items-center gap-1 px-3 py-1 rounded-lg bg-accent hover:bg-accent-hover disabled:opacity-50 text-white text-xs font-medium transition-all cursor-pointer"
+            >
+              <Check size={12} />
+              <span>{savingGoal ? 'Saving...' : 'Apply'}</span>
+            </button>
+          </form>
+
+          <p className="text-3xs text-ink-muted dark:text-ink-dark-muted">
+            💡 Streak freeze threshold automatically adapts to 5× daily goal ({customGoal * 5} pages in 7 rolling days).
+          </p>
+        </div>
+      )}
     </section>
   );
 };
-
