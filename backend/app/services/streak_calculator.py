@@ -65,6 +65,9 @@ def calculate_streak_summary(
     freeze_threshold = max(20, daily_goal_pages * 5)
 
     def can_grace_freeze(missed_date: date, used_freeze_dates: Set[date]) -> bool:
+        # Today and future dates can NEVER be frozen; today is still in progress
+        if missed_date >= today:
+            return False
         # Check if another freeze was used within 14 days
         for fd in used_freeze_dates:
             if abs((missed_date - fd).days) < 14:
@@ -124,18 +127,21 @@ def calculate_streak_summary(
     historical_freezes: Set[date] = set()
     if all_dates:
         earliest_date = all_dates[0]
-        scan_end = today
         running_streak = 0
 
         scan_d = earliest_date
-        while scan_d <= scan_end:
+        while scan_d <= today:
             pgs = daily_pages.get(scan_d, 0)
             if pgs > 0:
                 running_streak += 1
                 longest_streak = max(longest_streak, running_streak)
                 scan_d += timedelta(days=1)
+            elif scan_d == today:
+                # Today has 0 pages so far, but the day is still in progress.
+                # Do NOT treat today as a missed day; do not break streak or freeze today.
+                scan_d += timedelta(days=1)
             else:
-                # Missed day: check grace freeze
+                # Missed past day: check grace freeze
                 if running_streak > 0 and can_grace_freeze(scan_d, historical_freezes):
                     historical_freezes.add(scan_d)
                     scan_d += timedelta(days=1)

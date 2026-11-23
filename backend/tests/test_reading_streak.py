@@ -53,6 +53,9 @@ def test_streak_at_risk_when_today_is_zero():
     assert summary.current_streak_days == 2
     assert summary.streak_at_risk is True
     assert summary.today_pages == 0
+    assert summary.grace_freeze_used is False
+    # Today is in-progress and must NEVER be marked as frozen!
+    assert ref_date.strftime("%Y-%m-%d") not in summary.frozen_dates
 
 
 def test_grace_freeze_bridging_qualified():

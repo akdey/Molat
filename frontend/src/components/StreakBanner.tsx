@@ -70,17 +70,20 @@ export const StreakBanner: React.FC = () => {
                 </span>
               )}
               {grace_freeze_used ? (
-                <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-2xs font-medium bg-sky-100 dark:bg-sky-950/40 text-sky-800 dark:text-sky-400 border border-sky-300 dark:border-sky-800/40">
+                <span
+                  className="flex items-center gap-1 px-2 py-0.5 rounded-full text-2xs font-medium bg-sky-100 dark:bg-sky-950/40 text-sky-800 dark:text-sky-400 border border-sky-300 dark:border-sky-800/40"
+                  title="Yesterday was cushioned by a grace freeze"
+                >
                   <ShieldCheck size={11} />
-                  Grace Freeze Active
+                  Yesterday Protected
                 </span>
               ) : grace_freeze_available ? (
                 <span
                   className="flex items-center gap-1 px-2 py-0.5 rounded-full text-2xs font-medium bg-cyan-100 dark:bg-cyan-950/40 text-cyan-800 dark:text-cyan-300 border border-cyan-300 dark:border-cyan-800/40"
-                  title={`Freeze Protected: 1 missed day cushioned (${freeze_prior_pages || 0}/${freeze_required_pages || 75} pgs read in past 7 days)`}
+                  title={`Freeze Armed: If you miss today, 1 grace freeze will protect your streak tomorrow morning (${freeze_prior_pages || 0}/${freeze_required_pages || 75} pgs in past 7 days)`}
                 >
                   <Snowflake size={11} className="text-cyan-600 dark:text-cyan-400" />
-                  Freeze Protected
+                  Freeze Armed
                 </span>
               ) : freeze_cooldown_days_left && freeze_cooldown_days_left > 0 ? (
                 <span
