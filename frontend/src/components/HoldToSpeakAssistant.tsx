@@ -72,11 +72,10 @@ export const HoldToSpeakAssistant: React.FC<HoldToSpeakAssistantProps> = ({
   const undoToastIdRef = useRef<string | null>(null);
   const pendingLogRef = useRef<AssistantResult | null>(null);
 
-  // Active book currently reading (prioritizing active book from store/database)
+  // Active book currently reading (from database via store)
   const activeBook = useMemo(() => {
-    const targetId = activeBookId || (typeof window !== 'undefined' ? localStorage.getItem('molat_last_active_book_id') : null);
-    const lastActiveBook = targetId
-      ? books.find((b) => b.book_id === targetId && b.reading_status === 'READING')
+    const lastActiveBook = activeBookId
+      ? books.find((b) => b.book_id === activeBookId && b.reading_status === 'READING')
       : null;
     return lastActiveBook || books.find((b) => b.reading_status === 'READING') || (books.length > 0 ? books[0] : null);
   }, [books, activeBookId]);
@@ -287,6 +286,7 @@ export const HoldToSpeakAssistant: React.FC<HoldToSpeakAssistantProps> = ({
       lendingRecords,
       streakSummary,
       bookLastPages,
+      activeBookId,
     });
 
     setUnderstoodResult(res);

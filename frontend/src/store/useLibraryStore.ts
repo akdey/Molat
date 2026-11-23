@@ -183,13 +183,9 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
   authToken: localStorage.getItem('molat_auth_token') || null,
   authUser: localStorage.getItem('molat_auth_user') || null,
   libraryKey: localStorage.getItem('molat_library_key') || (import.meta.env.VITE_LIBRARY_KEY || ''),
-  theme: (localStorage.getItem('molat_theme') as 'light' | 'dark') || 'light',
-  dailyGoal: typeof localStorage !== 'undefined'
-    ? parseInt(localStorage.getItem('molat_daily_goal_pages') || '15', 10)
-    : 15,
-  activeBookId: typeof localStorage !== 'undefined'
-    ? localStorage.getItem('molat_last_active_book_id')
-    : null,
+  theme: 'light',
+  dailyGoal: 15,
+  activeBookId: null,
 
   setActiveTab: (tab) => set({ activeTab: tab }),
   setViewMode: (mode) => set({ viewMode: mode }),
@@ -210,7 +206,7 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
   setSelectedBook: (selectedBook) => set({ selectedBook }),
   
   openQuickLog: (book) => {
-    const activeId = get().activeBookId || (typeof window !== 'undefined' ? localStorage.getItem('molat_last_active_book_id') : null);
+    const activeId = get().activeBookId;
     const activeBook = activeId ? get().books.find(b => b.book_id === activeId && b.reading_status === 'READING') : null;
     set({
       quickLogOpen: true,
@@ -244,15 +240,9 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
 
   setDailyGoal: async (goal: number) => {
     const clamped = Math.max(1, Math.min(500, Math.round(goal)));
-    if (typeof localStorage !== 'undefined') {
-      localStorage.setItem('molat_daily_goal_pages', String(clamped));
-    }
     set({ dailyGoal: clamped });
-    // Persist to Google Sheets DB in background
-    updateSettings({ daily_goal_pages: clamped }).catch((err) =>
-      console.warn('Could not sync daily goal to database:', err)
-    );
     try {
+      await updateSettings({ daily_goal_pages: clamped });
       const updated = await fetchStreakSummary(clamped);
       set({ streakSummary: updated });
       get().addToast(`Daily goal updated to ${clamped} pages`, 'success');
@@ -262,9 +252,6 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
   },
 
   setActiveBookId: async (bookId: string) => {
-    if (typeof localStorage !== 'undefined') {
-      localStorage.setItem('molat_last_active_book_id', bookId);
-    }
     set({ activeBookId: bookId });
     try {
       await updateSettings({ active_book_id: bookId });
@@ -321,7 +308,6 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
 
   toggleTheme: () => {
     const next = get().theme === 'light' ? 'dark' : 'light';
-    localStorage.setItem('molat_theme', next);
     if (next === 'dark') {
       document.documentElement.classList.add('dark');
     } else {
@@ -356,21 +342,12 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
         const s = settingsRes.value;
         if (s.daily_goal_pages) {
           loadedGoal = s.daily_goal_pages;
-          if (typeof localStorage !== 'undefined') {
-            localStorage.setItem('molat_daily_goal_pages', String(s.daily_goal_pages));
-          }
         }
         if (s.active_book_id) {
           loadedActiveBookId = s.active_book_id;
-          if (typeof localStorage !== 'undefined') {
-            localStorage.setItem('molat_last_active_book_id', s.active_book_id);
-          }
         }
         if (s.theme && (s.theme === 'dark' || s.theme === 'light')) {
           loadedTheme = s.theme;
-          if (typeof localStorage !== 'undefined') {
-            localStorage.setItem('molat_theme', s.theme);
-          }
           if (s.theme === 'dark') {
             document.documentElement.classList.add('dark');
           } else {

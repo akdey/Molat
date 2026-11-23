@@ -79,9 +79,8 @@ export const QuickLogModal: React.FC = () => {
     if (quickLogBook) {
       setSelectedBookId(quickLogBook.book_id);
     } else if (books.length > 0) {
-      const targetId = activeBookId || (typeof window !== 'undefined' ? localStorage.getItem('molat_last_active_book_id') : null);
-      const lastActiveBook = targetId
-        ? books.find((b) => b.book_id === targetId && b.reading_status === 'READING')
+      const lastActiveBook = activeBookId
+        ? books.find((b) => b.book_id === activeBookId && b.reading_status === 'READING')
         : null;
       const active = lastActiveBook || books.find((b) => b.reading_status === 'READING');
       setSelectedBookId(active ? active.book_id : books[0].book_id);

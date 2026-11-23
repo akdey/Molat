@@ -260,10 +260,9 @@ export const FocusReadingRoomModal: React.FC = () => {
       }
     }
 
-    // Fresh session: prioritize explicit focusRoomBook -> activeBook from store/db -> first 'READING' book
-    const targetId = activeBookId || (typeof window !== 'undefined' ? localStorage.getItem('molat_last_active_book_id') : null);
-    const lastActiveBook = targetId
-      ? books.find((b) => b.book_id === targetId && b.reading_status === 'READING')
+    // Fresh session: prioritize explicit focusRoomBook -> activeBook from database -> first 'READING' book
+    const lastActiveBook = activeBookId
+      ? books.find((b) => b.book_id === activeBookId && b.reading_status === 'READING')
       : null;
     const targetBook = focusRoomBook || lastActiveBook || books.find((b) => b.reading_status === 'READING') || books[0];
     const bookId = targetBook ? targetBook.book_id : '';

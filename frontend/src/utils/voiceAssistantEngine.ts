@@ -146,6 +146,7 @@ export function processVoiceAssistantCommand(
     lendingRecords: LendingRecord[];
     streakSummary: StreakSummary | null;
     bookLastPages?: Record<string, number>;
+    activeBookId?: string | null;
   }
 ): AssistantResult {
   const speech = rawSpeech.trim();
@@ -223,9 +224,8 @@ export function processVoiceAssistantCommand(
       .trim();
 
     const matched = cleanSpeech.length > 2 ? fuzzyMatchBook(cleanSpeech, context.books) : null;
-    const lastActiveId = typeof window !== 'undefined' ? localStorage.getItem('molat_last_active_book_id') : null;
-    const lastActiveBook = lastActiveId
-      ? context.books.find((b) => b.book_id === lastActiveId && b.reading_status === 'READING')
+    const lastActiveBook = context.activeBookId
+      ? context.books.find((b) => b.book_id === context.activeBookId && b.reading_status === 'READING')
       : null;
 
     const target =
@@ -316,9 +316,8 @@ export function processVoiceAssistantCommand(
     const lastEnd = context.bookLastPages[matched.book.book_id] || 0;
     currentStart = lastEnd > 0 ? lastEnd + 1 : 1;
   } else {
-    const lastActiveId = typeof window !== 'undefined' ? localStorage.getItem('molat_last_active_book_id') : null;
-    const lastActiveBook = lastActiveId
-      ? context.books.find((b) => b.book_id === lastActiveId && b.reading_status === 'READING')
+    const lastActiveBook = context.activeBookId
+      ? context.books.find((b) => b.book_id === context.activeBookId && b.reading_status === 'READING')
       : null;
     const activeBook = lastActiveBook || context.books.find((b) => b.reading_status === 'READING');
     if (activeBook?.book_id && context.bookLastPages) {

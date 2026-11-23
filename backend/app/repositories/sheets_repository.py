@@ -758,23 +758,21 @@ class GoogleSheetsRepository:
             if settings.BRIDGE_TOKEN:
                 params["token"] = settings.BRIDGE_TOKEN
 
-            try:
-                async with self._client(timeout=15.0) as client:
-                    resp = await client.get(settings.GOOGLE_SHEETS_BRIDGE_URL, params=params)
-                    resp.raise_for_status()
-                    data = resp.json()
-                    if data.get("success"):
-                        rows = data.get("rows") or []
-                        for r in rows:
-                            k = r.get("key")
-                            v = r.get("value")
-                            u = r.get("updated_at")
-                            if k:
-                                settings_dict[k] = str(v) if v is not None else ""
-                                if u:
-                                    latest_updated_at = u
-            except Exception as e:
-                logger.warning(f"Failed to fetch settings from bridge, using memory fallback: {e}")
+            async with self._client(timeout=15.0) as client:
+                resp = await client.get(settings.GOOGLE_SHEETS_BRIDGE_URL, params=params)
+                resp.raise_for_status()
+                data = resp.json()
+                if not data.get("success"):
+                    raise RuntimeError(f"Apps Script error reading Settings: {data.get('error')}")
+                rows = data.get("rows") or []
+                for r in rows:
+                    k = r.get("key")
+                    v = r.get("value")
+                    u = r.get("updated_at")
+                    if k:
+                        settings_dict[k] = str(v) if v is not None else ""
+                        if u:
+                            latest_updated_at = u
 
         # Parse daily goal
         try:
@@ -836,7 +834,6 @@ class GoogleSheetsRepository:
                         "value": sanitize_cell_value(val),
                         "updated_at": now_str,
                     }
-                    # Try update first, fallback to append
                     payload_update = {
                         "token": settings.BRIDGE_TOKEN or "",
                         "action": "update",
@@ -845,21 +842,23 @@ class GoogleSheetsRepository:
                         "keyValue": key,
                         "record": record,
                     }
-                    try:
-                        async with self._client(timeout=15.0) as client:
-                            resp = await client.post(settings.GOOGLE_SHEETS_BRIDGE_URL, json=payload_update)
-                            data = resp.json()
-                            if not data.get("success"):
-                                # If update failed (record didn't exist yet), append it
-                                payload_append = {
-                                    "token": settings.BRIDGE_TOKEN or "",
-                                    "action": "append",
-                                    "table": "Settings",
-                                    "record": record,
-                                }
-                                await client.post(settings.GOOGLE_SHEETS_BRIDGE_URL, json=payload_append)
-                    except Exception as err:
-                        logger.warning(f"Could not persist setting {key} to Google Sheets bridge: {err}")
+                    async with self._client(timeout=15.0) as client:
+                        resp = await client.post(settings.GOOGLE_SHEETS_BRIDGE_URL, json=payload_update)
+                        resp.raise_for_status()
+                        data = resp.json()
+                        if not data.get("success"):
+                            # If update failed (record didn't exist yet in sheet), append it
+                            payload_append = {
+                                "token": settings.BRIDGE_TOKEN or "",
+                                "action": "append",
+                                "table": "Settings",
+                                "record": record,
+                            }
+                            append_resp = await client.post(settings.GOOGLE_SHEETS_BRIDGE_URL, json=payload_append)
+                            append_resp.raise_for_status()
+                            append_data = append_resp.json()
+                            if not append_data.get("success"):
+                                raise RuntimeError(f"Failed to persist setting {key}: {append_data.get('error')}")
 
             self.cache.clear()
             return await self.get_settings(force_refresh=True)

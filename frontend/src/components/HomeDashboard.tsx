@@ -42,11 +42,10 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({
   const { activeBookId, setActiveBookId, lendingRecords, setPickNextModalOpen, openFocusRoom } = useLibraryStore();
   const activeBooks = useMemo(() => books.filter((b) => b.reading_status === 'READING'), [books]);
 
-  // Selected active book index, defaulting to database activeBookId or localStorage
+  // Selected active book index, sourced from database activeBookId
   const [selectedActiveIndex, setSelectedActiveIndex] = useState(() => {
-    const targetId = activeBookId || (typeof window !== 'undefined' ? localStorage.getItem('molat_last_active_book_id') : null);
-    if (!targetId) return 0;
-    const idx = books.filter((b) => b.reading_status === 'READING').findIndex((b) => b.book_id === targetId);
+    if (!activeBookId) return 0;
+    const idx = books.filter((b) => b.reading_status === 'READING').findIndex((b) => b.book_id === activeBookId);
     return idx >= 0 ? idx : 0;
   });
 
