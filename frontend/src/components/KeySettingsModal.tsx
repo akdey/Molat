@@ -194,11 +194,10 @@ export const KeySettingsModal: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => { setMode('login'); setErrorMsg(null); }}
-                    className={`flex-1 py-1.5 rounded-lg font-medium flex items-center justify-center gap-1.5 transition-all ${
-                      mode === 'login'
+                    className={`flex-1 py-1.5 rounded-lg font-medium flex items-center justify-center gap-1.5 transition-all ${mode === 'login'
                         ? 'bg-canvas dark:bg-canvas-dark text-ink dark:text-ink-dark shadow-xs'
                         : 'text-ink-muted hover:text-ink'
-                    }`}
+                      }`}
                   >
                     <LogIn size={13} />
                     <span>Sign In</span>
@@ -206,11 +205,10 @@ export const KeySettingsModal: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => { setMode('signup'); setErrorMsg(null); }}
-                    className={`flex-1 py-1.5 rounded-lg font-medium flex items-center justify-center gap-1.5 transition-all ${
-                      mode === 'signup'
+                    className={`flex-1 py-1.5 rounded-lg font-medium flex items-center justify-center gap-1.5 transition-all ${mode === 'signup'
                         ? 'bg-canvas dark:bg-canvas-dark text-ink dark:text-ink-dark shadow-xs'
                         : 'text-ink-muted hover:text-ink'
-                    }`}
+                      }`}
                   >
                     <UserPlus size={13} />
                     <span>Create Account</span>
@@ -300,7 +298,7 @@ export const KeySettingsModal: React.FC = () => {
                       </label>
                       <div className="relative flex items-center">
                         <span className="absolute left-2.5 font-serif text-accent dark:text-accent-dark text-xs select-none">
-                          ❧ ex/
+                          ex/
                         </span>
                         <input
                           type="text"

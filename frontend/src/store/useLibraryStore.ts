@@ -59,19 +59,19 @@ interface LibraryState {
   refreshing: boolean;
   error: string | null;
   toasts: Toast[];
-  
+
   // Navigation & View Mode
   activeTab: 'home' | 'shelf' | 'tracker' | 'wishlist' | 'maintenance' | 'insights' | 'lending';
   viewMode: 'grid' | 'spine' | 'table';
   sortBy: ShelfSortOption;
-  
+
   // Filters & Search
   search: string;
   statusFilter: string;
   genreFilter: string;
   selectedGenres: string[];
   conditionFilter: string;
-  
+
   // Drawers & Modals
   selectedBook: Book | null;
   quickLogOpen: boolean;
@@ -86,14 +86,14 @@ interface LibraryState {
   focusRoomOpen: boolean;
   focusRoomBook: Book | null;
   hasActiveFocusTimer: boolean;
-  
+
   // Auth & Settings
   authToken: string | null;
   authUser: string | null;
   theme: 'light' | 'dark';
   dailyGoal: number;
   activeBookId: string | null;
-  
+
   // Setters & Actions
   setActiveTab: (tab: 'home' | 'shelf' | 'tracker' | 'wishlist' | 'maintenance' | 'insights' | 'lending') => void;
   setViewMode: (mode: 'grid' | 'spine' | 'table') => void;
@@ -132,7 +132,7 @@ interface LibraryState {
   ) => string;
   updateToast: (id: string, updates: Partial<Toast>) => void;
   removeToast: (id: string) => void;
-  
+
   // API Calls
   loadAllData: (forceRefresh?: boolean) => Promise<void>;
   loadBooks: (forceRefresh?: boolean) => Promise<void>;
@@ -156,17 +156,17 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
   refreshing: false,
   error: null,
   toasts: [],
-  
+
   activeTab: 'home',
   viewMode: 'grid',
   sortBy: 'default',
-  
+
   search: '',
   statusFilter: 'ALL',
   genreFilter: 'ALL',
   selectedGenres: [],
   conditionFilter: 'ALL',
-  
+
   selectedBook: null,
   quickLogOpen: false,
   quickLogBook: null,
@@ -180,7 +180,7 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
   focusRoomOpen: false,
   focusRoomBook: null,
   hasActiveFocusTimer: typeof localStorage !== 'undefined' && !!localStorage.getItem('molat_active_focus_session_v1'),
-  
+
   authToken: typeof localStorage !== 'undefined' ? localStorage.getItem('molat_auth_token') : null,
   authUser: null,
   theme: 'light',
@@ -204,7 +204,7 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
   clearSelectedGenres: () => set({ selectedGenres: [] }),
   setConditionFilter: (conditionFilter) => set({ conditionFilter }),
   setSelectedBook: (selectedBook) => set({ selectedBook }),
-  
+
   openQuickLog: (book) => {
     const activeId = get().activeBookId;
     const activeBook = activeId ? get().books.find(b => b.book_id === activeId && b.reading_status === 'READING') : null;
@@ -314,7 +314,7 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
       wishlist: [],
       lendingRecords: [],
     });
-    get().addToast(`Welcome to Molat, ❧ ex/${uName}! Your library account is ready.`, 'success');
+    get().addToast(`Welcome to Molat, ex/${uName}! Your library account is ready.`, 'success');
     await get().loadAllData(true);
   },
 
