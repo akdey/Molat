@@ -14,6 +14,7 @@ CREATE TABLE IF NOT EXISTS users (
 );
 
 -- Migration safety for existing instances
+ALTER TABLE users DROP COLUMN IF EXISTS display_name;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS email VARCHAR(255);
 DO $$ 
 BEGIN 
