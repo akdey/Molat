@@ -3,7 +3,7 @@ import hmac
 import logging
 import uuid
 from typing import Optional
-from fastapi import APIRouter, HTTPException, Depends, status
+from fastapi import APIRouter, HTTPException, Depends, status, Response
 from pydantic import BaseModel
 from app.config import settings
 from app.storage.provider import get_storage
@@ -14,20 +14,21 @@ from app.core.security import (
     verify_password,
     require_authenticated_user,
 )
-from app.features.auth.models import SignupRequest, UserResponse, AuthResponse
+from app.features.auth.models import SignupRequest, UserResponse
 
 logger = logging.getLogger("molat.auth")
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 
-@router.post("/signup", response_model=AuthResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/signup", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
 async def signup(
     req: SignupRequest,
+    response: Response,
     storage: StorageFactory = Depends(get_storage),
 ):
     """
     Registers a new reader account with unique email, username handle, and password.
-    Returns JWT session token with instant access (no email verification barrier).
+    Emits JWT session token via Authorization and X-Auth-Token response headers.
     """
     if not storage.users:
         raise HTTPException(
@@ -70,17 +71,15 @@ async def signup(
         expires_days=30,
     )
 
-    return AuthResponse(
-        access_token=token,
-        token_type="bearer",
-        user=UserResponse(
-            id=created_user.id,
-            email=created_user.email,
-            username=created_user.username,
-            role=created_user.role,
-            created_at=created_user.created_at,
-        ),
-        expires_in_days=30,
+    response.headers["Authorization"] = f"Bearer {token}"
+    response.headers["X-Auth-Token"] = token
+
+    return UserResponse(
+        id=created_user.id,
+        email=created_user.email,
+        username=created_user.username,
+        role=created_user.role,
+        created_at=created_user.created_at,
     )
 
 
@@ -90,13 +89,15 @@ class LoginRequest(BaseModel):
     password: str
 
 
-@router.post("/login", response_model=AuthResponse)
+@router.post("/login", response_model=UserResponse)
 async def login(
     req: LoginRequest,
+    response: Response,
     storage: StorageFactory = Depends(get_storage),
 ):
     """
     Authenticates a reader via email OR username, or via configured admin credentials.
+    Emits JWT session token via Authorization and X-Auth-Token response headers.
     """
     ident = (req.identifier or req.username or "").strip()
     if not ident or not req.password:
@@ -111,16 +112,13 @@ async def login(
     if configured_pass and ident.lower() == configured_user.lower():
         if hmac.compare_digest(req.password.strip(), configured_pass.strip()):
             token = create_access_token(username=configured_user, user_id="usr_admin", role="admin", expires_days=30)
-            return AuthResponse(
-                access_token=token,
-                token_type="bearer",
-                user=UserResponse(
-                    id="usr_admin",
-                    email=f"{configured_user}@molat.local",
-                    username=configured_user,
-                    role="admin",
-                ),
-                expires_in_days=30,
+            response.headers["Authorization"] = f"Bearer {token}"
+            response.headers["X-Auth-Token"] = token
+            return UserResponse(
+                id="usr_admin",
+                email=f"{configured_user}@molat.local",
+                username=configured_user,
+                role="admin",
             )
 
     # 2. Database user lookup (Email or Username)
@@ -134,17 +132,14 @@ async def login(
                 role=user_record.role,
                 expires_days=30,
             )
-            return AuthResponse(
-                access_token=token,
-                token_type="bearer",
-                user=UserResponse(
-                    id=user_record.id,
-                    email=user_record.email,
-                    username=user_record.username,
-                    role=user_record.role,
-                    created_at=user_record.created_at,
-                ),
-                expires_in_days=30,
+            response.headers["Authorization"] = f"Bearer {token}"
+            response.headers["X-Auth-Token"] = token
+            return UserResponse(
+                id=user_record.id,
+                email=user_record.email,
+                username=user_record.username,
+                role=user_record.role,
+                created_at=user_record.created_at,
             )
 
     raise HTTPException(

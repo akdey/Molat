@@ -56,6 +56,7 @@ def attach_api_routes(target_app):
         allow_credentials=True,
         allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
         allow_headers=["*"],
+        expose_headers=["Authorization", "X-Auth-Token"],
     )
     target_app.include_router(health_router, prefix="/api/v1")
     target_app.include_router(auth_router, prefix="/api/v1")

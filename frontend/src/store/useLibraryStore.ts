@@ -181,8 +181,8 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
   focusRoomBook: null,
   hasActiveFocusTimer: typeof localStorage !== 'undefined' && !!localStorage.getItem('molat_active_focus_session_v1'),
   
-  authToken: localStorage.getItem('molat_auth_token') || null,
-  authUser: localStorage.getItem('molat_auth_user') || null,
+  authToken: typeof localStorage !== 'undefined' ? localStorage.getItem('molat_auth_token') : null,
+  authUser: null,
   theme: 'light',
   dailyGoal: 15,
   activeBookId: null,
@@ -285,12 +285,11 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
   },
 
   loginOwner: async (username, password) => {
-    const res = await loginUser(username, password);
-    const uName = res.user?.username || res.user?.email || 'reader';
-    localStorage.setItem('molat_auth_token', res.access_token);
-    localStorage.setItem('molat_auth_user', uName);
+    const user = await loginUser(username, password);
+    const uName = user.username || user.email || 'reader';
+    const token = typeof localStorage !== 'undefined' ? localStorage.getItem('molat_auth_token') : null;
     set({
-      authToken: res.access_token,
+      authToken: token,
       authUser: uName,
       books: [],
       portfolio: null,
@@ -303,12 +302,11 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
   },
 
   signupReader: async (email, username, password) => {
-    const res = await signupUser(email, username, password);
-    const uName = res.user?.username || username;
-    localStorage.setItem('molat_auth_token', res.access_token);
-    localStorage.setItem('molat_auth_user', uName);
+    const user = await signupUser(email, username, password);
+    const uName = user.username || username;
+    const token = typeof localStorage !== 'undefined' ? localStorage.getItem('molat_auth_token') : null;
     set({
-      authToken: res.access_token,
+      authToken: token,
       authUser: uName,
       books: [],
       portfolio: null,
@@ -321,9 +319,9 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
   },
 
   logout: () => {
-    localStorage.removeItem('molat_auth_token');
-    localStorage.removeItem('molat_auth_user');
-    localStorage.removeItem('molat_library_key');
+    if (typeof localStorage !== 'undefined') {
+      localStorage.removeItem('molat_auth_token');
+    }
     set({
       authToken: null,
       authUser: null,

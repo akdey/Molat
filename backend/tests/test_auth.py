@@ -25,11 +25,13 @@ def test_auth_signup_and_dual_login():
     signup_res = client.post("/api/v1/auth/signup", json=signup_payload)
     assert signup_res.status_code == 201
     signup_data = signup_res.json()
-    assert "access_token" in signup_data
-    assert signup_data["user"]["email"] == "reader_test@example.com"
-    assert signup_data["user"]["username"] == "reader_hero"
-    assert signup_data["user"]["role"] == "reader"
-    token = signup_data["access_token"]
+    assert "access_token" not in signup_data
+    assert signup_data["email"] == "reader_test@example.com"
+    assert signup_data["username"] == "reader_hero"
+    assert signup_data["role"] == "reader"
+    assert "Authorization" in signup_res.headers or "x-auth-token" in signup_res.headers
+    raw_auth = signup_res.headers.get("authorization", "")
+    token = signup_res.headers.get("x-auth-token") or raw_auth.replace("Bearer ", "").strip()
 
     # 2. Check /api/v1/auth/me with Bearer token
     me_res = client.get(
@@ -68,7 +70,9 @@ def test_auth_signup_and_dual_login():
         json={"identifier": "reader_test@example.com", "password": "strongPassword99"},
     )
     assert login_by_email.status_code == 200
-    assert login_by_email.json()["user"]["username"] == "reader_hero"
+    assert "Authorization" in login_by_email.headers or "x-auth-token" in login_by_email.headers
+    assert "access_token" not in login_by_email.json()
+    assert login_by_email.json()["username"] == "reader_hero"
 
     # 6. Login via Username
     login_by_username = client.post(
@@ -76,7 +80,9 @@ def test_auth_signup_and_dual_login():
         json={"identifier": "reader_hero", "password": "strongPassword99"},
     )
     assert login_by_username.status_code == 200
-    assert login_by_username.json()["user"]["email"] == "reader_test@example.com"
+    assert "Authorization" in login_by_username.headers or "x-auth-token" in login_by_username.headers
+    assert "access_token" not in login_by_username.json()
+    assert login_by_username.json()["email"] == "reader_test@example.com"
 
 
 def test_auth_legacy_login_and_token_usage(monkeypatch):
@@ -90,12 +96,13 @@ def test_auth_legacy_login_and_token_usage(monkeypatch):
         json={"username": "amit", "password": "secret123"},
     )
     assert login_res.status_code == 200
+    assert "Authorization" in login_res.headers or "x-auth-token" in login_res.headers
     data = login_res.json()
-    assert "access_token" in data
-    assert data["user"]["username"] == "amit"
-    assert data["token_type"] == "bearer"
+    assert "access_token" not in data
+    assert data["username"] == "amit"
 
-    token = data["access_token"]
+    raw_auth = login_res.headers.get("authorization", "")
+    token = login_res.headers.get("x-auth-token") or raw_auth.replace("Bearer ", "").strip()
     assert len(token.split(".")) == 3
 
     # 2. Use token on protected write endpoint

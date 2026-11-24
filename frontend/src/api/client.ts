@@ -41,12 +41,20 @@ export async function apiFetch<T>(endpoint: string, options: ApiFetchOptions = {
   // 3. Execution
   const res = await fetch(url, { ...options, headers });
 
-  // 4. Response Interceptor
+  // 4. Response Interceptor: Capture Auth Token from Headers
+  const authHeader = res.headers.get('Authorization') || res.headers.get('X-Auth-Token');
+  if (authHeader) {
+    const rawToken = authHeader.replace(/^Bearer\s+/i, '').trim();
+    if (rawToken && typeof localStorage !== 'undefined') {
+      localStorage.setItem('molat_auth_token', rawToken);
+    }
+  }
+
+  // 5. Response Interceptor: Error handling
   if (!res.ok) {
     if (res.status === 401 && !options.skipAuth) {
       if (typeof localStorage !== 'undefined') {
         localStorage.removeItem('molat_auth_token');
-        localStorage.removeItem('molat_auth_user');
       }
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new CustomEvent('molat:unauthorized'));
@@ -74,19 +82,12 @@ export interface AuthUser {
   created_at?: string;
 }
 
-export interface AuthResponse {
-  access_token: string;
-  token_type: string;
-  user: AuthUser;
-  expires_in_days: number;
-}
-
 export async function signupUser(
   email: string,
   username: string,
   password: string
-): Promise<AuthResponse> {
-  return apiFetch<AuthResponse>('/auth/signup', {
+): Promise<AuthUser> {
+  return apiFetch<AuthUser>('/auth/signup', {
     method: 'POST',
     body: JSON.stringify({ email, username, password }),
     skipAuth: true,
@@ -96,8 +97,8 @@ export async function signupUser(
 export async function loginUser(
   identifier: string,
   password: string
-): Promise<AuthResponse> {
-  return apiFetch<AuthResponse>('/auth/login', {
+): Promise<AuthUser> {
+  return apiFetch<AuthUser>('/auth/login', {
     method: 'POST',
     body: JSON.stringify({ identifier, password }),
     skipAuth: true,
