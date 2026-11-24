@@ -134,7 +134,7 @@ export const AuthScreen: React.FC = () => {
                 <input
                   type="text"
                   required
-                  placeholder="e.g. reader@molat.local or ex/akdey"
+                  placeholder="e.g. reader@molat.com or ex/username"
                   value={loginIdent}
                   onChange={(e) => setLoginIdent(e.target.value)}
                   className="w-full pl-8 pr-3 py-2 text-sm rounded-xl bg-white dark:bg-[#121316] border border-[#E2D9C8] dark:border-[#2A2F3A] text-[#1E293B] dark:text-[#F1F5F9] focus:outline-hidden focus:ring-2 focus:ring-[#C2410C]/40 transition-shadow"
@@ -197,7 +197,7 @@ export const AuthScreen: React.FC = () => {
               </label>
               <div className="relative flex items-center">
                 <span className="absolute left-3 font-serif font-bold text-[#C2410C] dark:text-[#D97706] text-sm select-none pointer-events-none">
-                  ❧ ex/
+                  ex/
                 </span>
                 <input
                   type="text"
@@ -209,7 +209,7 @@ export const AuthScreen: React.FC = () => {
                 />
               </div>
               <p className="text-3xs text-[#475569] dark:text-[#94A3B8] mt-1 pl-1">
-                Your Ex Libris bookplate slug: <span className="font-mono text-[#C2410C] dark:text-[#D97706]">❧ ex/{signupUsername || 'handle'}</span>
+                Your Ex Libris bookplate slug: <span className="font-mono text-[#C2410C] dark:text-[#D97706]">ex/{signupUsername || 'handle'}</span>
               </p>
             </div>
 
