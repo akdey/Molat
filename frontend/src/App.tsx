@@ -50,6 +50,7 @@ import { LendingLedger } from './components/LendingLedger';
 import { PickNextReadModal } from './components/PickNextReadModal';
 import { FocusReadingRoomModal } from './components/FocusReadingRoomModal';
 import { HoldToSpeakAssistant } from './components/HoldToSpeakAssistant';
+import { AuthScreen } from './components/AuthScreen';
 
 export default function App() {
   const {
@@ -92,6 +93,7 @@ export default function App() {
     loadAllData,
     authToken,
     authUser,
+    logout,
     theme,
     toggleTheme,
   } = useLibraryStore();
@@ -129,8 +131,18 @@ export default function App() {
   }, [activeTab]);
 
   useEffect(() => {
-    loadAllData();
-  }, [loadAllData]);
+    if (authToken) {
+      loadAllData();
+    }
+  }, [authToken, loadAllData]);
+
+  useEffect(() => {
+    const handleUnauthorized = () => {
+      logout();
+    };
+    window.addEventListener('molat:unauthorized', handleUnauthorized);
+    return () => window.removeEventListener('molat:unauthorized', handleUnauthorized);
+  }, [logout]);
 
   // Extract unique individual genres for filter dropdown
   const allGenres = Array.from(
@@ -208,6 +220,15 @@ export default function App() {
   }, [filteredBooks, sortBy]);
 
   const readingBooks = books.filter((b) => b.reading_status === 'READING');
+
+  if (!authToken) {
+    return (
+      <>
+        <AuthScreen />
+        <ToastContainer />
+      </>
+    );
+  }
 
   return (
     <div className="min-h-screen min-h-dvh w-full max-w-full overflow-x-hidden bg-canvas dark:bg-canvas-dark text-ink dark:text-ink-dark transition-colors duration-200 flex flex-col">
