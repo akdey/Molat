@@ -7,6 +7,7 @@ from fastapi.responses import JSONResponse
 
 from app.config import settings
 from app.core.database import db_manager
+from app.core.rbac import RBACMiddleware
 from app.storage import PostgresStorageFactory, SheetsStorageFactory, MemoryStorageFactory
 from app.features.health.router import router as health_router
 from app.features.auth.router import router as auth_router
@@ -76,7 +77,8 @@ app = FastAPI(
     redoc_url="/redoc" if settings.DEBUG else None,
 )
 
-# CORS configuration
+# RBAC and CORS configuration
+app.add_middleware(RBACMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,

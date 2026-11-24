@@ -3,7 +3,10 @@ from fastapi.testclient import TestClient
 from app.main import app
 from app.features.books.models import BOOKS_SCHEMA_COLUMNS, Book, ReadingStatus, BookCondition
 
+from app.core.security import create_access_token
+
 client = TestClient(app)
+AUTH_HEADERS = {"Authorization": f"Bearer {create_access_token('reader_test', user_id='usr_test', role='reader')}"}
 
 
 def test_schema_21_columns():
@@ -30,7 +33,7 @@ def test_root_and_health():
 
 
 def test_get_books_and_portfolio_stats():
-    res = client.get("/api/v1/books")
+    res = client.get("/api/v1/books", headers=AUTH_HEADERS)
     assert res.status_code == 200
     body = res.json()
     assert "books" in body
@@ -65,8 +68,7 @@ def test_book_crud_lifecycle():
         "purchase_date": "2024-01-15",
         "notes": "Acquired in sale",
     }
-    auth_headers = {"X-Library-Key": "development-secret-key-change-in-production"}
-    create_res = client.post("/api/v1/books", json=new_book, headers=auth_headers)
+    create_res = client.post("/api/v1/books", json=new_book, headers=AUTH_HEADERS)
     assert create_res.status_code == 201
     created = create_res.json()
     book_id = created["book_id"]
@@ -74,7 +76,7 @@ def test_book_crud_lifecycle():
     assert created["title"] == "Clear and Present Danger"
 
     # 2. Get book by id
-    get_res = client.get(f"/api/v1/books/{book_id}")
+    get_res = client.get(f"/api/v1/books/{book_id}", headers=AUTH_HEADERS)
     assert get_res.status_code == 200
     assert get_res.json()["authors"] == "Tom Clancy"
 
@@ -82,7 +84,7 @@ def test_book_crud_lifecycle():
     patch_res = client.patch(
         f"/api/v1/books/{book_id}",
         json={"reading_status": "READING", "rating": 5, "notes": "Reading chapter 3"},
-        headers=auth_headers,
+        headers=AUTH_HEADERS,
     )
     assert patch_res.status_code == 200
     updated = patch_res.json()
@@ -91,25 +93,23 @@ def test_book_crud_lifecycle():
     assert updated["notes"] == "Reading chapter 3"
 
     # 4. Delete book
-    del_res = client.delete(f"/api/v1/books/{book_id}", headers=auth_headers)
+    del_res = client.delete(f"/api/v1/books/{book_id}", headers=AUTH_HEADERS)
     assert del_res.status_code == 204
 
     # 5. Confirm deletion returns 404
-    get_after = client.get(f"/api/v1/books/{book_id}")
+    get_after = client.get(f"/api/v1/books/{book_id}", headers=AUTH_HEADERS)
     assert get_after.status_code == 404
 
 
 def test_both_isbn10_and_isbn13_auto_sync():
     """Verify that submitting only ISBN-13 automatically computes ISBN-10, and vice versa."""
-    auth_headers = {"X-Library-Key": "development-secret-key-change-in-production"}
-
     # 1. Provide only ISBN-13 -> should auto-derive ISBN-10
     book_only_13 = {
         "title": "Appointment with Death",
         "authors": "Agatha Christie",
         "isbn_13": "9780007119356",
     }
-    res13 = client.post("/api/v1/books", json=book_only_13, headers=auth_headers)
+    res13 = client.post("/api/v1/books", json=book_only_13, headers=AUTH_HEADERS)
     assert res13.status_code == 201
     created13 = res13.json()
     assert created13["isbn_13"] == "9780007119356"
@@ -121,14 +121,14 @@ def test_both_isbn10_and_isbn13_auto_sync():
         "authors": "Agatha Christie",
         "isbn_10": "0007119356",
     }
-    res10 = client.post("/api/v1/books", json=book_only_10, headers=auth_headers)
+    res10 = client.post("/api/v1/books", json=book_only_10, headers=AUTH_HEADERS)
     assert res10.status_code == 201
     created10 = res10.json()
     assert created10["isbn_10"] == "0007119356"
     assert created10["isbn_13"] == "9780007119356"
 
     # Cleanup
-    client.delete(f"/api/v1/books/{created13['book_id']}", headers=auth_headers)
-    client.delete(f"/api/v1/books/{created10['book_id']}", headers=auth_headers)
+    client.delete(f"/api/v1/books/{created13['book_id']}", headers=AUTH_HEADERS)
+    client.delete(f"/api/v1/books/{created10['book_id']}", headers=AUTH_HEADERS)
 
 

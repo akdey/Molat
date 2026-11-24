@@ -24,7 +24,6 @@ export const KeySettingsModal: React.FC = () => {
   // Signup form state
   const [signupEmail, setSignupEmail] = useState('');
   const [signupUsername, setSignupUsername] = useState('');
-  const [signupDisplayName, setSignupDisplayName] = useState('');
   const [signupPassword, setSignupPassword] = useState('');
 
   const [loading, setLoading] = useState(false);
@@ -69,8 +68,7 @@ export const KeySettingsModal: React.FC = () => {
       await signupReader(
         signupEmail.trim(),
         signupUsername.trim(),
-        signupPassword.trim(),
-        signupDisplayName.trim() || undefined
+        signupPassword.trim()
       );
       setSignupPassword('');
     } catch (err: any) {
@@ -148,13 +146,15 @@ export const KeySettingsModal: React.FC = () => {
               <div className="space-y-4">
                 <div className="p-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900/40 flex items-center justify-between">
                   <div className="flex items-center gap-2.5">
-                    <UserCheck className="text-emerald-700 dark:text-emerald-400 h-5 w-5" />
+                    <div className="h-8 w-8 rounded-full bg-emerald-200/70 dark:bg-emerald-900/60 flex items-center justify-center font-serif text-emerald-800 dark:text-emerald-300 font-bold text-sm">
+                      ❧
+                    </div>
                     <div>
                       <p className="text-xs font-medium text-emerald-900 dark:text-emerald-200">
-                        Signed in as <strong className="font-mono">@{authUser || 'reader'}</strong>
+                        Signed in as <strong className="font-mono text-accent dark:text-accent-dark">ex/{authUser || 'reader'}</strong>
                       </p>
                       <p className="text-3xs text-emerald-700 dark:text-emerald-400">
-                        Library read & write access active
+                        Ex Libris Provenance • Personal Library Active
                       </p>
                     </div>
                   </div>
@@ -293,39 +293,28 @@ export const KeySettingsModal: React.FC = () => {
                       />
                     </div>
 
-                    <div className="grid grid-cols-2 gap-2">
-                      <div className="space-y-1">
-                        <label className="text-3xs uppercase tracking-wider font-medium text-ink-muted flex items-center gap-1">
-                          <AtSign size={11} />
-                          <span>Username Handle</span>
-                        </label>
+                    <div className="space-y-1">
+                      <label className="text-3xs uppercase tracking-wider font-medium text-ink-muted flex items-center gap-1">
+                        <AtSign size={11} />
+                        <span>Username Handle</span>
+                      </label>
+                      <div className="relative flex items-center">
+                        <span className="absolute left-2.5 font-serif text-accent dark:text-accent-dark text-xs select-none">
+                          ❧ ex/
+                        </span>
                         <input
                           type="text"
                           required
                           value={signupUsername}
                           onChange={(e) => setSignupUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, ''))}
-                          placeholder="amit"
-                          className="w-full px-2.5 py-1.5 rounded-lg border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark text-xs font-mono focus:outline-none focus:border-accent"
+                          placeholder="handle"
+                          className="w-full pl-12 pr-2.5 py-1.5 rounded-lg border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark text-xs font-mono focus:outline-none focus:border-accent"
                         />
                       </div>
-
-                      <div className="space-y-1">
-                        <label className="text-3xs uppercase tracking-wider font-medium text-ink-muted flex items-center gap-1">
-                          <User size={11} />
-                          <span>Display Name (Optional)</span>
-                        </label>
-                        <input
-                          type="text"
-                          value={signupDisplayName}
-                          onChange={(e) => setSignupDisplayName(e.target.value)}
-                          placeholder="Amit Kumar Dey"
-                          className="w-full px-2.5 py-1.5 rounded-lg border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark text-xs focus:outline-none focus:border-accent"
-                        />
-                      </div>
+                      <span className="text-3xs text-ink-muted block">
+                        Ex Libris provenance slug for personal shelves and future book lending.
+                      </span>
                     </div>
-                    <span className="text-3xs text-ink-muted block">
-                      Public handle for shelf links, peer lending, and reader clans.
-                    </span>
 
                     <div className="space-y-1">
                       <label className="text-3xs uppercase tracking-wider font-medium text-ink-muted flex items-center gap-1">

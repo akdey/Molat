@@ -121,7 +121,7 @@ Whether cataloguing a multi-hundred volume collection, scanning new arrivals at 
 - **Dark Mode Support**: Seamless toggle between warm paper daylight and low-contrast midnight obsidian themes.
 
 ### 🔒 Privacy & Passkey Protection
-- **Passkey-Guarded Admin Actions**: Public visitors can browse your library and stats in read-only mode; book creation, edits, log submissions, and wishlist mutations require your secret `X-Library-Key`.
+- **JWT Authentication & Centralized RBAC**: Robust reader authentication with email, handle, and password. Public visitor shelves via Ex Libris provenance handles (`ex/<handle>`); collection management, reading log submissions, lending, and wishlist mutations require authenticated reader session tokens. System administrative maintenance is protected via role-based route mapper middleware.
 - **Sanitized Formula Injections**: All cell writes neutralize formula injection attacks (leading `=`, `+`, `-`, `@`).
 - **Zero Telemetry**: No third-party trackers, analytics, or cookies.
 

@@ -5,10 +5,11 @@ from app.main import app
 from app.features.reading.models import ReadingLog, ReadingLogCreate
 from app.features.books.models import BookCreate, ReadingStatus
 from app.features.reading.streak_calculator import calculate_streak_summary
-from app.main import app
+from app.core.security import create_access_token
 
 client = TestClient(app)
-AUTH_HEADERS = {"X-Library-Key": "development-secret-key-change-in-production"}
+AUTH_HEADERS = {"Authorization": f"Bearer {create_access_token('reader_test', user_id='usr_test')}"}
+
 
 
 def make_dummy_log(log_id: str, session_date: str, pages_read: int) -> ReadingLog:
@@ -137,7 +138,7 @@ def test_velocity_and_heatmap_365():
 # ==================== ENDPOINT INTEGRATION TESTS ====================
 
 def test_api_streak_summary_endpoint():
-    res = client.get("/api/v1/reading/streak-summary")
+    res = client.get("/api/v1/reading/streak-summary", headers=AUTH_HEADERS)
     assert res.status_code == 200
     data = res.json()
     assert "current_streak_days" in data
@@ -159,7 +160,8 @@ async def test_api_log_reading_auto_transition_unread_to_reading():
             reading_status=ReadingStatus.UNREAD,
             purchase_price=250.0,
             rp=499.0,
-        )
+        ),
+        user_id="usr_test",
     )
     assert new_book.reading_status == ReadingStatus.UNREAD
 
@@ -180,7 +182,7 @@ async def test_api_log_reading_auto_transition_unread_to_reading():
     assert "session_date" in log_data
 
     # 3. Verify book status transitioned to READING
-    updated_book = await app.state.storage.books.get(new_book.book_id)
+    updated_book = await app.state.storage.books.get(new_book.book_id, user_id="usr_test")
     assert updated_book is not None
     assert updated_book.reading_status == ReadingStatus.READING
 
@@ -194,7 +196,8 @@ async def test_api_log_reading_auto_transition_to_completed_with_rating():
             reading_status=ReadingStatus.READING,
             purchase_price=199.0,
             rp=399.0,
-        )
+        ),
+        user_id="usr_test",
     )
 
     # 2. Log final session with finished_book=True and rating=5
@@ -211,7 +214,7 @@ async def test_api_log_reading_auto_transition_to_completed_with_rating():
     assert res.status_code == 201
 
     # 3. Verify book status transitioned to COMPLETED and rating is updated
-    updated_book = await app.state.storage.books.get(new_book.book_id)
+    updated_book = await app.state.storage.books.get(new_book.book_id, user_id="usr_test")
     assert updated_book is not None
     assert updated_book.reading_status == ReadingStatus.COMPLETED
     assert updated_book.rating == 5

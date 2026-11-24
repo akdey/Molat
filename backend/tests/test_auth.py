@@ -21,7 +21,6 @@ def test_auth_signup_and_dual_login():
         "email": "reader_test@example.com",
         "username": "reader_hero",
         "password": "strongPassword99",
-        "display_name": "Hero Reader",
     }
     signup_res = client.post("/api/v1/auth/signup", json=signup_payload)
     assert signup_res.status_code == 201
@@ -29,7 +28,7 @@ def test_auth_signup_and_dual_login():
     assert "access_token" in signup_data
     assert signup_data["user"]["email"] == "reader_test@example.com"
     assert signup_data["user"]["username"] == "reader_hero"
-    assert signup_data["user"]["display_name"] == "Hero Reader"
+    assert signup_data["user"]["role"] == "reader"
     token = signup_data["access_token"]
 
     # 2. Check /api/v1/auth/me with Bearer token
@@ -41,6 +40,7 @@ def test_auth_signup_and_dual_login():
     me_data = me_res.json()
     assert me_data["username"] == "reader_hero"
     assert me_data["email"] == "reader_test@example.com"
+    assert me_data["role"] == "reader"
 
     # 3. Duplicate email signup -> 400 Bad Request
     dup_email_payload = {

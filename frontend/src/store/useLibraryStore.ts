@@ -90,7 +90,6 @@ interface LibraryState {
   // Auth & Settings
   authToken: string | null;
   authUser: string | null;
-  libraryKey: string;
   theme: 'light' | 'dark';
   dailyGoal: number;
   activeBookId: string | null;
@@ -118,11 +117,11 @@ interface LibraryState {
   openFocusRoom: (book?: Book) => void;
   closeFocusRoom: () => void;
   setHasActiveFocusTimer: (has: boolean) => void;
-  setLibraryKey: (key: string) => void;
   setDailyGoal: (goal: number) => Promise<void>;
   setActiveBookId: (bookId: string) => Promise<void>;
   loginOwner: (username: string, password: string) => Promise<void>;
-  signupReader: (email: string, username: string, password: string, displayName?: string) => Promise<void>;
+  signupReader: (email: string, username: string, password: string) => Promise<void>;
+  logout: () => void;
   logoutOwner: () => void;
   toggleTheme: () => void;
   addToast: (
@@ -184,7 +183,6 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
   
   authToken: localStorage.getItem('molat_auth_token') || null,
   authUser: localStorage.getItem('molat_auth_user') || null,
-  libraryKey: localStorage.getItem('molat_library_key') || (import.meta.env.VITE_LIBRARY_KEY || ''),
   theme: 'light',
   dailyGoal: 15,
   activeBookId: null,
@@ -233,12 +231,6 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
   },
   closeFocusRoom: () => set({ focusRoomOpen: false, focusRoomBook: null }),
   setHasActiveFocusTimer: (hasActiveFocusTimer) => set({ hasActiveFocusTimer }),
-
-  setLibraryKey: (key: string) => {
-    localStorage.setItem('molat_library_key', key);
-    set({ libraryKey: key });
-    get().addToast('API Key saved locally', 'info');
-  },
 
   setDailyGoal: async (goal: number) => {
     const clamped = Math.max(1, Math.min(500, Math.round(goal)));
@@ -298,24 +290,28 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
     localStorage.setItem('molat_auth_token', res.access_token);
     localStorage.setItem('molat_auth_user', uName);
     set({ authToken: res.access_token, authUser: uName });
-    get().addToast(`Welcome back, ${uName}!`, 'success');
+    get().addToast(`Welcome back, @${uName}!`, 'success');
   },
 
-  signupReader: async (email, username, password, displayName) => {
-    const res = await signupUser(email, username, password, displayName);
+  signupReader: async (email, username, password) => {
+    const res = await signupUser(email, username, password);
     const uName = res.user?.username || username;
     localStorage.setItem('molat_auth_token', res.access_token);
     localStorage.setItem('molat_auth_user', uName);
     set({ authToken: res.access_token, authUser: uName });
-    get().addToast(`Welcome to Molat, @${uName}! Your library account is ready.`, 'success');
+    get().addToast(`Welcome to Molat, ❧ ex/${uName}! Your library account is ready.`, 'success');
   },
 
-  logoutOwner: () => {
+  logout: () => {
     localStorage.removeItem('molat_auth_token');
     localStorage.removeItem('molat_auth_user');
     localStorage.removeItem('molat_library_key');
-    set({ authToken: null, authUser: null, libraryKey: '' });
-    get().addToast('Signed out of owner session.', 'info');
+    set({ authToken: null, authUser: null });
+    get().addToast('Signed out of reader session.', 'info');
+  },
+
+  logoutOwner: () => {
+    get().logout();
   },
 
   toggleTheme: () => {
@@ -428,46 +424,42 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
   },
 
   lendBookRecord: async (payload) => {
-    const token = get().authToken || get().libraryKey;
+    const token = get().authToken;
     const record = await apiLendBook(payload, token || undefined);
     get().addToast(`Lent volume to ${record.borrower_name}!`, 'success');
     await Promise.all([get().loadBooks(true), get().loadLendingRecords(true)]);
   },
 
   returnBookRecord: async (lendingId, returnLocation = 'Home Shelf') => {
-    const token = get().authToken || get().libraryKey;
+    const token = get().authToken;
     const record = await apiReturnBook(lendingId, { return_location: returnLocation }, token || undefined);
     get().addToast(`Marked volume as returned by ${record.borrower_name}!`, 'success');
     await Promise.all([get().loadBooks(true), get().loadLendingRecords(true)]);
   },
 
   submitReadingLog: async (payload) => {
-    const token = get().authToken || get().libraryKey;
+    const token = get().authToken;
     await logReadingSession(payload, token || undefined);
     get().addToast(`Recorded reading session (+${payload.pages_read} pages)!`, 'success');
     await Promise.all([get().loadBooks(true), get().loadStreak()]);
   },
 
   acquireItem: async (wishlistId, payload) => {
-    const token = get().authToken || get().libraryKey;
+    const token = get().authToken;
     const book = await acquireWishlistItem(wishlistId, payload, token || undefined);
     get().addToast(`Acquired "${book.title}" and added to collection!`, 'success');
     await Promise.all([get().loadBooks(true), get().loadWishlist()]);
   },
 
   updateBookDetails: async (bookId, updates) => {
-    const token = get().authToken || get().libraryKey;
+    const token = get().authToken;
     const updated = await updateBook(bookId, updates, token || undefined);
-    set((state) => ({
-      books: state.books.map((b) => (b.book_id === bookId ? updated : b)),
-      selectedBook: state.selectedBook?.book_id === bookId ? updated : state.selectedBook,
-    }));
     get().addToast(`Updated details for "${updated.title}"`, 'success');
     await get().loadBooks(true);
   },
 
   triggerCoverEnrichment: async () => {
-    const token = get().authToken || get().libraryKey;
+    const token = get().authToken;
     get().addToast('Scanning catalogue for cover enrichment...', 'info');
     const res = await enrichCovers(token || undefined);
     get().addToast(res.message || 'Cover enrichment completed!', 'success');

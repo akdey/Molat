@@ -38,7 +38,6 @@ export const BarcodeScannerModal: React.FC = () => {
     setScannerOpen,
     books,
     loadBooks,
-    libraryKey,
     authToken,
     addToast,
     setKeyModalOpen,
@@ -378,7 +377,7 @@ export const BarcodeScannerModal: React.FC = () => {
 
     setSaving(true);
     setErrorMsg(null);
-    const token = authToken || libraryKey;
+    const token = authToken || undefined;
 
     const finalIsbn13 = isbn13.trim() || (scannedIsbn.length === 13 ? scannedIsbn : deriveIsbn13(scannedIsbn) || undefined);
     const finalIsbn10 = isbn10.trim() || (scannedIsbn.length === 10 ? scannedIsbn : deriveIsbn10(scannedIsbn) || undefined);
@@ -407,7 +406,7 @@ export const BarcodeScannerModal: React.FC = () => {
       setScannerOpen(false);
     } catch (err: any) {
       if (err.message && err.message.includes('401')) {
-        setErrorMsg('Authentication key required to add books.');
+        setErrorMsg('Please sign in to add books to your library.');
         setKeyModalOpen(true);
       } else {
         setErrorMsg(err.message || 'Failed to save book.');

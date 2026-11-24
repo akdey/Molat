@@ -5,10 +5,10 @@
 -- 1. Users Table
 CREATE TABLE IF NOT EXISTS users (
     id VARCHAR(50) PRIMARY KEY,
-    email VARCHAR(255) UNIQUE,
+    email VARCHAR(255) UNIQUE NOT NULL,
     username VARCHAR(100) UNIQUE NOT NULL,
-    password_hash VARCHAR(255),
-    display_name VARCHAR(100),
+    password_hash VARCHAR(255) NOT NULL,
+    role VARCHAR(20) DEFAULT 'reader' NOT NULL,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -24,16 +24,13 @@ BEGIN
     END IF; 
 EXCEPTION WHEN OTHERS THEN NULL;
 END $$;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS role VARCHAR(20) DEFAULT 'reader' NOT NULL;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS password_hash VARCHAR(255);
 ALTER TABLE users ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
 
 CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
 CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
-
--- Default owner seed
-INSERT INTO users (id, username, display_name)
-VALUES ('owner', 'admin', 'Library Owner')
-ON CONFLICT (id) DO NOTHING;
+CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
 
 -- 2. Books Table (Scoped to user_id)
 CREATE TABLE IF NOT EXISTS books (

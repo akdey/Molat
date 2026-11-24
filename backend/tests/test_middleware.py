@@ -1,35 +1,60 @@
+# backend/tests/test_middleware.py
 from fastapi.testclient import TestClient
 from app.main import app
-from app.config import settings
+from app.core.security import create_access_token
 
 client = TestClient(app)
 
 
-def test_library_key_middleware_enforcement(monkeypatch):
-    monkeypatch.setattr(settings, "LIBRARY_KEY", "secret-test-key")
+def test_rbac_middleware_public_routes():
+    """Verify that guest routes are accessible without any credentials."""
+    res_root = client.get("/")
+    assert res_root.status_code == 200
 
-    payload = {"title": "Auth Protected Book", "purchase_price": 50.0}
+    res_health = client.get("/api/v1/health")
+    assert res_health.status_code == 200
+    assert res_health.json()["status"] == "ok"
 
-    # 1. Missing header -> 401
-    res_missing = client.post("/api/v1/books", json=payload)
-    assert res_missing.status_code == 401
 
-    # 2. Invalid header -> 403
-    res_invalid = client.post(
-        "/api/v1/books", json=payload, headers={"X-Library-Key": "wrong-key"}
+def test_rbac_middleware_authentication_enforcement():
+    """Verify unauthenticated requests to reader endpoints are rejected with 401."""
+    # 1. Missing Authorization header -> 401
+    res_unauth = client.get("/api/v1/books")
+    assert res_unauth.status_code == 401
+    assert "Authentication required" in res_unauth.json()["detail"]
+
+    # 2. Invalid/tampered Bearer token -> 401
+    res_invalid = client.get(
+        "/api/v1/books",
+        headers={"Authorization": "Bearer invalid.fake.token"},
     )
-    assert res_invalid.status_code == 403
+    assert res_invalid.status_code == 401
 
-    # 3. Valid header -> 201
-    res_valid = client.post(
-        "/api/v1/books", json=payload, headers={"X-Library-Key": "secret-test-key"}
+    # 3. Valid reader token -> 200
+    reader_token = create_access_token("reader_amy", user_id="usr_amy", role="reader")
+    res_valid = client.get(
+        "/api/v1/books",
+        headers={"Authorization": f"Bearer {reader_token}"},
     )
-    assert res_valid.status_code == 201
-    created_id = res_valid.json()["book_id"]
+    assert res_valid.status_code == 200
 
-    # Clean up with key
-    del_res = client.delete(
-        f"/api/v1/books/{created_id}", headers={"X-Library-Key": "secret-test-key"}
+
+def test_rbac_middleware_admin_route_authorization():
+    """Verify admin routes block reader tier with 403 and allow admin tier."""
+    reader_token = create_access_token("reader_bob", user_id="usr_bob", role="reader")
+    admin_token = create_access_token("admin_boss", user_id="usr_admin", role="admin")
+
+    # 1. Reader role attempting admin route -> 403 Forbidden
+    res_forbidden = client.post(
+        "/api/v1/books/enrich-covers",
+        headers={"Authorization": f"Bearer {reader_token}"},
     )
-    assert del_res.status_code == 204
+    assert res_forbidden.status_code == 403
+    assert "Access denied" in res_forbidden.json()["detail"]
 
+    # 2. Admin role attempting admin route -> 200 OK
+    res_allowed = client.post(
+        "/api/v1/books/enrich-covers",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert res_allowed.status_code == 200

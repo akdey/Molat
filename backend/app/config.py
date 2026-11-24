@@ -16,7 +16,6 @@ class Settings(BaseSettings):
     ADMIN_USERNAME: str = "admin"
     ADMIN_PASSWORD: Optional[str] = None
     JWT_SECRET: str = "molat-jwt-secret-key-change-in-production"
-    LIBRARY_KEY: Optional[str] = None
 
     # Database (PostgreSQL / Supabase)
     DATABASE_URL: Optional[str] = None

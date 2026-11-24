@@ -22,11 +22,11 @@ router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 # In-memory user store fallback for local/test execution without PostgreSQL
 _IN_MEMORY_USERS: Dict[str, Dict[str, Any]] = {
-    "owner": {
-        "id": "owner",
+    "usr_admin": {
+        "id": "usr_admin",
         "email": "admin@molat.local",
         "username": "admin",
-        "display_name": "Library Owner",
+        "role": "admin",
         "password_hash": hash_password("secret123"),
         "created_at": "2026-01-01T00:00:00Z",
     }
@@ -41,9 +41,9 @@ async def signup(req: SignupRequest):
     """
     clean_email = req.email.strip().lower()
     clean_username = req.username.strip().lower()
-    display_name = req.display_name or clean_username.title()
     hashed = hash_password(req.password)
     user_id = f"usr_{uuid.uuid4().hex[:12]}"
+    role = "reader"
 
     if db_manager.is_connected and db_manager.pool:
         async with db_manager.pool.acquire() as conn:
@@ -71,11 +71,11 @@ async def signup(req: SignupRequest):
             # Insert new user record
             row = await conn.fetchrow(
                 """
-                INSERT INTO users (id, email, username, display_name, password_hash)
+                INSERT INTO users (id, email, username, role, password_hash)
                 VALUES ($1, $2, $3, $4, $5)
-                RETURNING id, email, username, display_name, created_at
+                RETURNING id, email, username, role, created_at
                 """,
-                user_id, clean_email, clean_username, display_name, hashed
+                user_id, clean_email, clean_username, role, hashed
             )
 
             # Seed default reading settings
@@ -92,7 +92,7 @@ async def signup(req: SignupRequest):
                 id=row["id"],
                 email=row["email"],
                 username=row["username"],
-                display_name=row["display_name"],
+                role=row.get("role") or role,
                 created_at=str(row["created_at"]) if row["created_at"] else None,
             )
     else:
@@ -113,7 +113,7 @@ async def signup(req: SignupRequest):
             "id": user_id,
             "email": clean_email,
             "username": clean_username,
-            "display_name": display_name,
+            "role": role,
             "password_hash": hashed,
             "created_at": "2026-11-24T00:00:00Z",
         }
@@ -121,7 +121,7 @@ async def signup(req: SignupRequest):
             id=user_id,
             email=clean_email,
             username=clean_username,
-            display_name=display_name,
+            role=role,
             created_at="2026-11-24T00:00:00Z",
         )
 
@@ -129,6 +129,7 @@ async def signup(req: SignupRequest):
         username=created_user.username,
         user_id=created_user.id,
         email=created_user.email,
+        role=created_user.role,
         expires_days=30,
     )
 
@@ -163,7 +164,7 @@ async def login(req: LegacyLoginRequest):
         async with db_manager.pool.acquire() as conn:
             user_row = await conn.fetchrow(
                 """
-                SELECT id, email, username, display_name, password_hash, created_at
+                SELECT id, email, username, role, password_hash, created_at
                 FROM users
                 WHERE LOWER(email) = LOWER($1) OR LOWER(username) = LOWER($1)
                 """,
@@ -171,10 +172,12 @@ async def login(req: LegacyLoginRequest):
             )
             if user_row and user_row["password_hash"]:
                 if verify_password(req.password, user_row["password_hash"]):
+                    user_role = user_row.get("role") or "reader"
                     token = create_access_token(
                         username=user_row["username"],
                         user_id=user_row["id"],
                         email=user_row["email"],
+                        role=user_role,
                         expires_days=30,
                     )
                     return AuthResponse(
@@ -184,7 +187,7 @@ async def login(req: LegacyLoginRequest):
                             id=user_row["id"],
                             email=user_row["email"],
                             username=user_row["username"],
-                            display_name=user_row["display_name"],
+                            role=user_role,
                             created_at=str(user_row["created_at"]) if user_row["created_at"] else None,
                         ),
                         expires_in_days=30,
@@ -194,10 +197,12 @@ async def login(req: LegacyLoginRequest):
     for u in _IN_MEMORY_USERS.values():
         if (u.get("email") and u["email"].lower() == ident.lower()) or (u.get("username") and u["username"].lower() == ident.lower()):
             if verify_password(req.password, u["password_hash"]):
+                user_role = u.get("role") or "reader"
                 token = create_access_token(
                     username=u["username"],
                     user_id=u["id"],
                     email=u["email"],
+                    role=user_role,
                     expires_days=30,
                 )
                 return AuthResponse(
@@ -207,26 +212,26 @@ async def login(req: LegacyLoginRequest):
                         id=u["id"],
                         email=u["email"],
                         username=u["username"],
-                        display_name=u["display_name"],
+                        role=user_role,
                         created_at=u.get("created_at"),
                     ),
                     expires_in_days=30,
                 )
 
-    # 3. Legacy Admin fallback check (configured in settings)
+    # 3. Admin credentials check (configured in settings)
     configured_user = settings.ADMIN_USERNAME
-    configured_pass = settings.ADMIN_PASSWORD or settings.LIBRARY_KEY
+    configured_pass = settings.ADMIN_PASSWORD
     if configured_pass and ident.lower() == configured_user.lower():
         if hmac.compare_digest(req.password.strip(), configured_pass.strip()):
-            token = create_access_token(username=configured_user, user_id="owner", expires_days=30)
+            token = create_access_token(username=configured_user, user_id="usr_admin", role="admin", expires_days=30)
             return AuthResponse(
                 access_token=token,
                 token_type="bearer",
                 user=UserResponse(
-                    id="owner",
+                    id="usr_admin",
                     email=f"{configured_user}@molat.local",
                     username=configured_user,
-                    display_name="Library Owner",
+                    role="admin",
                 ),
                 expires_in_days=30,
             )
@@ -244,7 +249,7 @@ async def get_current_user_profile(user_id: str = Depends(require_authenticated_
         async with db_manager.pool.acquire() as conn:
             row = await conn.fetchrow(
                 """
-                SELECT id, email, username, display_name, created_at
+                SELECT id, email, username, role, created_at
                 FROM users
                 WHERE id = $1
                 """,
@@ -255,7 +260,7 @@ async def get_current_user_profile(user_id: str = Depends(require_authenticated_
                     id=row["id"],
                     email=row["email"],
                     username=row["username"],
-                    display_name=row["display_name"],
+                    role=row.get("role") or "reader",
                     created_at=str(row["created_at"]) if row["created_at"] else None,
                 )
 
@@ -266,7 +271,7 @@ async def get_current_user_profile(user_id: str = Depends(require_authenticated_
             id=u["id"],
             email=u.get("email"),
             username=u["username"],
-            display_name=u.get("display_name"),
+            role=u.get("role") or "reader",
             created_at=u.get("created_at"),
         )
 
@@ -274,5 +279,5 @@ async def get_current_user_profile(user_id: str = Depends(require_authenticated_
         id=user_id,
         email="user@molat.local",
         username=user_id,
-        display_name=user_id.title(),
+        role="reader",
     )

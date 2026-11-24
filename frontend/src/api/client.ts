@@ -5,20 +5,12 @@ import type { Book, BookListResponse } from '../types/book';
 const RAW_BASE = (import.meta.env.VITE_API_URL || '').replace(/\/+$/, '');
 const API_BASE = `${RAW_BASE}/api/v1`;
 
-function getAuthHeaders(tokenOrKey?: string): Record<string, string> {
+function getAuthHeaders(token?: string): Record<string, string> {
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-  const cred =
-    tokenOrKey ||
-    localStorage.getItem('molat_auth_token') ||
-    localStorage.getItem('molat_library_key') ||
-    (import.meta.env.VITE_LIBRARY_KEY || '');
+  const cred = token || localStorage.getItem('molat_auth_token');
 
   if (cred) {
-    if (cred.includes('.')) {
-      headers['Authorization'] = `Bearer ${cred}`;
-    } else {
-      headers['X-Library-Key'] = cred;
-    }
+    headers['Authorization'] = `Bearer ${cred.replace(/^Bearer\s+/i, '')}`;
   }
   return headers;
 }
@@ -29,7 +21,7 @@ export interface AuthUser {
   id: string;
   email?: string;
   username: string;
-  display_name?: string;
+  role: string;
   created_at?: string;
 }
 
@@ -43,8 +35,7 @@ export interface AuthResponse {
 export async function signupUser(
   email: string,
   username: string,
-  password: string,
-  display_name?: string
+  password: string
 ): Promise<AuthResponse> {
   const res = await fetch(`${API_BASE}/auth/signup`, {
     method: 'POST',
@@ -53,12 +44,11 @@ export async function signupUser(
       email,
       username,
       password,
-      display_name: display_name || undefined,
     }),
   });
   if (!res.ok) {
     const data = await res.json().catch(() => ({}));
-    throw new Error(data.detail || 'Failed to create account');
+    throw new Error(data.detail || `Signup failed (${res.status})`);
   }
   return res.json();
 }

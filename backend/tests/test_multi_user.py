@@ -60,10 +60,7 @@ async def test_multi_user_data_isolation():
     assert get_b_settings.status_code == 200
     assert get_b_settings.json()["daily_goal_pages"] == 15
 
-    # 7. Unauthenticated request accesses public shelf (owner)
-    public_res = client.get("/api/v1/books")
-    assert public_res.status_code == 200
-    public_titles = [b["title"] for b in public_res.json()["books"]]
-    # Owner's shelf does not contain alice or bob's books
-    assert "Alice in Wonderland" not in public_titles
-    assert "Bob's Adventure" not in public_titles
+    # 7. Unauthenticated request without token receives 401
+    unauth_res = client.get("/api/v1/books")
+    assert unauth_res.status_code == 401
+

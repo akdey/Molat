@@ -6,7 +6,7 @@ import json
 import time
 from typing import Optional, Dict, Any
 import bcrypt
-from fastapi import Header, HTTPException, status
+from fastapi import Header, HTTPException, status, Request
 from app.config import settings
 
 
@@ -41,14 +41,16 @@ def create_access_token(
     username: str,
     user_id: Optional[str] = None,
     email: Optional[str] = None,
+    role: str = "reader",
     expires_days: int = 30
 ) -> str:
-    """Creates HMAC-SHA256 signed bearer token with user_id and email payload."""
-    effective_user_id = user_id or ("owner" if username == settings.ADMIN_USERNAME else f"user_{username}")
+    """Creates HMAC-SHA256 signed bearer token with user_id, email, and role payload."""
+    effective_user_id = user_id or f"user_{username}"
     payload = {
         "sub": username,
         "user_id": effective_user_id,
         "email": email or "",
+        "role": role,
         "exp": int(time.time()) + (expires_days * 86400),
         "iat": int(time.time()),
     }
@@ -94,75 +96,48 @@ def verify_access_token(token: str) -> Optional[Dict[str, Any]]:
 
 
 def get_current_user_id(
+    request: Request,
     authorization: Optional[str] = Header(None, alias="Authorization"),
-    x_library_key: Optional[str] = Header(None, alias="X-Library-Key"),
     x_user_id: Optional[str] = Header(None, alias="X-User-Id"),
 ) -> str:
     """
-    Returns user_id for the request.
-    If authenticated via Bearer token -> extracts user_id.
-    If X-Library-Key matches -> 'owner'.
-    If X-User-Id header provided -> x_user_id.
-    Defaults to 'owner' (public default view).
+    Returns user_id for the request without hardcoded 'owner' fallback.
+    1. Reads user_id from request.state (populated by RBACMiddleware).
+    2. Validates Bearer token if provided.
+    3. Respects explicit X-User-Id header.
+    4. Fails fast with 401 if unauthenticated.
     """
+    if hasattr(request.state, "user_id") and request.state.user_id:
+        return request.state.user_id
+
     if authorization and authorization.lower().startswith("bearer "):
         token = authorization[7:].strip()
         payload = verify_access_token(token)
-        if payload is not None:
-            return payload.get("user_id") or "owner"
-
-    if x_library_key:
-        valid_keys = [k for k in (settings.LIBRARY_KEY, settings.ADMIN_PASSWORD) if k]
-        for key in valid_keys:
-            if hmac.compare_digest(x_library_key, key):
-                return "owner"
+        if payload is not None and payload.get("user_id"):
+            return payload["user_id"]
 
     if x_user_id:
         return x_user_id.strip()
 
-    return "owner"
-
-
-def require_authenticated_user(
-    authorization: Optional[str] = Header(None, alias="Authorization"),
-    x_library_key: Optional[str] = Header(None, alias="X-Library-Key"),
-) -> str:
-    """Enforces authentication and returns user_id."""
-    if authorization and authorization.lower().startswith("bearer "):
-        token = authorization[7:].strip()
-        payload = verify_access_token(token)
-        if payload is not None:
-            return payload.get("user_id") or "owner"
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid or expired access token",
-        )
-
-    if x_library_key:
-        valid_keys = [k for k in (settings.LIBRARY_KEY, settings.ADMIN_PASSWORD) if k]
-        if not valid_keys:
-            return "owner"
-        for key in valid_keys:
-            if hmac.compare_digest(x_library_key, key):
-                return "owner"
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Invalid X-Library-Key",
-        )
-
-    if not settings.LIBRARY_KEY and not settings.ADMIN_PASSWORD:
-        return "owner"
-
     raise HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Authentication required. Please log in or provide X-Library-Key header.",
+        detail="Authentication required. Please sign in.",
     )
 
 
-def verify_library_key(
+def require_authenticated_user(
+    request: Request,
     authorization: Optional[str] = Header(None, alias="Authorization"),
-    x_library_key: Optional[str] = Header(None, alias="X-Library-Key"),
+) -> str:
+    """Enforces authentication and returns user_id."""
+    return get_current_user_id(request=request, authorization=authorization)
+
+
+def verify_library_key(
+    request: Request,
+    authorization: Optional[str] = Header(None, alias="Authorization"),
 ) -> bool:
-    """Backward compatibility wrapper returning bool."""
-    require_authenticated_user(authorization=authorization, x_library_key=x_library_key)
-    return True
+    """Validates that request is authenticated."""
+    uid = get_current_user_id(request=request, authorization=authorization)
+    return bool(uid)
+

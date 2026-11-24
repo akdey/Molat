@@ -9,7 +9,6 @@ export const WishlistScreen: React.FC = () => {
     wishlist,
     acquireItem,
     loadWishlist,
-    libraryKey,
     authToken,
     addToast,
     setKeyModalOpen,
@@ -71,7 +70,7 @@ export const WishlistScreen: React.FC = () => {
 
     setAdding(true);
     setErrorMsg(null);
-    const token = authToken || libraryKey;
+    const token = authToken || undefined;
     try {
       const created = await createWishlistItem(
         {

@@ -4,11 +4,12 @@ from zoneinfo import ZoneInfo
 from fastapi.testclient import TestClient
 from app.main import app
 from app.config import settings
+from app.core.security import create_access_token
 from app.features.lending.models import LENDING_COLUMNS, LendingStatus
 from app.features.books.models import BookCreate
 
 client = TestClient(app)
-AUTH_HEADERS = {"X-Library-Key": "test-secret-key"}
+AUTH_HEADERS = {"Authorization": f"Bearer {create_access_token('reader_test', user_id='usr_test')}"}
 IST = ZoneInfo("Asia/Kolkata")
 
 
@@ -27,23 +28,22 @@ def test_lending_schema_columns():
 
 
 def test_list_lending_endpoint():
-    res = client.get("/api/v1/lending")
+    res = client.get("/api/v1/lending", headers=AUTH_HEADERS)
     assert res.status_code == 200
     data = res.json()
     assert isinstance(data, list)
 
 
 @pytest.mark.anyio
-async def test_lend_and_return_book_lifecycle(monkeypatch):
-    monkeypatch.setattr(settings, "LIBRARY_KEY", "test-secret-key")
-
+async def test_lend_and_return_book_lifecycle():
     # 1. Create a test book in memory repository
     book = await app.state.storage.books.create(
         BookCreate(
             title="The Hobbit",
             authors="J.R.R. Tolkien",
             location="Home Shelf",
-        )
+        ),
+        user_id="usr_test",
     )
     book_id = book.book_id
 
@@ -70,12 +70,12 @@ async def test_lend_and_return_book_lifecycle(monkeypatch):
     assert lending_record["book_title"] == "The Hobbit"
 
     # Verify book's location was updated in catalogue
-    updated_book = await app.state.storage.books.get(book_id)
+    updated_book = await app.state.storage.books.get(book_id, user_id="usr_test")
     assert updated_book is not None
     assert updated_book.location == "Lent to Arun Kumar"
 
     # 4. Check active lending for this book
-    active_res = client.get(f"/api/v1/lending/book/{book_id}")
+    active_res = client.get(f"/api/v1/lending/book/{book_id}", headers=AUTH_HEADERS)
     assert active_res.status_code == 200
     assert active_res.json()["lending_id"] == lending_id
 
@@ -102,21 +102,20 @@ async def test_lend_and_return_book_lifecycle(monkeypatch):
     assert returned_record["returned_date"] is not None
 
     # Verify book location is restored
-    restored_book = await app.state.storage.books.get(book_id)
+    restored_book = await app.state.storage.books.get(book_id, user_id="usr_test")
     assert restored_book.location == "Living Room Shelf"
 
     # Verify book is no longer in active lending
-    active_after_return = client.get(f"/api/v1/lending/book/{book_id}")
+    active_after_return = client.get(f"/api/v1/lending/book/{book_id}", headers=AUTH_HEADERS)
     assert active_after_return.status_code == 200
     assert active_after_return.json() is None
 
 
 @pytest.mark.anyio
-async def test_overdue_calculation(monkeypatch):
-    monkeypatch.setattr(settings, "LIBRARY_KEY", "test-secret-key")
-
+async def test_overdue_calculation():
     book = await app.state.storage.books.create(
-        BookCreate(title="1984", authors="George Orwell")
+        BookCreate(title="1984", authors="George Orwell"),
+        user_id="usr_test",
     )
 
     # Yesterday's due date -> should mark is_overdue = True

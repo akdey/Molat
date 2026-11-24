@@ -2,11 +2,12 @@ import pytest
 from fastapi.testclient import TestClient
 from app.main import app
 from app.config import settings
+from app.core.security import create_access_token
 from app.features.wishlist.models import WISHLIST_COLUMNS, WishlistItemCreate, WishlistAcquireRequest
 from app.features.books.models import ReadingStatus, BookCondition
 
 client = TestClient(app)
-AUTH_HEADERS = {"X-Library-Key": "test-secret-key"}
+AUTH_HEADERS = {"Authorization": f"Bearer {create_access_token('reader_test', user_id='usr_test')}"}
 
 
 def test_wishlist_schema_columns():
@@ -20,15 +21,13 @@ def test_wishlist_schema_columns():
 
 
 def test_list_wishlist():
-    res = client.get("/api/v1/wishlist")
+    res = client.get("/api/v1/wishlist", headers=AUTH_HEADERS)
     assert res.status_code == 200
     data = res.json()
     assert isinstance(data, list)
 
 
-def test_add_to_wishlist_auth_required(monkeypatch):
-    monkeypatch.setattr(settings, "LIBRARY_KEY", "test-secret-key")
-
+def test_add_to_wishlist_auth_required():
     payload = {
         "title": "Klara and the Sun",
         "authors": "Kazuo Ishiguro",
@@ -50,9 +49,7 @@ def test_add_to_wishlist_auth_required(monkeypatch):
 
 
 @pytest.mark.anyio
-async def test_acquire_wishlist_item_lifecycle(monkeypatch):
-    monkeypatch.setattr(settings, "LIBRARY_KEY", "test-secret-key")
-
+async def test_acquire_wishlist_item_lifecycle():
     # 1. Add item to wishlist
     item_in = WishlistItemCreate(
         title="Never Let Me Go",
@@ -64,7 +61,7 @@ async def test_acquire_wishlist_item_lifecycle(monkeypatch):
         priority="High",
         notes="Pre-ordered from bookshop",
     )
-    created_wish = await app.state.storage.wishlist.create(item_in)
+    created_wish = await app.state.storage.wishlist.create(item_in, user_id="usr_test")
     wish_id = created_wish.wishlist_id
 
     # 2. Acquire wishlist item with actual purchase price 200.0
@@ -91,15 +88,15 @@ async def test_acquire_wishlist_item_lifecycle(monkeypatch):
     assert book_data["location"] == "Top Shelf"
 
     # 4. Verify item was removed from Wishlist
-    all_wishlist = await app.state.storage.wishlist.list()
+    all_wishlist = await app.state.storage.wishlist.list(user_id="usr_test")
     assert not any(w.wishlist_id == wish_id for w in all_wishlist)
 
 
-def test_acquire_non_existent_wishlist_item(monkeypatch):
-    monkeypatch.setattr(settings, "LIBRARY_KEY", "test-secret-key")
+def test_acquire_non_existent_wishlist_item():
     res = client.post(
         "/api/v1/wishlist/WISH-999999/acquire",
         json={"purchase_price": 100.0},
         headers=AUTH_HEADERS,
     )
     assert res.status_code == 404
+
