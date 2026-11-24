@@ -147,14 +147,14 @@ export const KeySettingsModal: React.FC = () => {
                 <div className="p-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900/40 flex items-center justify-between">
                   <div className="flex items-center gap-2.5">
                     <div className="h-8 w-8 rounded-full bg-emerald-200/70 dark:bg-emerald-900/60 flex items-center justify-center font-serif text-emerald-800 dark:text-emerald-300 font-bold text-sm">
-                      ❧
+                      ex/
                     </div>
                     <div>
                       <p className="text-xs font-medium text-emerald-900 dark:text-emerald-200">
                         Signed in as <strong className="font-mono text-accent dark:text-accent-dark">ex/{authUser || 'reader'}</strong>
                       </p>
                       <p className="text-3xs text-emerald-700 dark:text-emerald-400">
-                        Ex Libris Provenance • Personal Library Active
+                        Personal Library
                       </p>
                     </div>
                   </div>
@@ -195,8 +195,8 @@ export const KeySettingsModal: React.FC = () => {
                     type="button"
                     onClick={() => { setMode('login'); setErrorMsg(null); }}
                     className={`flex-1 py-1.5 rounded-lg font-medium flex items-center justify-center gap-1.5 transition-all ${mode === 'login'
-                        ? 'bg-canvas dark:bg-canvas-dark text-ink dark:text-ink-dark shadow-xs'
-                        : 'text-ink-muted hover:text-ink'
+                      ? 'bg-canvas dark:bg-canvas-dark text-ink dark:text-ink-dark shadow-xs'
+                      : 'text-ink-muted hover:text-ink'
                       }`}
                   >
                     <LogIn size={13} />
@@ -206,8 +206,8 @@ export const KeySettingsModal: React.FC = () => {
                     type="button"
                     onClick={() => { setMode('signup'); setErrorMsg(null); }}
                     className={`flex-1 py-1.5 rounded-lg font-medium flex items-center justify-center gap-1.5 transition-all ${mode === 'signup'
-                        ? 'bg-canvas dark:bg-canvas-dark text-ink dark:text-ink-dark shadow-xs'
-                        : 'text-ink-muted hover:text-ink'
+                      ? 'bg-canvas dark:bg-canvas-dark text-ink dark:text-ink-dark shadow-xs'
+                      : 'text-ink-muted hover:text-ink'
                       }`}
                   >
                     <UserPlus size={13} />

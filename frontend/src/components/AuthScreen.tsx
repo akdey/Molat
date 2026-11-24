@@ -92,8 +92,8 @@ export const AuthScreen: React.FC = () => {
             type="button"
             onClick={() => { setMode('login'); setErrorMsg(null); }}
             className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-semibold rounded-lg transition-all ${mode === 'login'
-                ? 'bg-white dark:bg-[#1A1D24] text-[#1E293B] dark:text-[#F1F5F9] shadow-xs'
-                : 'text-[#475569] dark:text-[#94A3B8] hover:text-[#1E293B] dark:hover:text-[#F1F5F9]'
+              ? 'bg-white dark:bg-[#1A1D24] text-[#1E293B] dark:text-[#F1F5F9] shadow-xs'
+              : 'text-[#475569] dark:text-[#94A3B8] hover:text-[#1E293B] dark:hover:text-[#F1F5F9]'
               }`}
           >
             <LogIn size={14} />
@@ -103,8 +103,8 @@ export const AuthScreen: React.FC = () => {
             type="button"
             onClick={() => { setMode('signup'); setErrorMsg(null); }}
             className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-semibold rounded-lg transition-all ${mode === 'signup'
-                ? 'bg-white dark:bg-[#1A1D24] text-[#1E293B] dark:text-[#F1F5F9] shadow-xs'
-                : 'text-[#475569] dark:text-[#94A3B8] hover:text-[#1E293B] dark:hover:text-[#F1F5F9]'
+              ? 'bg-white dark:bg-[#1A1D24] text-[#1E293B] dark:text-[#F1F5F9] shadow-xs'
+              : 'text-[#475569] dark:text-[#94A3B8] hover:text-[#1E293B] dark:hover:text-[#F1F5F9]'
               }`}
           >
             <UserPlus size={14} />
@@ -129,7 +129,7 @@ export const AuthScreen: React.FC = () => {
               </label>
               <div className="relative">
                 <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-[#475569] dark:text-[#94A3B8] font-serif font-bold text-xs select-none">
-                  ❧
+                  ex/
                 </span>
                 <input
                   type="text"
