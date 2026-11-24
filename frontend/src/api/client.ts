@@ -25,18 +25,56 @@ function getAuthHeaders(tokenOrKey?: string): Record<string, string> {
 
 // ==================== AUTH ====================
 
-export async function loginUser(
+export interface AuthUser {
+  id: string;
+  email?: string;
+  username: string;
+  display_name?: string;
+  created_at?: string;
+}
+
+export interface AuthResponse {
+  access_token: string;
+  token_type: string;
+  user: AuthUser;
+  expires_in_days: number;
+}
+
+export async function signupUser(
+  email: string,
   username: string,
-  password: string
-): Promise<{ access_token: string; username: string }> {
-  const res = await fetch(`${API_BASE}/auth/login`, {
+  password: string,
+  display_name?: string
+): Promise<AuthResponse> {
+  const res = await fetch(`${API_BASE}/auth/signup`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ username, password }),
+    body: JSON.stringify({
+      email,
+      username,
+      password,
+      display_name: display_name || undefined,
+    }),
   });
   if (!res.ok) {
     const data = await res.json().catch(() => ({}));
-    throw new Error(data.detail || 'Invalid username or password');
+    throw new Error(data.detail || 'Failed to create account');
+  }
+  return res.json();
+}
+
+export async function loginUser(
+  identifier: string,
+  password: string
+): Promise<AuthResponse> {
+  const res = await fetch(`${API_BASE}/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ identifier, password }),
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.detail || 'Invalid email/username or password');
   }
   return res.json();
 }

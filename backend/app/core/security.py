@@ -5,8 +5,25 @@ import hmac
 import json
 import time
 from typing import Optional, Dict, Any
+import bcrypt
 from fastapi import Header, HTTPException, status
 from app.config import settings
+
+
+def hash_password(password: str) -> str:
+    """Hashes a password using bcrypt."""
+    salt = bcrypt.gensalt(rounds=12)
+    return bcrypt.hashpw(password.encode("utf-8"), salt).decode("utf-8")
+
+
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    """Verifies a plain password against a bcrypt hash."""
+    if not plain_password or not hashed_password:
+        return False
+    try:
+        return bcrypt.checkpw(plain_password.encode("utf-8"), hashed_password.encode("utf-8"))
+    except Exception:
+        return False
 
 
 def _b64_encode(data: bytes) -> str:
@@ -20,12 +37,18 @@ def _b64_decode(data: str) -> bytes:
     return base64.urlsafe_b64decode(data.encode("utf-8"))
 
 
-def create_access_token(username: str, user_id: Optional[str] = None, expires_days: int = 30) -> str:
-    """Creates HMAC-SHA256 signed bearer token with user_id payload."""
+def create_access_token(
+    username: str,
+    user_id: Optional[str] = None,
+    email: Optional[str] = None,
+    expires_days: int = 30
+) -> str:
+    """Creates HMAC-SHA256 signed bearer token with user_id and email payload."""
     effective_user_id = user_id or ("owner" if username == settings.ADMIN_USERNAME else f"user_{username}")
     payload = {
         "sub": username,
         "user_id": effective_user_id,
+        "email": email or "",
         "exp": int(time.time()) + (expires_days * 86400),
         "iat": int(time.time()),
     }

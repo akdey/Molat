@@ -1,29 +1,36 @@
+import pytest
 from fastapi.testclient import TestClient
 from app.main import app
 from app.config import settings
-from app.core.security import create_access_token, verify_access_token
+from app.core.security import create_access_token, verify_access_token, hash_password, verify_password
 
 client = TestClient(app)
 
 
-def test_auth_login_success_and_token_usage(monkeypatch):
-    monkeypatch.setattr(settings, "ADMIN_USERNAME", "amit")
-    monkeypatch.setattr(settings, "ADMIN_PASSWORD", "secret123")
-    monkeypatch.setattr(settings, "JWT_SECRET", "test-jwt-secret")
+def test_password_hashing():
+    pw = "SuperSecret123!"
+    hashed = hash_password(pw)
+    assert hashed != pw
+    assert verify_password(pw, hashed) is True
+    assert verify_password("WrongPassword", hashed) is False
 
-    # 1. Successful login
-    login_res = client.post(
-        "/api/v1/auth/login",
-        json={"username": "amit", "password": "secret123"},
-    )
-    assert login_res.status_code == 200
-    data = login_res.json()
-    assert "access_token" in data
-    assert data["username"] == "amit"
-    assert data["token_type"] == "bearer"
 
-    token = data["access_token"]
-    assert len(token.split(".")) == 3
+def test_auth_signup_and_dual_login():
+    # 1. Successful Signup
+    signup_payload = {
+        "email": "reader_test@example.com",
+        "username": "reader_hero",
+        "password": "strongPassword99",
+        "display_name": "Hero Reader",
+    }
+    signup_res = client.post("/api/v1/auth/signup", json=signup_payload)
+    assert signup_res.status_code == 201
+    signup_data = signup_res.json()
+    assert "access_token" in signup_data
+    assert signup_data["user"]["email"] == "reader_test@example.com"
+    assert signup_data["user"]["username"] == "reader_hero"
+    assert signup_data["user"]["display_name"] == "Hero Reader"
+    token = signup_data["access_token"]
 
     # 2. Check /api/v1/auth/me with Bearer token
     me_res = client.get(
@@ -31,10 +38,67 @@ def test_auth_login_success_and_token_usage(monkeypatch):
         headers={"Authorization": f"Bearer {token}"},
     )
     assert me_res.status_code == 200
-    assert me_res.json()["authenticated"] is True
-    assert me_res.json()["username"] == "amit"
+    me_data = me_res.json()
+    assert me_data["username"] == "reader_hero"
+    assert me_data["email"] == "reader_test@example.com"
 
-    # 3. Use token on protected write endpoint
+    # 3. Duplicate email signup -> 400 Bad Request
+    dup_email_payload = {
+        "email": "reader_test@example.com",
+        "username": "another_hero",
+        "password": "strongPassword99",
+    }
+    dup_email_res = client.post("/api/v1/auth/signup", json=dup_email_payload)
+    assert dup_email_res.status_code == 400
+    assert "email already exists" in dup_email_res.json()["detail"].lower()
+
+    # 4. Duplicate username signup -> 400 Bad Request
+    dup_user_payload = {
+        "email": "another_email@example.com",
+        "username": "reader_hero",
+        "password": "strongPassword99",
+    }
+    dup_user_res = client.post("/api/v1/auth/signup", json=dup_user_payload)
+    assert dup_user_res.status_code == 400
+    assert "username is already taken" in dup_user_res.json()["detail"].lower()
+
+    # 5. Login via Email
+    login_by_email = client.post(
+        "/api/v1/auth/login",
+        json={"identifier": "reader_test@example.com", "password": "strongPassword99"},
+    )
+    assert login_by_email.status_code == 200
+    assert login_by_email.json()["user"]["username"] == "reader_hero"
+
+    # 6. Login via Username
+    login_by_username = client.post(
+        "/api/v1/auth/login",
+        json={"identifier": "reader_hero", "password": "strongPassword99"},
+    )
+    assert login_by_username.status_code == 200
+    assert login_by_username.json()["user"]["email"] == "reader_test@example.com"
+
+
+def test_auth_legacy_login_and_token_usage(monkeypatch):
+    monkeypatch.setattr(settings, "ADMIN_USERNAME", "amit")
+    monkeypatch.setattr(settings, "ADMIN_PASSWORD", "secret123")
+    monkeypatch.setattr(settings, "JWT_SECRET", "test-jwt-secret")
+
+    # 1. Successful legacy login
+    login_res = client.post(
+        "/api/v1/auth/login",
+        json={"username": "amit", "password": "secret123"},
+    )
+    assert login_res.status_code == 200
+    data = login_res.json()
+    assert "access_token" in data
+    assert data["user"]["username"] == "amit"
+    assert data["token_type"] == "bearer"
+
+    token = data["access_token"]
+    assert len(token.split(".")) == 3
+
+    # 2. Use token on protected write endpoint
     book_payload = {"title": "Authenticated Novel", "purchase_price": 100.0}
     create_res = client.post(
         "/api/v1/books",
@@ -59,14 +123,14 @@ def test_auth_login_invalid_credentials(monkeypatch):
     # Wrong password
     res_bad_pass = client.post(
         "/api/v1/auth/login",
-        json={"username": "amit", "password": "wrongpassword"},
+        json={"identifier": "amit", "password": "wrongpassword"},
     )
     assert res_bad_pass.status_code == 401
 
     # Wrong username
     res_bad_user = client.post(
         "/api/v1/auth/login",
-        json={"username": "stranger", "password": "secret123"},
+        json={"identifier": "nonexistent_reader", "password": "secret123"},
     )
     assert res_bad_user.status_code == 401
 
@@ -81,4 +145,3 @@ def test_auth_tampered_bearer_token(monkeypatch):
         headers={"Authorization": f"Bearer {fake_token}"},
     )
     assert res.status_code == 401
-

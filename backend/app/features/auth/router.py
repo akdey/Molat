@@ -1,58 +1,278 @@
 # backend/app/features/auth/router.py
 import hmac
-from typing import Optional
-from fastapi import APIRouter, HTTPException, Depends, status
+import logging
+import uuid
+from typing import Optional, Dict, Any
+from fastapi import APIRouter, HTTPException, Depends, status, Request
 from pydantic import BaseModel
 from app.config import settings
-from app.core.security import create_access_token, verify_library_key
+from app.core.database import db_manager
+from app.core.security import (
+    create_access_token,
+    verify_access_token,
+    hash_password,
+    verify_password,
+    require_authenticated_user,
+    verify_library_key,
+)
+from app.features.auth.models import SignupRequest, LoginRequest, UserResponse, AuthResponse
 
+logger = logging.getLogger("molat.auth")
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
+# In-memory user store fallback for local/test execution without PostgreSQL
+_IN_MEMORY_USERS: Dict[str, Dict[str, Any]] = {
+    "owner": {
+        "id": "owner",
+        "email": "admin@molat.local",
+        "username": "admin",
+        "display_name": "Library Owner",
+        "password_hash": hash_password("secret123"),
+        "created_at": "2026-01-01T00:00:00Z",
+    }
+}
 
-class LoginRequest(BaseModel):
-    username: str
-    password: str
 
+@router.post("/signup", response_model=AuthResponse, status_code=status.HTTP_201_CREATED)
+async def signup(req: SignupRequest):
+    """
+    Registers a new reader account with unique email, username handle, and password.
+    Returns JWT session token with instant access (no email verification barrier).
+    """
+    clean_email = req.email.strip().lower()
+    clean_username = req.username.strip().lower()
+    display_name = req.display_name or clean_username.title()
+    hashed = hash_password(req.password)
+    user_id = f"usr_{uuid.uuid4().hex[:12]}"
 
-class LoginResponse(BaseModel):
-    access_token: str
-    token_type: str = "bearer"
-    username: str
-    expires_in_days: int = 30
+    if db_manager.is_connected and db_manager.pool:
+        async with db_manager.pool.acquire() as conn:
+            # Check uniqueness of email and username
+            existing = await conn.fetchrow(
+                """
+                SELECT id, email, username 
+                FROM users 
+                WHERE LOWER(email) = $1 OR LOWER(username) = $2
+                """,
+                clean_email, clean_username
+            )
+            if existing:
+                if existing["email"] and existing["email"].lower() == clean_email:
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail="An account with this email already exists",
+                    )
+                if existing["username"] and existing["username"].lower() == clean_username:
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail="This username is already taken. Please choose another handle.",
+                    )
 
+            # Insert new user record
+            row = await conn.fetchrow(
+                """
+                INSERT INTO users (id, email, username, display_name, password_hash)
+                VALUES ($1, $2, $3, $4, $5)
+                RETURNING id, email, username, display_name, created_at
+                """,
+                user_id, clean_email, clean_username, display_name, hashed
+            )
 
-@router.post("/login", response_model=LoginResponse)
-async def login(req: LoginRequest):
-    """Authenticates user against ADMIN_USERNAME and ADMIN_PASSWORD."""
-    configured_user = settings.ADMIN_USERNAME
-    configured_pass = settings.ADMIN_PASSWORD or settings.LIBRARY_KEY
+            # Seed default reading settings
+            await conn.execute(
+                """
+                INSERT INTO user_settings (user_id, daily_goal_pages, theme)
+                VALUES ($1, 15, 'light')
+                ON CONFLICT (user_id) DO NOTHING
+                """,
+                user_id
+            )
 
-    if configured_pass:
-        is_user_valid = hmac.compare_digest(req.username.strip(), configured_user.strip())
-        is_pass_valid = hmac.compare_digest(req.password.strip(), configured_pass.strip())
-
-        if not (is_user_valid and is_pass_valid):
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid username or password",
+            created_user = UserResponse(
+                id=row["id"],
+                email=row["email"],
+                username=row["username"],
+                display_name=row["display_name"],
+                created_at=str(row["created_at"]) if row["created_at"] else None,
             )
     else:
-        if not req.username.strip() or not req.password.strip():
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Username and password must not be empty",
-            )
+        # In-memory fallback
+        for u in _IN_MEMORY_USERS.values():
+            if u.get("email") and u["email"].lower() == clean_email:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="An account with this email already exists",
+                )
+            if u.get("username") and u["username"].lower() == clean_username:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="This username is already taken. Please choose another handle.",
+                )
 
-    token = create_access_token(username=req.username.strip(), expires_days=30)
-    return LoginResponse(
+        _IN_MEMORY_USERS[user_id] = {
+            "id": user_id,
+            "email": clean_email,
+            "username": clean_username,
+            "display_name": display_name,
+            "password_hash": hashed,
+            "created_at": "2026-11-24T00:00:00Z",
+        }
+        created_user = UserResponse(
+            id=user_id,
+            email=clean_email,
+            username=clean_username,
+            display_name=display_name,
+            created_at="2026-11-24T00:00:00Z",
+        )
+
+    token = create_access_token(
+        username=created_user.username,
+        user_id=created_user.id,
+        email=created_user.email,
+        expires_days=30,
+    )
+
+    return AuthResponse(
         access_token=token,
         token_type="bearer",
-        username=req.username.strip(),
+        user=created_user,
         expires_in_days=30,
     )
 
 
-@router.get("/me")
-async def get_current_user(_: bool = Depends(verify_library_key)):
-    """Verifies that the caller's session token is valid."""
-    return {"authenticated": True, "username": settings.ADMIN_USERNAME}
+class LegacyLoginRequest(BaseModel):
+    username: Optional[str] = None
+    identifier: Optional[str] = None
+    password: str
+
+
+@router.post("/login", response_model=AuthResponse)
+async def login(req: LegacyLoginRequest):
+    """
+    Authenticates a reader via email OR username, or via legacy admin credentials.
+    """
+    ident = (req.identifier or req.username or "").strip()
+    if not ident or not req.password:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Email/Username and password must not be empty",
+        )
+
+    # 1. Database user lookup (Email or Username)
+    if db_manager.is_connected and db_manager.pool:
+        async with db_manager.pool.acquire() as conn:
+            user_row = await conn.fetchrow(
+                """
+                SELECT id, email, username, display_name, password_hash, created_at
+                FROM users
+                WHERE LOWER(email) = LOWER($1) OR LOWER(username) = LOWER($1)
+                """,
+                ident
+            )
+            if user_row and user_row["password_hash"]:
+                if verify_password(req.password, user_row["password_hash"]):
+                    token = create_access_token(
+                        username=user_row["username"],
+                        user_id=user_row["id"],
+                        email=user_row["email"],
+                        expires_days=30,
+                    )
+                    return AuthResponse(
+                        access_token=token,
+                        token_type="bearer",
+                        user=UserResponse(
+                            id=user_row["id"],
+                            email=user_row["email"],
+                            username=user_row["username"],
+                            display_name=user_row["display_name"],
+                            created_at=str(user_row["created_at"]) if user_row["created_at"] else None,
+                        ),
+                        expires_in_days=30,
+                    )
+
+    # 2. In-Memory user lookup
+    for u in _IN_MEMORY_USERS.values():
+        if (u.get("email") and u["email"].lower() == ident.lower()) or (u.get("username") and u["username"].lower() == ident.lower()):
+            if verify_password(req.password, u["password_hash"]):
+                token = create_access_token(
+                    username=u["username"],
+                    user_id=u["id"],
+                    email=u["email"],
+                    expires_days=30,
+                )
+                return AuthResponse(
+                    access_token=token,
+                    token_type="bearer",
+                    user=UserResponse(
+                        id=u["id"],
+                        email=u["email"],
+                        username=u["username"],
+                        display_name=u["display_name"],
+                        created_at=u.get("created_at"),
+                    ),
+                    expires_in_days=30,
+                )
+
+    # 3. Legacy Admin fallback check (configured in settings)
+    configured_user = settings.ADMIN_USERNAME
+    configured_pass = settings.ADMIN_PASSWORD or settings.LIBRARY_KEY
+    if configured_pass and ident.lower() == configured_user.lower():
+        if hmac.compare_digest(req.password.strip(), configured_pass.strip()):
+            token = create_access_token(username=configured_user, user_id="owner", expires_days=30)
+            return AuthResponse(
+                access_token=token,
+                token_type="bearer",
+                user=UserResponse(
+                    id="owner",
+                    email=f"{configured_user}@molat.local",
+                    username=configured_user,
+                    display_name="Library Owner",
+                ),
+                expires_in_days=30,
+            )
+
+    raise HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Invalid email/username or password",
+    )
+
+
+@router.get("/me", response_model=UserResponse)
+async def get_current_user_profile(user_id: str = Depends(require_authenticated_user)):
+    """Fetches the authenticated user profile."""
+    if db_manager.is_connected and db_manager.pool:
+        async with db_manager.pool.acquire() as conn:
+            row = await conn.fetchrow(
+                """
+                SELECT id, email, username, display_name, created_at
+                FROM users
+                WHERE id = $1
+                """,
+                user_id
+            )
+            if row:
+                return UserResponse(
+                    id=row["id"],
+                    email=row["email"],
+                    username=row["username"],
+                    display_name=row["display_name"],
+                    created_at=str(row["created_at"]) if row["created_at"] else None,
+                )
+
+    # In-memory lookup
+    if user_id in _IN_MEMORY_USERS:
+        u = _IN_MEMORY_USERS[user_id]
+        return UserResponse(
+            id=u["id"],
+            email=u.get("email"),
+            username=u["username"],
+            display_name=u.get("display_name"),
+            created_at=u.get("created_at"),
+        )
+
+    return UserResponse(
+        id=user_id,
+        email="user@molat.local",
+        username=user_id,
+        display_name=user_id.title(),
+    )

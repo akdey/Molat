@@ -200,9 +200,12 @@ Molat runs on a relational PostgreSQL database schema (`backend/schema.sql`) hos
 ### 1. `users` Table
 Multi-tenant user registry:
 - `id VARCHAR(50) PRIMARY KEY`
+- `email VARCHAR(255) UNIQUE NOT NULL`
 - `username VARCHAR(100) UNIQUE NOT NULL`
+- `password_hash VARCHAR(255) NOT NULL` (bcrypt)
 - `display_name VARCHAR(100)`
 - `created_at TIMESTAMPTZ`
+- `updated_at TIMESTAMPTZ`
 
 ### 2. `books` Table
 The catalog of physical volumes partitioned per user (`user_id, book_id` composite key):

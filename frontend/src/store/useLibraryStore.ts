@@ -22,6 +22,7 @@ import {
   updateBook,
   enrichCovers,
   loginUser,
+  signupUser,
   fetchSettings,
   updateSettings,
 } from '../api/client';
@@ -121,6 +122,7 @@ interface LibraryState {
   setDailyGoal: (goal: number) => Promise<void>;
   setActiveBookId: (bookId: string) => Promise<void>;
   loginOwner: (username: string, password: string) => Promise<void>;
+  signupReader: (email: string, username: string, password: string, displayName?: string) => Promise<void>;
   logoutOwner: () => void;
   toggleTheme: () => void;
   addToast: (
@@ -292,10 +294,20 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
 
   loginOwner: async (username, password) => {
     const res = await loginUser(username, password);
+    const uName = res.user?.username || res.user?.email || 'reader';
     localStorage.setItem('molat_auth_token', res.access_token);
-    localStorage.setItem('molat_auth_user', res.username);
-    set({ authToken: res.access_token, authUser: res.username });
-    get().addToast(`Welcome back, ${res.username}! Signed in as owner.`, 'success');
+    localStorage.setItem('molat_auth_user', uName);
+    set({ authToken: res.access_token, authUser: uName });
+    get().addToast(`Welcome back, ${uName}!`, 'success');
+  },
+
+  signupReader: async (email, username, password, displayName) => {
+    const res = await signupUser(email, username, password, displayName);
+    const uName = res.user?.username || username;
+    localStorage.setItem('molat_auth_token', res.access_token);
+    localStorage.setItem('molat_auth_user', uName);
+    set({ authToken: res.access_token, authUser: uName });
+    get().addToast(`Welcome to Molat, @${uName}! Your library account is ready.`, 'success');
   },
 
   logoutOwner: () => {
