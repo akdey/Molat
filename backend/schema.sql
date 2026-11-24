@@ -127,7 +127,3 @@ CREATE TABLE IF NOT EXISTS user_settings (
     updated_at VARCHAR(50)
 );
 
--- Default settings seed for owner
-INSERT INTO user_settings (user_id, daily_goal_pages, theme)
-VALUES ('owner', 15, 'light')
-ON CONFLICT (user_id) DO NOTHING;
