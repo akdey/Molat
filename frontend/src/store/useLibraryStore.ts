@@ -147,13 +147,6 @@ interface LibraryState {
   triggerCoverEnrichment: () => Promise<{ scanned: number; enriched: number; message: string }>;
 }
 
-// Purge deprecated legacy client storage keys
-if (typeof localStorage !== 'undefined') {
-  localStorage.removeItem('molat_last_active_book_id');
-  localStorage.removeItem('molat_auth_user');
-  localStorage.removeItem('molat_library_key');
-}
-
 export const useLibraryStore = create<LibraryState>((set, get) => ({
   books: [],
   portfolio: null,
