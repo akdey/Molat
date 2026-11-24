@@ -1,5 +1,6 @@
 # backend/app/features/books/sheets_repo.py
 import logging
+import re
 from datetime import datetime
 from typing import List, Optional, Dict, Any
 from zoneinfo import ZoneInfo
@@ -18,6 +19,36 @@ def _sanitize(val: Any) -> Any:
     if s.startswith(("=", "+", "-", "@", "\t", "\r")):
         return "'" + s
     return val
+
+
+def _parse_float(val: Any) -> Optional[float]:
+    if val is None or val == "":
+        return None
+    try:
+        if isinstance(val, (int, float)):
+            return float(val)
+        cleaned = re.sub(r"[^\d.-]", "", str(val).strip())
+        if not cleaned or cleaned in ("-", ".", "-."):
+            return None
+        return float(cleaned)
+    except (ValueError, TypeError):
+        return None
+
+
+def _parse_int(val: Any) -> Optional[int]:
+    if val is None or val == "":
+        return None
+    try:
+        if isinstance(val, int):
+            return val
+        if isinstance(val, float):
+            return int(val)
+        cleaned = re.sub(r"[^\d.-]", "", str(val).strip())
+        if not cleaned or cleaned in ("-", ".", "-."):
+            return None
+        return int(float(cleaned))
+    except (ValueError, TypeError):
+        return None
 
 
 def _to_sheet_row(book: Book) -> List[Any]:
@@ -56,17 +87,17 @@ def _from_sheet_row(row: Dict[str, Any], user_id: str = "owner") -> Book:
         isbn_10=str(row.get("isbn_10")) if row.get("isbn_10") else None,
         isbn_13=str(row.get("isbn_13")) if row.get("isbn_13") else None,
         publisher=row.get("publisher") or None,
-        publication_year=int(float(str(row.get("publication_year")))) if row.get("publication_year") else None,
+        publication_year=_parse_int(row.get("publication_year")),
         language=row.get("language") or "English",
         genre=row.get("genre") or None,
         cover_url=row.get("cover_url") or None,
         reading_status=ReadingStatus(row.get("reading_status")) if row.get("reading_status") in ReadingStatus._value2member_map_ else ReadingStatus.UNREAD,
         condition=BookCondition(row.get("condition")) if row.get("condition") in BookCondition._value2member_map_ else BookCondition.GOOD,
         location=row.get("location") or "Home Shelf",
-        purchase_price=float(row.get("purchase_price")) if row.get("purchase_price") not in (None, "") else None,
-        rp=float(row.get("rp")) if row.get("rp") not in (None, "") else None,
+        purchase_price=_parse_float(row.get("purchase_price")),
+        rp=_parse_float(row.get("rp")),
         purchase_date=str(row.get("purchase_date")) if row.get("purchase_date") else None,
-        rating=int(float(str(row.get("rating")))) if row.get("rating") not in (None, "") else None,
+        rating=_parse_int(row.get("rating")),
         notes=row.get("notes") or None,
         created_at=str(row.get("created_at")) if row.get("created_at") else None,
         updated_at=str(row.get("updated_at")) if row.get("updated_at") else None,

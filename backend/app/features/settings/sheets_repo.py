@@ -1,5 +1,6 @@
 # backend/app/features/settings/sheets_repo.py
 import logging
+import re
 from datetime import datetime
 from typing import Optional, Dict, Any
 from zoneinfo import ZoneInfo
@@ -18,6 +19,22 @@ def _sanitize(val: Any) -> Any:
     if s.startswith(("=", "+", "-", "@", "\t", "\r")):
         return "'" + s
     return val
+
+
+def _parse_int(val: Any) -> Optional[int]:
+    if val is None or val == "":
+        return None
+    try:
+        if isinstance(val, int):
+            return val
+        if isinstance(val, float):
+            return int(val)
+        cleaned = re.sub(r"[^\d.-]", "", str(val).strip())
+        if not cleaned or cleaned in ("-", ".", "-."):
+            return None
+        return int(float(cleaned))
+    except (ValueError, TypeError):
+        return None
 
 
 class SheetsSettingsRepository(SettingsRepository):
@@ -53,7 +70,7 @@ class SheetsSettingsRepository(SettingsRepository):
         except Exception as e:
             logger.warning(f"Failed to fetch settings from sheets bridge: {e}")
 
-        daily_goal = int(settings_dict.get("daily_goal_pages", 15)) if settings_dict.get("daily_goal_pages") else 15
+        daily_goal = _parse_int(settings_dict.get("daily_goal_pages")) or 15
         active_book = settings_dict.get("active_book_id")
 
         if not active_book:

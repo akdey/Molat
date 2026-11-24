@@ -1,5 +1,6 @@
 # backend/app/features/wishlist/sheets_repo.py
 import logging
+import re
 from datetime import datetime
 from typing import List, Optional, Dict, Any
 from zoneinfo import ZoneInfo
@@ -21,6 +22,20 @@ def _sanitize(val: Any) -> Any:
     return val
 
 
+def _parse_float(val: Any) -> Optional[float]:
+    if val is None or val == "":
+        return None
+    try:
+        if isinstance(val, (int, float)):
+            return float(val)
+        cleaned = re.sub(r"[^\d.-]", "", str(val).strip())
+        if not cleaned or cleaned in ("-", ".", "-."):
+            return None
+        return float(cleaned)
+    except (ValueError, TypeError):
+        return None
+
+
 def _from_sheet_row(r: Dict[str, Any], user_id: str = "owner") -> WishlistItem:
     return WishlistItem(
         wishlist_id=str(r.get("wishlist_id") or ""),
@@ -29,8 +44,8 @@ def _from_sheet_row(r: Dict[str, Any], user_id: str = "owner") -> WishlistItem:
         authors=r.get("authors") or None,
         isbn_13=str(r.get("isbn_13")) if r.get("isbn_13") else None,
         genre=r.get("genre") or None,
-        expected_rp=float(r.get("expected_rp")) if r.get("expected_rp") not in (None, "") else None,
-        target_price=float(r.get("target_price")) if r.get("target_price") not in (None, "") else None,
+        expected_rp=_parse_float(r.get("expected_rp")),
+        target_price=_parse_float(r.get("target_price")),
         priority=r.get("priority") or "MEDIUM",
         notes=r.get("notes") or None,
         created_at=str(r.get("created_at") or ""),

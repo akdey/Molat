@@ -1,5 +1,6 @@
 # backend/app/features/reading/sheets_repo.py
 import logging
+import re
 from datetime import datetime
 from typing import List, Optional, Dict, Any
 from zoneinfo import ZoneInfo
@@ -21,12 +22,28 @@ def _sanitize(val: Any) -> Any:
     return val
 
 
+def _parse_int(val: Any) -> Optional[int]:
+    if val is None or val == "":
+        return None
+    try:
+        if isinstance(val, int):
+            return val
+        if isinstance(val, float):
+            return int(val)
+        cleaned = re.sub(r"[^\d.-]", "", str(val).strip())
+        if not cleaned or cleaned in ("-", ".", "-."):
+            return None
+        return int(float(cleaned))
+    except (ValueError, TypeError):
+        return None
+
+
 def _from_sheet_row(r: Dict[str, Any], user_id: str = "owner") -> ReadingLog:
-    start = int(float(str(r.get("start_page", 0) or 0)))
-    end = int(float(str(r.get("end_page", 0) or 0)))
+    start = _parse_int(r.get("start_page")) or 0
+    end = _parse_int(r.get("end_page")) or 0
     raw_pages = r.get("pages_read")
     calc_pages = (end - start + 1) if (end >= start and start >= 1) else max(0, end - start)
-    pages = int(float(str(raw_pages))) if raw_pages not in (None, "") else calc_pages
+    pages = _parse_int(raw_pages) if raw_pages not in (None, "") else calc_pages
 
     return ReadingLog(
         log_id=str(r.get("log_id") or ""),
@@ -35,8 +52,8 @@ def _from_sheet_row(r: Dict[str, Any], user_id: str = "owner") -> ReadingLog:
         session_date=str(r.get("session_date") or ""),
         start_page=start,
         end_page=end,
-        pages_read=pages,
-        duration_minutes=int(float(str(r.get("duration_minutes", 0) or 0))),
+        pages_read=pages if pages is not None else 0,
+        duration_minutes=_parse_int(r.get("duration_minutes")) or 0,
         session_note=r.get("session_note") or None,
         created_at=str(r.get("created_at") or ""),
     )
