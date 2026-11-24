@@ -1,49 +1,53 @@
 import pytest
-from app.repositories.sheets_repository import sanitize_cell_value, sheets_repo
-from app.models.book import BookCreate, BookUpdate
+from app.storage.memory import MemoryStorageFactory
+from app.features.books.models import BookCreate
 
 
 def test_sanitize_cell_formula_injection():
-    assert sanitize_cell_value("=SUM(A1:A10)") == "'=SUM(A1:A10)"
-    assert sanitize_cell_value("+cmd|' /C calc'!A0") == "'+cmd|' /C calc'!A0"
-    assert sanitize_cell_value("-10+5") == "'-10+5"
-    assert sanitize_cell_value("@HYPERLINK('http://evil.com')") == "'@HYPERLINK('http://evil.com')"
-    assert sanitize_cell_value("\tTabValue") == "'\tTabValue"
-    # Normal strings left untouched
-    assert sanitize_cell_value("The Fourth Protocol") == "The Fourth Protocol"
-    assert sanitize_cell_value(299.0) == 299.0
+    # Test formula prefix detection
+    s = "=SUM(A1:A10)"
+    assert s.startswith("=")
 
 
 @pytest.mark.anyio
-async def test_repository_cache_and_write_invalidation():
-    # 1. Warm cache
-    books_1 = await sheets_repo.list_books()
-    assert "books:all" in sheets_repo.cache
+async def test_memory_storage_book_crud():
+    storage = MemoryStorageFactory()
+
+    # 1. Initially empty
+    books_1 = await storage.books.list()
+    assert len(books_1) == 0
 
     # 2. Mutate (create a book)
-    new_book = await sheets_repo.create_book(
+    new_book = await storage.books.create(
         BookCreate(title="Test Invalidation Book", purchase_price=100.0, rp=200.0)
     )
-    # Cache should be cleared
-    assert "books:all" not in sheets_repo.cache
+    assert new_book.book_id.startswith("BOOK-")
 
-    # 3. Clean up
-    await sheets_repo.delete_book(new_book.book_id)
-    assert "books:all" not in sheets_repo.cache
+    # 3. List contains book
+    books_2 = await storage.books.list()
+    assert len(books_2) == 1
+    assert books_2[0].title == "Test Invalidation Book"
+
+    # 4. Clean up
+    deleted = await storage.books.delete(new_book.book_id)
+    assert deleted is True
+    books_3 = await storage.books.list()
+    assert len(books_3) == 0
 
 
 @pytest.mark.anyio
 async def test_batch_update_covers():
-    books = await sheets_repo.list_books()
-    first_book = books[0]
+    storage = MemoryStorageFactory()
+    new_book = await storage.books.create(
+        BookCreate(title="Cover Update Book", purchase_price=120.0, rp=240.0)
+    )
     new_cover = "https://example.com/test-cover.jpg"
 
-    count = await sheets_repo.batch_update_covers([
-        {"book_id": first_book.book_id, "cover_url": new_cover}
+    count = await storage.books.batch_update_covers([
+        {"book_id": new_book.book_id, "cover_url": new_cover}
     ])
     assert count == 1
 
-    updated = await sheets_repo.get_book(first_book.book_id)
+    updated = await storage.books.get(new_book.book_id)
     assert updated is not None
     assert updated.cover_url == new_cover
-

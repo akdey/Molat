@@ -18,7 +18,10 @@ class Settings(BaseSettings):
     JWT_SECRET: str = "molat-jwt-secret-key-change-in-production"
     LIBRARY_KEY: Optional[str] = None
 
-    # Google Sheets Bridge (Apps Script Web App)
+    # Database (PostgreSQL / Supabase)
+    DATABASE_URL: Optional[str] = None
+
+    # Google Sheets Bridge (Apps Script Web App - Legacy)
     GOOGLE_SHEETS_BRIDGE_URL: Optional[str] = None
     BRIDGE_TOKEN: Optional[str] = None
 

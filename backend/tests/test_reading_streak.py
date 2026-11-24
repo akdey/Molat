@@ -5,7 +5,7 @@ from app.main import app
 from app.models.reading_log import ReadingLog, ReadingLogCreate
 from app.models.book import BookCreate, ReadingStatus
 from app.services.streak_calculator import calculate_streak_summary
-from app.repositories.sheets_repository import sheets_repo
+from app.main import app
 
 client = TestClient(app)
 AUTH_HEADERS = {"X-Library-Key": "development-secret-key-change-in-production"}
@@ -153,7 +153,7 @@ def test_api_streak_summary_endpoint():
 @pytest.mark.anyio
 async def test_api_log_reading_auto_transition_unread_to_reading():
     # 1. Create a book in UNREAD status
-    new_book = await sheets_repo.create_book(
+    new_book = await app.state.storage.books.create(
         BookCreate(
             title="Auto Transition Test Novel",
             reading_status=ReadingStatus.UNREAD,
@@ -180,7 +180,7 @@ async def test_api_log_reading_auto_transition_unread_to_reading():
     assert "session_date" in log_data
 
     # 3. Verify book status transitioned to READING
-    updated_book = await sheets_repo.get_book(new_book.book_id)
+    updated_book = await app.state.storage.books.get(new_book.book_id)
     assert updated_book is not None
     assert updated_book.reading_status == ReadingStatus.READING
 
@@ -188,7 +188,7 @@ async def test_api_log_reading_auto_transition_unread_to_reading():
 @pytest.mark.anyio
 async def test_api_log_reading_auto_transition_to_completed_with_rating():
     # 1. Create a book in READING status
-    new_book = await sheets_repo.create_book(
+    new_book = await app.state.storage.books.create(
         BookCreate(
             title="Finish Me Novel",
             reading_status=ReadingStatus.READING,
@@ -211,7 +211,7 @@ async def test_api_log_reading_auto_transition_to_completed_with_rating():
     assert res.status_code == 201
 
     # 3. Verify book status transitioned to COMPLETED and rating is updated
-    updated_book = await sheets_repo.get_book(new_book.book_id)
+    updated_book = await app.state.storage.books.get(new_book.book_id)
     assert updated_book is not None
     assert updated_book.reading_status == ReadingStatus.COMPLETED
     assert updated_book.rating == 5
@@ -219,7 +219,7 @@ async def test_api_log_reading_auto_transition_to_completed_with_rating():
 
 @pytest.mark.anyio
 async def test_api_log_reading_inclusive_page_counting_samples():
-    new_book = await sheets_repo.create_book(
+    new_book = await app.state.storage.books.create(
         BookCreate(title="Inclusive Pages Novel", purchase_price=150.0, rp=300.0)
     )
 

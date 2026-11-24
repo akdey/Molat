@@ -6,7 +6,6 @@ from app.main import app
 from app.config import settings
 from app.models.lending import LENDING_COLUMNS, LendingStatus
 from app.models.book import BookCreate
-from app.repositories.sheets_repository import sheets_repo
 
 client = TestClient(app)
 AUTH_HEADERS = {"X-Library-Key": "test-secret-key"}
@@ -39,7 +38,7 @@ async def test_lend_and_return_book_lifecycle(monkeypatch):
     monkeypatch.setattr(settings, "LIBRARY_KEY", "test-secret-key")
 
     # 1. Create a test book in memory repository
-    book = await sheets_repo.create_book(
+    book = await app.state.storage.books.create(
         BookCreate(
             title="The Hobbit",
             authors="J.R.R. Tolkien",
@@ -71,7 +70,7 @@ async def test_lend_and_return_book_lifecycle(monkeypatch):
     assert lending_record["book_title"] == "The Hobbit"
 
     # Verify book's location was updated in catalogue
-    updated_book = await sheets_repo.get_book(book_id)
+    updated_book = await app.state.storage.books.get(book_id)
     assert updated_book is not None
     assert updated_book.location == "Lent to Arun Kumar"
 
@@ -103,7 +102,7 @@ async def test_lend_and_return_book_lifecycle(monkeypatch):
     assert returned_record["returned_date"] is not None
 
     # Verify book location is restored
-    restored_book = await sheets_repo.get_book(book_id)
+    restored_book = await app.state.storage.books.get(book_id)
     assert restored_book.location == "Living Room Shelf"
 
     # Verify book is no longer in active lending
@@ -116,7 +115,7 @@ async def test_lend_and_return_book_lifecycle(monkeypatch):
 async def test_overdue_calculation(monkeypatch):
     monkeypatch.setattr(settings, "LIBRARY_KEY", "test-secret-key")
 
-    book = await sheets_repo.create_book(
+    book = await app.state.storage.books.create(
         BookCreate(title="1984", authors="George Orwell")
     )
 

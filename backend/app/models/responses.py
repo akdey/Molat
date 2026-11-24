@@ -48,6 +48,7 @@ class HealthResponse(BaseModel):
     port: int
     sheets_connected: bool
     bridge_url_configured: bool
+    db_connected: Optional[bool] = False
     cache_ttl_seconds: int
     cache_cached_entries: int
     timestamp: str

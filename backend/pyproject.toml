@@ -13,6 +13,7 @@ dependencies = [
     "httpx>=0.27.0",
     "cachetools>=5.5.0",
     "python-multipart>=0.0.12",
+    "asyncpg>=0.32.0",
 ]
 
 [project.optional-dependencies]

@@ -4,7 +4,6 @@ from app.main import app
 from app.config import settings
 from app.models.wishlist import WISHLIST_COLUMNS, WishlistItemCreate, WishlistAcquireRequest
 from app.models.book import ReadingStatus, BookCondition
-from app.repositories.sheets_repository import sheets_repo
 
 client = TestClient(app)
 AUTH_HEADERS = {"X-Library-Key": "test-secret-key"}
@@ -65,7 +64,7 @@ async def test_acquire_wishlist_item_lifecycle(monkeypatch):
         priority="High",
         notes="Pre-ordered from bookshop",
     )
-    created_wish = await sheets_repo.create_wishlist_item(item_in)
+    created_wish = await app.state.storage.wishlist.create(item_in)
     wish_id = created_wish.wishlist_id
 
     # 2. Acquire wishlist item with actual purchase price 200.0
@@ -92,7 +91,7 @@ async def test_acquire_wishlist_item_lifecycle(monkeypatch):
     assert book_data["location"] == "Top Shelf"
 
     # 4. Verify item was removed from Wishlist
-    all_wishlist = await sheets_repo.list_wishlist()
+    all_wishlist = await app.state.storage.wishlist.list()
     assert not any(w.wishlist_id == wish_id for w in all_wishlist)
 
 

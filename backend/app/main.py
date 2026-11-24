@@ -1,3 +1,4 @@
+# backend/app/main.py
 import logging
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request, status
@@ -5,7 +6,14 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.config import settings
-from app.routers import health, books, reading, wishlist, auth, lending, settings as settings_router
+from app.core.database import db_manager
+from app.storage import PostgresStorageFactory, SheetsStorageFactory, MemoryStorageFactory
+from app.routers import health, auth
+from app.features.books.router import router as books_router
+from app.features.reading.router import router as reading_router
+from app.features.lending.router import router as lending_router
+from app.features.wishlist.router import router as wishlist_router
+from app.features.settings.router import router as settings_router
 
 logging.basicConfig(
     level=logging.INFO if not settings.DEBUG else logging.DEBUG,
@@ -17,9 +25,28 @@ logger = logging.getLogger("molat.api")
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info(f"Starting {settings.PROJECT_NAME} v{settings.VERSION} on port {settings.PORT}")
-    logger.info(f"Bridge configured: {bool(settings.GOOGLE_SHEETS_BRIDGE_URL)}")
+
+    # Initialize concrete Storage Factory once at startup
+    if settings.DATABASE_URL and "[YOUR-DATABASE-PASSWORD]" not in settings.DATABASE_URL:
+        pool = await db_manager.init_pool(settings.DATABASE_URL)
+        if pool:
+            app.state.storage = PostgresStorageFactory(pool)
+            logger.info("Active storage engine: PostgreSQL (Supabase)")
+        else:
+            app.state.storage = MemoryStorageFactory()
+            logger.info("Active storage engine: In-Memory fallback")
+    elif settings.GOOGLE_SHEETS_BRIDGE_URL:
+        app.state.storage = SheetsStorageFactory(settings.GOOGLE_SHEETS_BRIDGE_URL, settings.BRIDGE_TOKEN)
+        logger.info("Active storage engine: Google Sheets Bridge")
+    else:
+        app.state.storage = MemoryStorageFactory()
+        logger.info("Active storage engine: In-Memory")
+
     yield
-    logger.info("Shutting down Molat API.")
+
+    logger.info("Shutting down Molat API...")
+    if hasattr(app.state, "storage") and app.state.storage:
+        await app.state.storage.close()
 
 
 app = FastAPI(
@@ -49,14 +76,14 @@ async def global_exception_handler(request: Request, exc: Exception):
     )
 
 
-# Include API v1 routers
+# Mount feature and core routers
 app.include_router(health.router, prefix="/api/v1")
 app.include_router(auth.router, prefix="/api/v1")
-app.include_router(books.router, prefix="/api/v1")
-app.include_router(reading.router, prefix="/api/v1")
-app.include_router(wishlist.router, prefix="/api/v1")
-app.include_router(lending.router, prefix="/api/v1")
-app.include_router(settings_router.router, prefix="/api/v1")
+app.include_router(books_router, prefix="/api/v1")
+app.include_router(reading_router, prefix="/api/v1")
+app.include_router(wishlist_router, prefix="/api/v1")
+app.include_router(lending_router, prefix="/api/v1")
+app.include_router(settings_router, prefix="/api/v1")
 
 
 @app.get("/")
@@ -68,4 +95,3 @@ async def root():
         "docs": "/docs" if settings.DEBUG else "disabled in production",
         "port": settings.PORT,
     }
-

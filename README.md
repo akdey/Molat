@@ -6,7 +6,7 @@
 [![React](https://img.shields.io/badge/React-18.3+-61DAFB?style=flat&logo=react)](https://react.dev)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.5+-3178C6?style=flat&logo=typescript)](https://www.typescriptlang.org)
 [![PWA Ready](https://img.shields.io/badge/PWA-Installable-5A0FC8?style=flat&logo=pwa)](https://developer.mozilla.org/en-US/docs/Web/Progressive_web_apps)
-[![Database](https://img.shields.io/badge/Database-Google%20Sheets-34A853?style=flat&logo=googlesheets)](https://www.google.com/sheets/about/)
+[![Database](https://img.shields.io/badge/Database-PostgreSQL%20%2F%20Supabase-3ECF8E?style=flat&logo=supabase)](https://supabase.com)
 [![Zero Billing](https://img.shields.io/badge/Cloud%20Cost-%240.00%2Fmo-brightgreen?style=flat)](#-zero-billing-philosophy)
 
 > **Engineered by [AMIT KUMAR DEY](https://portfolio.akdey.vercel.app/)**
@@ -21,7 +21,7 @@ Most book tracking tools today are either bloated social networks, proprietary w
 
 1. **A beautiful, tactile digital twin of their physical bookshelf** that feels like browsing a private library.
 2. **Habit-forming reading accountability** inspired by Duolingo-style streaks and GitHub-style contribution heatmaps.
-3. **Total ownership of their data** with **zero ongoing cloud costs**, using **Google Sheets as the database**.
+3. **Multi-user scalable database architecture** powered by **PostgreSQL (Supabase)** with connection pooling and relational data integrity, alongside in-memory development fallback.
 
 Whether cataloguing a multi-hundred volume collection, scanning new arrivals at a bookshop with your phone's camera, or celebrating a 30-day continuous reading streak, Molat gives you a private, lightning-fast, and distraction-free home for your library.
 
@@ -127,88 +127,102 @@ Whether cataloguing a multi-hundred volume collection, scanning new arrivals at 
 
 ---
 
-## 🏗️ Architecture
+## 🏗️ Architecture & Clean Feature-Driven Design
+
+Molat backend is architected around **Vertical Feature Slices** with an **Abstract Storage Factory**:
 
 ```mermaid
-flowchart LR
-    subgraph Client["Mobile & Desktop Browser (PWA)"]
+flowchart TD
+    subgraph Client["Frontend Client (PWA)"]
         UI["React 18 + Vite + Tailwind CSS"]
         Scanner["Camera Barcode Scanner (Html5Qrcode)"]
-        SW["Service Worker (Workbox Offline Cache)"]
     end
 
-    subgraph CloudAPI["Backend Services (Hugging Face Spaces)"]
-        API["FastAPI 0.115+ (Python 3.11)"]
-        Cache["TTLCache (300s Invalidation Engine)"]
-        Enricher["Multi-Tier Cover Enricher"]
-        Streak["Streak & Ledger Engine (Asia/Kolkata)"]
+    subgraph Core["Core & Storage Factory"]
+        AppBoot["Server Lifespan Boot"]
+        SF["StorageFactory ABC\n(app.state.storage)"]
+        Provider["get_storage(request) Dependency"]
+        AppBoot -->|Selects Engine Once| SF
+        SF --> Provider
     end
 
-    subgraph Metadata["External Metadata Providers"]
-        GB["Google Books API"]
-        AB["Apple Books (IN + US)"]
-        OL["Open Library API"]
+    subgraph FeatureSlices["Feature Slices (app/features/)"]
+        direction TB
+        BooksSlice["features/books/\n• models.py (Pure Schemas)\n• repository.py (ABC)\n• router.py"]
+        ReadingSlice["features/reading/\n• models.py\n• repository.py\n• router.py"]
+        LendingSlice["features/lending/\n• models.py\n• repository.py\n• router.py"]
+        WishlistSlice["features/wishlist/\n• models.py\n• repository.py\n• router.py"]
+        SettingsSlice["features/settings/\n• models.py\n• repository.py\n• router.py"]
     end
 
-    subgraph Storage["Zero-Billing Storage"]
-        Bridge["Google Apps Script Web App Bridge"]
-        Sheets[("Google Sheets Spreadsheet\n• Books (21 cols)\n• Reading_Logs (9 cols)\n• Wishlist (10 cols)\n• Lending (10 cols)")]
+    subgraph Engines["Storage Engines (app/storage/)"]
+        PGEngine["PostgresStorageFactory\n(Supabase / PostgreSQL Pool)"]
+        SheetsEngine["SheetsStorageFactory\n(Apps Script Web App Bridge)"]
+        MemEngine["MemoryStorageFactory\n(0.1s Fast Unit Tests & Offline)"]
     end
 
-    UI <-->|REST API + Bearer Auth| API
-    Scanner -.->|Auto-Lookup Metadata| GB & OL & AB
-    API <-->|In-Memory Cache| Cache
-    API -->|Async Enrichment Waterfall| Enricher
-    Enricher -.->|Query Covers| GB & AB & OL
-    API --> Streak
-    API <-->|Signed HTTPS Post/Get| Bridge
-    Bridge <-->|SpreadsheetApp API| Sheets
+    UI <-->|REST API + JWT Bearer Auth| FeatureSlices
+    FeatureSlices -->|Depends(get_storage)| Provider
+    SF -.-> PGEngine
+    SF -.-> SheetsEngine
+    SF -.-> MemEngine
+```
+
+### Feature-Driven Folder Structure
+```text
+backend/app/
+├── core/
+│   ├── config.py              # Application settings & environment
+│   ├── database.py            # Asyncpg pool lifecycle (init_pool / close_pool)
+│   └── security.py            # JWT auth, user resolution, passkey verification
+│
+├── storage/                   # Abstract Storage Factory & concrete engines
+│   ├── base.py                # StorageFactory ABC (contract)
+│   ├── postgres.py            # PostgresStorageFactory (wires Postgres repos)
+│   ├── sheets.py              # SheetsStorageFactory (wires Sheets repos)
+│   ├── memory.py              # MemoryStorageFactory (dev & unit tests)
+│   └── provider.py            # get_storage(request) FastAPI dependency
+│
+└── features/                  # Independent domain slices
+    ├── books/                 # models.py, repository.py, postgres_repo.py, sheets_repo.py, memory_repo.py, service.py, router.py
+    ├── reading/               # Reading logs, streak engine, 3-shield freeze bank, 365-day heatmap
+    ├── lending/               # Loan contracts, due dates, borrower WhatsApp follow-ups
+    ├── wishlist/              # Budget planning, 1-click shelf acquisition
+    └── settings/              # Reading profile, velocity goals, visual theme
 ```
 
 ---
 
-## 📊 Live Google Sheets Database Contract
+## 🗄️ Multi-User Database Architecture (PostgreSQL / Supabase)
 
-Molat connects to a single Google Spreadsheet containing four dedicated tabs:
+Molat runs on a relational PostgreSQL database schema (`backend/schema.sql`) hosted on Supabase, featuring native multi-tenancy and high-performance connection pooling via `asyncpg`:
 
-### 1. `Books` Tab (21 Columns)
-The catalog of all physical volumes owned in your personal library.
+### 1. `users` Table
+Multi-tenant user registry:
+- `id VARCHAR(50) PRIMARY KEY`
+- `username VARCHAR(100) UNIQUE NOT NULL`
+- `display_name VARCHAR(100)`
+- `created_at TIMESTAMPTZ`
 
-| Col | Header | Type | Description |
-|:---:|:---|:---:|:---|
-| **A** | `book_id` | string | Unique primary key (`BOOK-001`, `BOOK-002`, ...) |
-| **B** | `title` | string | Main title of the volume |
-| **C** | `subtitle` | string | Subtitle or volume name (optional) |
-| **D** | `authors` | string | Primary and contributing authors |
-| **E** | `isbn_10` | string | 10-digit ISBN (stored as text with leading zeros) |
-| **F** | `isbn_13` | string | 13-digit standard EAN barcode |
-| **G** | `publisher` | string | Publisher imprint or press |
-| **H** | `publication_year`| int | Year of publication |
-| **I** | `language` | string | Language (e.g., `English`, `Bengali`) |
-| **J** | `genre` | string | Primary genre classification |
-| **K** | `cover_url` | string | Direct URL to front dust jacket image |
-| **L** | `reading_status` | enum | `UNREAD` \| `READING` \| `COMPLETED` \| `PAUSED` \| `ABANDONED` |
-| **M** | `condition` | enum | `New` \| `Good` \| `Fair` \| `Damaged` |
-| **N** | `location` | string | Physical shelf placement (e.g., `Home Shelf`, `Lent to John`) |
-| **O** | `purchase_price`| float | Actual cost paid in INR (`CP`) |
-| **P** | `rp` | float | Retail printed MRP in INR (`RP`) |
-| **Q** | `purchase_date` | string | Date acquired (`YYYY-MM-DD`) |
-| **R** | `rating` | int | Reader score from `1` to `5` |
-| **S** | `notes` | string | Personal notes, acquisition stories, or edition details |
-| **T** | `created_at` | string | Creation timestamp |
-| **U** | `updated_at` | string | Last modification timestamp |
+### 2. `books` Table
+The catalog of physical volumes partitioned per user (`user_id, book_id` composite key):
+- `user_id` · `book_id` · `title` · `subtitle` · `authors` · `isbn_10` · `isbn_13` · `publisher` · `publication_year` · `language` · `genre` · `cover_url` · `reading_status` · `condition` · `location` · `purchase_price` · `rp` · `purchase_date` · `rating` · `notes` · `created_at` · `updated_at`
 
-### 2. `Reading_Logs` Tab (9 Columns)
-An append-only log recording every reading session to power the streak engine:
-`log_id` · `book_id` · `session_date` · `start_page` · `end_page` · `pages_read` · `duration_minutes` · `session_note` · `created_at`
+### 3. `reading_logs` Table
+Reading sessions driving the streak & velocity engine:
+- `user_id` · `log_id` · `book_id` · `session_date` · `start_page` · `end_page` · `pages_read` · `duration_minutes` · `session_note` · `created_at`
 
-### 3. `Wishlist` Tab (10 Columns)
-Future acquisitions and budget planning:
-`wishlist_id` · `title` · `authors` · `isbn_13` · `genre` · `expected_rp` · `target_price` · `priority` · `notes` · `created_at`
+### 4. `wishlist` Table
+Acquisitions and budget planning per user:
+- `user_id` · `wishlist_id` · `title` · `authors` · `isbn_13` · `genre` · `expected_rp` · `target_price` · `priority` · `notes` · `created_at`
 
-### 4. `Lending` Tab (10 Columns)
+### 5. `lending` Table
 Borrower contracts, due date calculations, and loan history:
-`lending_id` · `book_id` · `borrower_name` · `borrower_contact` · `lent_date` · `due_date` · `returned_date` · `status` · `notes` · `created_at`
+- `user_id` · `lending_id` · `book_id` · `borrower_name` · `borrower_contact` · `lent_date` · `due_date` · `returned_date` · `status` · `notes` · `created_at`
+
+### 6. `user_settings` Table
+Individual reading profiles and preferences:
+- `user_id PRIMARY KEY` · `daily_goal_pages` · `active_book_id` · `theme` · `updated_at`
 
 ---
 
@@ -312,8 +326,8 @@ Molat is packaged with a custom web manifest and Workbox service worker:
 | **Frontend** | React 18, Vite 5, TypeScript 5.5, Tailwind CSS 3, Zustand, Motion (Framer), Lucide Icons |
 | **Voice & Audio** | Native Web Speech API (`webkitSpeechRecognition`), Web SpeechSynthesis, Web Audio API Soundscape Synthesizer, Screen Wake Lock API, Local Fuzzy NLP |
 | **PWA & Camera** | `vite-plugin-pwa`, Workbox, `html5-qrcode` (rear environment camera) |
-| **Backend API** | FastAPI, Pydantic v2, Python 3.11, `httpx`, `cachetools`, `anyio` |
-| **Database** | Google Sheets via Google Apps Script (Serverless JSON Web App) |
+| **Backend API** | FastAPI, Pydantic v2, Python 3.11, `asyncpg`, `httpx`, `cachetools`, `anyio` |
+| **Database** | PostgreSQL / Supabase (Multi-user partitioned schema via `backend/schema.sql`) |
 | **Hosting** | Vercel (Frontend SPA/PWA), Hugging Face Spaces (Docker runtime) |
 | **Testing** | Pytest, Pytest-Asyncio, HTTPX TestClient |
 
