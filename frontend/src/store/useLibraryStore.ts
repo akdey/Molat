@@ -289,8 +289,17 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
     const uName = res.user?.username || res.user?.email || 'reader';
     localStorage.setItem('molat_auth_token', res.access_token);
     localStorage.setItem('molat_auth_user', uName);
-    set({ authToken: res.access_token, authUser: uName });
+    set({
+      authToken: res.access_token,
+      authUser: uName,
+      books: [],
+      portfolio: null,
+      streakSummary: null,
+      wishlist: [],
+      lendingRecords: [],
+    });
     get().addToast(`Welcome back, @${uName}!`, 'success');
+    await get().loadAllData(true);
   },
 
   signupReader: async (email, username, password) => {
@@ -298,15 +307,32 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
     const uName = res.user?.username || username;
     localStorage.setItem('molat_auth_token', res.access_token);
     localStorage.setItem('molat_auth_user', uName);
-    set({ authToken: res.access_token, authUser: uName });
+    set({
+      authToken: res.access_token,
+      authUser: uName,
+      books: [],
+      portfolio: null,
+      streakSummary: null,
+      wishlist: [],
+      lendingRecords: [],
+    });
     get().addToast(`Welcome to Molat, ❧ ex/${uName}! Your library account is ready.`, 'success');
+    await get().loadAllData(true);
   },
 
   logout: () => {
     localStorage.removeItem('molat_auth_token');
     localStorage.removeItem('molat_auth_user');
     localStorage.removeItem('molat_library_key');
-    set({ authToken: null, authUser: null });
+    set({
+      authToken: null,
+      authUser: null,
+      books: [],
+      portfolio: null,
+      streakSummary: null,
+      wishlist: [],
+      lendingRecords: [],
+    });
     get().addToast('Signed out of reader session.', 'info');
   },
 
@@ -365,11 +391,11 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
       }
 
       set((state) => ({
-        books: bookRes.status === 'fulfilled' ? bookRes.value.books : state.books,
-        portfolio: bookRes.status === 'fulfilled' ? bookRes.value.portfolio : state.portfolio,
-        streakSummary: streakRes.status === 'fulfilled' ? streakRes.value : state.streakSummary,
-        wishlist: wishRes.status === 'fulfilled' ? wishRes.value : state.wishlist,
-        lendingRecords: lendRes.status === 'fulfilled' ? lendRes.value : state.lendingRecords,
+        books: bookRes.status === 'fulfilled' ? bookRes.value.books : (get().authToken ? [] : state.books),
+        portfolio: bookRes.status === 'fulfilled' ? bookRes.value.portfolio : null,
+        streakSummary: streakRes.status === 'fulfilled' ? streakRes.value : null,
+        wishlist: wishRes.status === 'fulfilled' ? wishRes.value : [],
+        lendingRecords: lendRes.status === 'fulfilled' ? lendRes.value : [],
         dailyGoal: loadedGoal,
         activeBookId: loadedActiveBookId,
         theme: loadedTheme,
@@ -378,11 +404,11 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
       }));
 
       if (forceRefresh) {
-        get().addToast('Catalogue refreshed from Google Sheets', 'success');
+        get().addToast('Catalogue refreshed', 'success');
       }
     } catch (err: any) {
       set({ error: err.message || 'Error loading library data', loading: false, refreshing: false });
-      get().addToast(err.message || 'Failed to sync with Google Sheets', 'error');
+      get().addToast(err.message || 'Failed to sync library', 'error');
     }
   },
 

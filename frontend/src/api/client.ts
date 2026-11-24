@@ -71,15 +71,19 @@ export async function loginUser(
 
 // ==================== BOOKS ====================
 
-  export async function fetchBooks(refresh = false): Promise<BookListResponse> {
+  export async function fetchBooks(refresh = false, tokenOrKey?: string): Promise<BookListResponse> {
     const url = refresh ? `${API_BASE}/books?refresh=true` : `${API_BASE}/books`;
-    const res = await fetch(url);
+    const res = await fetch(url, {
+      headers: getAuthHeaders(tokenOrKey),
+    });
     if (!res.ok) throw new Error(`Failed to fetch books: ${res.status}`);
     return res.json();
   }
 
-  export async function fetchBookById(id: string): Promise<Book> {
-    const res = await fetch(`${API_BASE}/books/${id}`);
+  export async function fetchBookById(id: string, tokenOrKey?: string): Promise<Book> {
+    const res = await fetch(`${API_BASE}/books/${id}`, {
+      headers: getAuthHeaders(tokenOrKey),
+    });
     if (!res.ok) throw new Error(`Book not found: ${res.status}`);
     return res.json();
   }
@@ -123,8 +127,10 @@ export async function loginUser(
 
   // ==================== READING & STREAK ====================
 
-  export async function fetchStreakSummary(goal = 20): Promise<import('../types/book').StreakSummary> {
-    const res = await fetch(`${API_BASE}/reading/streak-summary?goal=${goal}`);
+  export async function fetchStreakSummary(goal = 20, tokenOrKey?: string): Promise<import('../types/book').StreakSummary> {
+    const res = await fetch(`${API_BASE}/reading/streak-summary?goal=${goal}`, {
+      headers: getAuthHeaders(tokenOrKey),
+    });
     if (!res.ok) throw new Error(`Failed to fetch streak summary: ${res.status}`);
     return res.json();
   }
@@ -142,17 +148,21 @@ export async function loginUser(
     return res.json();
   }
 
-  export async function fetchReadingLogs(bookId?: string): Promise<import('../types/book').ReadingLog[]> {
+  export async function fetchReadingLogs(bookId?: string, tokenOrKey?: string): Promise<import('../types/book').ReadingLog[]> {
     const url = bookId ? `${API_BASE}/reading/logs?book_id=${encodeURIComponent(bookId)}` : `${API_BASE}/reading/logs`;
-    const res = await fetch(url);
+    const res = await fetch(url, {
+      headers: getAuthHeaders(tokenOrKey),
+    });
     if (!res.ok) throw new Error(`Failed to fetch reading logs: ${res.status}`);
     return res.json();
   }
 
   // ==================== WISHLIST ====================
 
-  export async function fetchWishlist(): Promise<import('../types/book').WishlistItem[]> {
-    const res = await fetch(`${API_BASE}/wishlist`);
+  export async function fetchWishlist(tokenOrKey?: string): Promise<import('../types/book').WishlistItem[]> {
+    const res = await fetch(`${API_BASE}/wishlist`, {
+      headers: getAuthHeaders(tokenOrKey),
+    });
     if (!res.ok) throw new Error(`Failed to fetch wishlist: ${res.status}`);
     return res.json();
   }
@@ -188,21 +198,27 @@ export async function loginUser(
 
   export async function fetchLendingRecords(
     status?: string,
-    refresh = false
+    refresh = false,
+    tokenOrKey?: string
   ): Promise<import('../types/book').LendingRecord[]> {
     const params = new URLSearchParams();
     if (status) params.set('status', status);
     if (refresh) params.set('refresh', 'true');
     const qs = params.toString() ? `?${params.toString()}` : '';
-    const res = await fetch(`${API_BASE}/lending${qs}`);
+    const res = await fetch(`${API_BASE}/lending${qs}`, {
+      headers: getAuthHeaders(tokenOrKey),
+    });
     if (!res.ok) throw new Error(`Failed to fetch lending records: ${res.status}`);
     return res.json();
   }
 
   export async function fetchActiveLendingForBook(
-    bookId: string
+    bookId: string,
+    tokenOrKey?: string
   ): Promise<import('../types/book').LendingRecord | null> {
-    const res = await fetch(`${API_BASE}/lending/book/${bookId}`);
+    const res = await fetch(`${API_BASE}/lending/book/${bookId}`, {
+      headers: getAuthHeaders(tokenOrKey),
+    });
     if (!res.ok) throw new Error(`Failed to check lending status: ${res.status}`);
     return res.json();
   }
@@ -253,8 +269,10 @@ export async function loginUser(
     theme?: string;
   }
 
-  export async function fetchSettings(): Promise<UserSettings> {
-    const res = await fetch(`${API_BASE}/settings`);
+  export async function fetchSettings(tokenOrKey?: string): Promise<UserSettings> {
+    const res = await fetch(`${API_BASE}/settings`, {
+      headers: getAuthHeaders(tokenOrKey),
+    });
     if (!res.ok) throw new Error(`Failed to fetch settings: ${res.status}`);
     return res.json();
   }

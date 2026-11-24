@@ -28,20 +28,9 @@ async def init_storage(app_state) -> StorageFactory:
             print("=" * 50 + "\n", flush=True)
             logger.info("Storage destination: DB")
             return app_state.storage
-        elif settings.GOOGLE_SHEETS_BRIDGE_URL:
-            app_state.storage = SheetsStorageFactory(settings.GOOGLE_SHEETS_BRIDGE_URL, settings.BRIDGE_TOKEN)
-            print("\n" + "=" * 50)
-            print(">>> [STORAGE DESTINATION]: SHEET (DB failed, fell back to Sheet)")
-            print("=" * 50 + "\n", flush=True)
-            logger.info("Storage destination: SHEET (fallback from DB)")
-            return app_state.storage
         else:
-            app_state.storage = MemoryStorageFactory()
-            print("\n" + "=" * 50)
-            print(">>> [STORAGE DESTINATION]: LOCALDB (DB connection failed)")
-            print("=" * 50 + "\n", flush=True)
-            logger.info("Storage destination: LOCALDB")
-            return app_state.storage
+            logger.error("FATAL: DATABASE_URL is configured but connection pool failed to initialize. Silent fallback to Google Sheets is strictly disabled.")
+            raise RuntimeError("PostgreSQL connection pool failed to initialize. Check DATABASE_URL and database availability.")
 
     if settings.GOOGLE_SHEETS_BRIDGE_URL:
         app_state.storage = SheetsStorageFactory(settings.GOOGLE_SHEETS_BRIDGE_URL, settings.BRIDGE_TOKEN)
