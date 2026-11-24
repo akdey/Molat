@@ -5,9 +5,9 @@ from app.core.security import get_current_user_id, require_authenticated_user
 from app.storage.provider import get_storage
 from app.storage.base import StorageFactory
 from app.features.books.models import Book, BookCreate, BookUpdate
-from app.models.responses import BookListResponse, EnrichCoversResponse
+from app.core.responses import BookListResponse, EnrichCoversResponse
 from app.features.books.service import calculate_portfolio_summary, filter_books
-from app.services.cover_enrichment import cover_enricher
+from app.features.books.cover_enrichment import cover_enricher
 
 router = APIRouter(prefix="/books", tags=["Books"])
 

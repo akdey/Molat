@@ -1,7 +1,7 @@
 import pytest
 from fastapi.testclient import TestClient
 from app.main import app
-from app.models.book import BOOKS_SCHEMA_COLUMNS, Book, ReadingStatus, BookCondition
+from app.features.books.models import BOOKS_SCHEMA_COLUMNS, Book, ReadingStatus, BookCondition
 
 client = TestClient(app)
 

@@ -4,8 +4,8 @@ from zoneinfo import ZoneInfo
 from fastapi.testclient import TestClient
 from app.main import app
 from app.config import settings
-from app.models.lending import LENDING_COLUMNS, LendingStatus
-from app.models.book import BookCreate
+from app.features.lending.models import LENDING_COLUMNS, LendingStatus
+from app.features.books.models import BookCreate
 
 client = TestClient(app)
 AUTH_HEADERS = {"X-Library-Key": "test-secret-key"}

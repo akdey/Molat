@@ -2,7 +2,7 @@ import logging
 import asyncio
 from typing import Optional, List, Dict
 import httpx
-from app.models.book import Book
+from app.features.books.models import Book
 
 logger = logging.getLogger(__name__)
 

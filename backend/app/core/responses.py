@@ -1,6 +1,6 @@
 from typing import List, Optional, Dict, Any
 from pydantic import BaseModel, Field
-from app.models.book import Book
+from app.features.books.models import Book
 
 
 class PortfolioSummary(BaseModel):

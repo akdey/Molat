@@ -1,3 +1,4 @@
+# backend/app.py
 import os
 
 # Disable Gradio 5 Node.js SSR proxy so FastAPI directly handles all POST/GET requests
@@ -21,11 +22,25 @@ import gradio as gr
 from fastapi.middleware.cors import CORSMiddleware
 from gradio.routes import App
 from app.config import settings
-from app.routers import health, books, reading, wishlist, auth, lending
+from app.storage import PostgresStorageFactory, SheetsStorageFactory, MemoryStorageFactory
+from app.features.health.router import router as health_router
+from app.features.auth.router import router as auth_router
+from app.features.books.router import router as books_router
+from app.features.reading.router import router as reading_router
+from app.features.wishlist.router import router as wishlist_router
+from app.features.lending.router import router as lending_router
+from app.features.settings.router import router as settings_router
 
 
 def attach_api_routes(target_app):
-    """Register Molat REST API v1 routes and CORS middleware onto target FastAPI app."""
+    """Register Molat REST API v1 routes and storage engine onto target FastAPI app."""
+    # Ensure storage is initialized
+    if not hasattr(target_app.state, "storage"):
+        if settings.GOOGLE_SHEETS_BRIDGE_URL:
+            target_app.state.storage = SheetsStorageFactory(settings.GOOGLE_SHEETS_BRIDGE_URL, settings.BRIDGE_TOKEN)
+        else:
+            target_app.state.storage = MemoryStorageFactory()
+
     target_app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origins,
@@ -33,12 +48,13 @@ def attach_api_routes(target_app):
         allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
         allow_headers=["*"],
     )
-    target_app.include_router(health.router, prefix="/api/v1")
-    target_app.include_router(auth.router, prefix="/api/v1")
-    target_app.include_router(books.router, prefix="/api/v1")
-    target_app.include_router(reading.router, prefix="/api/v1")
-    target_app.include_router(wishlist.router, prefix="/api/v1")
-    target_app.include_router(lending.router, prefix="/api/v1")
+    target_app.include_router(health_router, prefix="/api/v1")
+    target_app.include_router(auth_router, prefix="/api/v1")
+    target_app.include_router(books_router, prefix="/api/v1")
+    target_app.include_router(reading_router, prefix="/api/v1")
+    target_app.include_router(wishlist_router, prefix="/api/v1")
+    target_app.include_router(lending_router, prefix="/api/v1")
+    target_app.include_router(settings_router, prefix="/api/v1")
 
 
 # Patch Gradio App.create_app so that whatever App Gradio instantiates in launch(),
@@ -52,35 +68,25 @@ def _patched_create_app(*args, **kwargs):
     return created_app
 
 
-App.create_app = staticmethod(_patched_create_app)
+App.create_app = _patched_create_app
 
 
-@spaces.GPU(duration=120)
-def predict(query: str = "health_ping") -> str:
-    """ZeroGPU function required for ZeroGPU startup verification."""
-    return f"ZeroGPU cluster active & Molat API ready. Echo: {query}"
-
-
-# Gradio Interface explicitly wired with @spaces.GPU for HF ZeroGPU scanner
-demo = gr.Interface(
-    fn=predict,
-    inputs=gr.Textbox(label="Query", value="ping"),
-    outputs=gr.Textbox(label="Status"),
-    title="📚 Ondorpata / Molat Library API",
-    description=(
-        "FastAPI backend running with Gradio on Hugging Face Spaces, serving REST endpoints under `/api/v1` for the Molat Library PWA.\n\n"
-        "- [Interactive API Docs](/docs)\n"
-        "- [Health Check](/api/v1/health)\n"
-        "- [Streak Summary](/api/v1/reading/streak-summary)"
-    ),
-)
-
-# Also ensure initial demo.app has routes if inspected before launch
-attach_api_routes(demo.app)
+# Minimal Gradio landing UI for Hugging Face Spaces visitors
+with gr.Blocks(title="Molat Personal Book Library API") as demo:
+    gr.Markdown(
+        """
+        # Molat (মলাট) — Personal Library API
+        Welcome to the Molat backend server.
+        - **API Health**: [/api/v1/health](/api/v1/health)
+        - **Books API**: [/api/v1/books](/api/v1/books)
+        - **Streak API**: [/api/v1/reading/streak-summary](/api/v1/reading/streak-summary)
+        - **Frontend App**: [molat-akdey.vercel.app](https://molat-akdey.vercel.app)
+        """
+    )
 
 if __name__ == "__main__":
     demo.launch(
         server_name="0.0.0.0",
-        server_port=7860,
-        ssr_mode=False,
+        server_port=settings.PORT,
+        show_error=True,
     )

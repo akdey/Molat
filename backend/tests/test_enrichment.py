@@ -1,7 +1,7 @@
 import pytest
 from unittest.mock import AsyncMock, patch
-from app.services.cover_enrichment import cover_enricher, CoverEnrichmentService
-from app.models.book import Book
+from app.features.books.cover_enrichment import cover_enricher, CoverEnrichmentService
+from app.features.books.models import Book
 
 
 def test_is_valid_cover_url():

@@ -5,8 +5,8 @@ from app.core.security import get_current_user_id, require_authenticated_user
 from app.storage.provider import get_storage
 from app.storage.base import StorageFactory
 from app.features.reading.models import ReadingLog, ReadingLogCreate
-from app.models.responses import StreakSummaryResponse
-from app.services.streak_calculator import calculate_streak_summary
+from app.core.responses import StreakSummaryResponse
+from app.features.reading.streak_calculator import calculate_streak_summary
 
 router = APIRouter(prefix="/reading", tags=["Reading & Streak Engine"])
 

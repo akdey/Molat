@@ -1,9 +1,9 @@
 import pytest
 from fastapi.testclient import TestClient
 from app.main import app
-from app.models.book import BookCreate
-from app.models.reading_log import ReadingLogCreate
-from app.services.auth import create_access_token
+from app.features.books.models import BookCreate
+from app.features.reading.models import ReadingLogCreate
+from app.core.security import create_access_token
 
 client = TestClient(app)
 

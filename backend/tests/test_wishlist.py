@@ -2,8 +2,8 @@ import pytest
 from fastapi.testclient import TestClient
 from app.main import app
 from app.config import settings
-from app.models.wishlist import WISHLIST_COLUMNS, WishlistItemCreate, WishlistAcquireRequest
-from app.models.book import ReadingStatus, BookCondition
+from app.features.wishlist.models import WISHLIST_COLUMNS, WishlistItemCreate, WishlistAcquireRequest
+from app.features.books.models import ReadingStatus, BookCondition
 
 client = TestClient(app)
 AUTH_HEADERS = {"X-Library-Key": "test-secret-key"}

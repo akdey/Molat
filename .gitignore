@@ -40,3 +40,6 @@ yarn-error.log*
 # IDE / Editor
 .idea/
 .vscode/
+
+.agents/
+graphify-out/

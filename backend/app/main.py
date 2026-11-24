@@ -8,11 +8,12 @@ from fastapi.responses import JSONResponse
 from app.config import settings
 from app.core.database import db_manager
 from app.storage import PostgresStorageFactory, SheetsStorageFactory, MemoryStorageFactory
-from app.routers import health, auth
+from app.features.health.router import router as health_router
+from app.features.auth.router import router as auth_router
 from app.features.books.router import router as books_router
 from app.features.reading.router import router as reading_router
-from app.features.lending.router import router as lending_router
 from app.features.wishlist.router import router as wishlist_router
+from app.features.lending.router import router as lending_router
 from app.features.settings.router import router as settings_router
 
 logging.basicConfig(
@@ -76,9 +77,9 @@ async def global_exception_handler(request: Request, exc: Exception):
     )
 
 
-# Mount feature and core routers
-app.include_router(health.router, prefix="/api/v1")
-app.include_router(auth.router, prefix="/api/v1")
+# Mount feature routers
+app.include_router(health_router, prefix="/api/v1")
+app.include_router(auth_router, prefix="/api/v1")
 app.include_router(books_router, prefix="/api/v1")
 app.include_router(reading_router, prefix="/api/v1")
 app.include_router(wishlist_router, prefix="/api/v1")

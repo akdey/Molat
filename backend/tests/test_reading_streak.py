@@ -2,9 +2,9 @@ from datetime import date, timedelta
 import pytest
 from fastapi.testclient import TestClient
 from app.main import app
-from app.models.reading_log import ReadingLog, ReadingLogCreate
-from app.models.book import BookCreate, ReadingStatus
-from app.services.streak_calculator import calculate_streak_summary
+from app.features.reading.models import ReadingLog, ReadingLogCreate
+from app.features.books.models import BookCreate, ReadingStatus
+from app.features.reading.streak_calculator import calculate_streak_summary
 from app.main import app
 
 client = TestClient(app)

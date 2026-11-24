@@ -1,7 +1,7 @@
 from fastapi.testclient import TestClient
 from app.main import app
 from app.config import settings
-from app.services.auth import create_access_token, verify_access_token
+from app.core.security import create_access_token, verify_access_token
 
 client = TestClient(app)
 

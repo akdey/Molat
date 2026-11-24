@@ -1,8 +1,8 @@
 # backend/app/features/books/service.py
 from typing import List, Optional, Dict
 from app.features.books.models import Book
-from app.models.responses import PortfolioSummary
-from app.services.cover_enrichment import cover_enricher
+from app.core.responses import PortfolioSummary
+from app.features.books.cover_enrichment import cover_enricher
 
 
 def calculate_portfolio_summary(books: List[Book]) -> PortfolioSummary:
