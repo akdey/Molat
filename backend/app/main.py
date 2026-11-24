@@ -8,7 +8,7 @@ from fastapi.responses import JSONResponse
 from app.config import settings
 from app.core.database import db_manager
 from app.core.rbac import RBACMiddleware
-from app.storage import PostgresStorageFactory, SheetsStorageFactory, MemoryStorageFactory
+from app.storage.provider import init_storage
 from app.features.health.router import router as health_router
 from app.features.auth.router import router as auth_router
 from app.features.books.router import router as books_router
@@ -27,43 +27,8 @@ logger = logging.getLogger("molat.api")
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info(f"Starting {settings.PROJECT_NAME} v{settings.VERSION} on port {settings.PORT}")
-
-    # Initialize concrete Storage Factory once at startup
-    if settings.DATABASE_URL and "[YOUR-DATABASE-PASSWORD]" not in settings.DATABASE_URL:
-        pool = await db_manager.init_pool(settings.DATABASE_URL)
-        if pool:
-            app.state.storage = PostgresStorageFactory(pool)
-            print("\n" + "=" * 50)
-            print(">>> [STORAGE DESTINATION]: DB")
-            print("=" * 50 + "\n", flush=True)
-            logger.info("Storage destination: DB")
-        elif settings.GOOGLE_SHEETS_BRIDGE_URL:
-            app.state.storage = SheetsStorageFactory(settings.GOOGLE_SHEETS_BRIDGE_URL, settings.BRIDGE_TOKEN)
-            print("\n" + "=" * 50)
-            print(">>> [STORAGE DESTINATION]: SHEET (DB failed, fell back to Sheet)")
-            print("=" * 50 + "\n", flush=True)
-            logger.info("Storage destination: SHEET (fallback from DB)")
-        else:
-            app.state.storage = MemoryStorageFactory()
-            print("\n" + "=" * 50)
-            print(">>> [STORAGE DESTINATION]: LOCALDB (DB connection failed)")
-            print("=" * 50 + "\n", flush=True)
-            logger.info("Storage destination: LOCALDB")
-    elif settings.GOOGLE_SHEETS_BRIDGE_URL:
-        app.state.storage = SheetsStorageFactory(settings.GOOGLE_SHEETS_BRIDGE_URL, settings.BRIDGE_TOKEN)
-        print("\n" + "=" * 50)
-        print(">>> [STORAGE DESTINATION]: SHEET")
-        print("=" * 50 + "\n", flush=True)
-        logger.info("Storage destination: SHEET")
-    else:
-        app.state.storage = MemoryStorageFactory()
-        print("\n" + "=" * 50)
-        print(">>> [STORAGE DESTINATION]: LOCALDB")
-        print("=" * 50 + "\n", flush=True)
-        logger.info("Storage destination: LOCALDB")
-
+    await init_storage(app.state)
     yield
-
     logger.info("Shutting down Molat API...")
     if hasattr(app.state, "storage") and app.state.storage:
         await app.state.storage.close()
