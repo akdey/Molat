@@ -2,6 +2,7 @@
 import logging
 import os
 from typing import Optional
+from urllib.parse import urlparse, unquote
 import asyncpg
 from app.config import settings
 
@@ -20,18 +21,30 @@ class DatabaseManager:
         return self.pool is not None
 
     async def init_pool(self, dsn: str) -> Optional[asyncpg.Pool]:
-        if not dsn or "[YOUR-DATABASE-PASSWORD]" in dsn:
+        if not dsn or "[YOUR-DATABASE-PASSWORD]" in dsn or "[YOUR-PASSWORD]" in dsn:
             logger.info("Database URL placeholder detected or empty. Skipping PostgreSQL connection.")
             return None
 
         try:
             logger.info("Initializing asyncpg connection pool...")
+            u = urlparse(dsn)
+            user = unquote(u.username or "")
+            password = unquote(u.password or "")
+            database = unquote(u.path.lstrip("/") or "postgres")
+            host = u.hostname or "localhost"
+            port = u.port or 5432
+
             self.pool = await asyncpg.create_pool(
-                dsn=dsn,
+                host=host,
+                port=port,
+                user=user,
+                password=password,
+                database=database,
                 min_size=1,
                 max_size=10,
                 ssl="require",
                 command_timeout=30.0,
+                statement_cache_size=0,
             )
             # Auto-run schema migrations
             if os.path.exists(SCHEMA_FILE):
