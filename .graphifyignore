@@ -1,0 +1,10 @@
+# Environment variables and secrets
+.env
+.env*
+*.env
+*.env*
+backend/.env
+frontend/.env
+*.local
+credentials*
+secrets*
