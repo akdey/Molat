@@ -68,7 +68,7 @@ class SheetsSettingsRepository(SettingsRepository):
                         if u:
                             latest_updated_at = u
         except Exception as e:
-            logger.warning(f"Failed to fetch settings from sheets bridge: {e}")
+            logger.error(f"Failed to fetch settings from sheets bridge: {e}", exc_info=True)
 
         daily_goal = _parse_int(settings_dict.get("daily_goal_pages")) or 15
         active_book = settings_dict.get("active_book_id")

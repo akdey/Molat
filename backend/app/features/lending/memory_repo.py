@@ -1,4 +1,5 @@
 # backend/app/features/lending/memory_repo.py
+import logging
 from collections import defaultdict
 from datetime import datetime
 from typing import List, Optional, Dict
@@ -6,6 +7,7 @@ from zoneinfo import ZoneInfo
 from app.features.lending.models import LendingRecord, LendingRecordCreate, LendingRecordReturn, LendingStatus
 from app.features.lending.repository import LendingRepository
 
+logger = logging.getLogger("molat.lending.memory")
 IST = ZoneInfo("Asia/Kolkata")
 
 
@@ -57,19 +59,20 @@ class MemoryLendingRepository(LendingRepository):
 
         today = datetime.now(IST).date()
         days_lent = 0
-        try:
-            l_d = datetime.strptime(lent_date, "%Y-%m-%d").date()
-            days_lent = max(0, (today - l_d).days)
-        except Exception:
-            pass
+        if lent_date:
+            try:
+                l_d = datetime.strptime(lent_date, "%Y-%m-%d").date()
+                days_lent = max(0, (today - l_d).days)
+            except (ValueError, TypeError) as e:
+                logger.warning(f"Could not parse lent_date '{lent_date}': {e}")
 
         is_overdue = False
         if payload.due_date:
             try:
                 d_d = datetime.strptime(payload.due_date, "%Y-%m-%d").date()
                 is_overdue = today > d_d
-            except Exception:
-                pass
+            except (ValueError, TypeError) as e:
+                logger.warning(f"Could not parse due_date '{payload.due_date}': {e}")
 
         book_title, book_authors, book_cover = None, None, None
         if self.book_repo and hasattr(self.book_repo, "_store"):

@@ -55,7 +55,7 @@ class DatabaseManager:
                 logger.info("PostgreSQL schema initialized and verified.")
             return self.pool
         except Exception as e:
-            logger.warning(f"Could not connect to PostgreSQL ({e}).")
+            logger.error(f"Could not connect to PostgreSQL: {e}", exc_info=True)
             self.pool = None
             return None
 

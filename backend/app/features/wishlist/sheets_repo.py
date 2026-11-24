@@ -73,7 +73,7 @@ class SheetsWishlistRepository(WishlistRepository):
                 raw_rows = data.get("rows") or []
                 return [_from_sheet_row(r, user_id=user_id) for r in raw_rows if r.get("wishlist_id")]
         except Exception as e:
-            logger.error(f"Failed to fetch wishlist from sheets: {e}")
+            logger.error(f"Failed to fetch wishlist from sheets: {e}", exc_info=True)
             return []
 
     async def create(self, data: WishlistItemCreate, user_id: str = "owner") -> WishlistItem:

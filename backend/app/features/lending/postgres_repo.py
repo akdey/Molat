@@ -1,4 +1,5 @@
 # backend/app/features/lending/postgres_repo.py
+import logging
 from datetime import datetime
 from typing import List, Optional
 from zoneinfo import ZoneInfo
@@ -6,6 +7,7 @@ import asyncpg
 from app.features.lending.models import LendingRecord, LendingRecordCreate, LendingRecordReturn, LendingStatus
 from app.features.lending.repository import LendingRepository
 
+logger = logging.getLogger("molat.lending.postgres")
 IST = ZoneInfo("Asia/Kolkata")
 
 
@@ -13,21 +15,22 @@ def _to_lending(r: asyncpg.Record) -> LendingRecord:
     lent_date = r["lent_date"]
     today = datetime.now(IST).date()
     days_lent = 0
-    try:
-        l_d = datetime.strptime(lent_date, "%Y-%m-%d").date()
-        days_lent = max(0, (today - l_d).days)
-    except Exception:
-        pass
+    if lent_date:
+        try:
+            l_d = datetime.strptime(str(lent_date), "%Y-%m-%d").date()
+            days_lent = max(0, (today - l_d).days)
+        except (ValueError, TypeError) as e:
+            logger.warning(f"Could not parse lent_date '{lent_date}': {e}")
 
     is_overdue = False
     due_date = r.get("due_date")
     status_val = r.get("status")
     if due_date and (status_val == "ACTIVE" or status_val == LendingStatus.ACTIVE):
         try:
-            d_d = datetime.strptime(due_date, "%Y-%m-%d").date()
+            d_d = datetime.strptime(str(due_date), "%Y-%m-%d").date()
             is_overdue = today > d_d
-        except Exception:
-            pass
+        except (ValueError, TypeError) as e:
+            logger.warning(f"Could not parse due_date '{due_date}': {e}")
 
     return LendingRecord(
         lending_id=r["lending_id"],
@@ -101,19 +104,20 @@ class PostgresLendingRepository(LendingRepository):
 
         today = datetime.now(IST).date()
         days_lent = 0
-        try:
-            l_d = datetime.strptime(lent_date, "%Y-%m-%d").date()
-            days_lent = max(0, (today - l_d).days)
-        except Exception:
-            pass
+        if lent_date:
+            try:
+                l_d = datetime.strptime(str(lent_date), "%Y-%m-%d").date()
+                days_lent = max(0, (today - l_d).days)
+            except (ValueError, TypeError) as e:
+                logger.warning(f"Could not parse lent_date '{lent_date}': {e}")
 
         is_overdue = False
         if payload.due_date:
             try:
-                d_d = datetime.strptime(payload.due_date, "%Y-%m-%d").date()
+                d_d = datetime.strptime(str(payload.due_date), "%Y-%m-%d").date()
                 is_overdue = today > d_d
-            except Exception:
-                pass
+            except (ValueError, TypeError) as e:
+                logger.warning(f"Could not parse due_date '{payload.due_date}': {e}")
 
         async with self.pool.acquire() as conn:
             async with conn.transaction():

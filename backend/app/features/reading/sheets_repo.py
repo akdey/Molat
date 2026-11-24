@@ -89,7 +89,7 @@ class SheetsReadingRepository(ReadingRepository):
                             logger.warning(f"Error parsing sheet reading log: {e}")
                 return logs
         except Exception as e:
-            logger.error(f"Failed to fetch reading logs from sheets: {e}")
+            logger.error(f"Failed to fetch reading logs from sheets: {e}", exc_info=True)
             return []
 
     async def create(self, data: ReadingLogCreate, user_id: str = "owner") -> ReadingLog:

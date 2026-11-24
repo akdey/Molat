@@ -20,11 +20,14 @@ except ImportError:
 
 import gradio as gr
 from fastapi.middleware.cors import CORSMiddleware
+import logging
 from gradio.routes import App
 from app.config import settings
 from app.core.database import db_manager
 from app.core.rbac import RBACMiddleware
 from app.storage import PostgresStorageFactory, SheetsStorageFactory, MemoryStorageFactory
+
+logger = logging.getLogger("molat.hf_spaces")
 from app.features.health.router import router as health_router
 from app.features.auth.router import router as auth_router
 from app.features.books.router import router as books_router
@@ -59,8 +62,8 @@ def attach_api_routes(target_app):
                     print("\n" + "=" * 50)
                     print(">>> [STORAGE DESTINATION]: DB")
                     print("=" * 50 + "\n", flush=True)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.error(f"Failed to initialize PostgreSQL pool in attach_api_routes: {e}", exc_info=True)
 
         if not storage_initialized:
             if settings.GOOGLE_SHEETS_BRIDGE_URL:

@@ -24,11 +24,12 @@ def _from_sheet_row(r: Dict[str, Any], user_id: str = "owner") -> LendingRecord:
     lent_date = str(r.get("lent_date") or "")
     today = datetime.now(IST).date()
     days_lent = 0
-    try:
-        l_d = datetime.strptime(lent_date, "%Y-%m-%d").date()
-        days_lent = max(0, (today - l_d).days)
-    except Exception:
-        pass
+    if lent_date:
+        try:
+            l_d = datetime.strptime(lent_date, "%Y-%m-%d").date()
+            days_lent = max(0, (today - l_d).days)
+        except (ValueError, TypeError) as e:
+            logger.warning(f"Could not parse lent_date '{lent_date}': {e}")
 
     is_overdue = False
     due_date = r.get("due_date")
@@ -37,8 +38,8 @@ def _from_sheet_row(r: Dict[str, Any], user_id: str = "owner") -> LendingRecord:
         try:
             d_d = datetime.strptime(str(due_date), "%Y-%m-%d").date()
             is_overdue = today > d_d
-        except Exception:
-            pass
+        except (ValueError, TypeError) as e:
+            logger.warning(f"Could not parse due_date '{due_date}': {e}")
 
     return LendingRecord(
         lending_id=str(r.get("lending_id") or ""),
@@ -101,7 +102,7 @@ class SheetsLendingRepository(LendingRepository):
                     records = [r for r in records if r.status.value == t]
                 return sorted(records, key=lambda x: (0 if x.status == LendingStatus.ACTIVE else 1, x.lent_date or ""), reverse=False)
         except Exception as e:
-            logger.error(f"Failed to fetch lending records from sheets: {e}")
+            logger.error(f"Failed to fetch lending records from sheets: {e}", exc_info=True)
             return []
 
     async def get_active_for_book(self, book_id: str, user_id: str = "owner") -> Optional[LendingRecord]:

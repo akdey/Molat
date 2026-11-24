@@ -135,7 +135,7 @@ class SheetsBookRepository(BookRepository):
                             logger.warning(f"Error parsing sheet book: {e}")
                 return books
         except Exception as e:
-            logger.error(f"Failed to fetch books from sheets bridge: {e}")
+            logger.error(f"Failed to fetch books from sheets bridge: {e}", exc_info=True)
             return []
 
     async def get(self, book_id: str, user_id: str = "owner") -> Optional[Book]:
