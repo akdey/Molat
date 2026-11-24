@@ -22,6 +22,7 @@ import gradio as gr
 from fastapi.middleware.cors import CORSMiddleware
 from gradio.routes import App
 from app.config import settings
+from app.core.database import db_manager
 from app.storage import PostgresStorageFactory, SheetsStorageFactory, MemoryStorageFactory
 from app.features.health.router import router as health_router
 from app.features.auth.router import router as auth_router
@@ -36,10 +37,44 @@ def attach_api_routes(target_app):
     """Register Molat REST API v1 routes and storage engine onto target FastAPI app."""
     # Ensure storage is initialized
     if not hasattr(target_app.state, "storage"):
-        if settings.GOOGLE_SHEETS_BRIDGE_URL:
+        if settings.DATABASE_URL and "[YOUR-DATABASE-PASSWORD]" not in settings.DATABASE_URL:
+            import asyncio
+            try:
+                try:
+                    loop = asyncio.get_running_loop()
+                except RuntimeError:
+                    loop = None
+
+                if loop and loop.is_running():
+                    pool = loop.run_until_complete(db_manager.init_pool(settings.DATABASE_URL))
+                else:
+                    pool = asyncio.run(db_manager.init_pool(settings.DATABASE_URL))
+
+                if pool:
+                    target_app.state.storage = PostgresStorageFactory(pool)
+                    print("\n" + "=" * 50)
+                    print(">>> [STORAGE DESTINATION]: DB")
+                    print("=" * 50 + "\n", flush=True)
+                else:
+                    target_app.state.storage = MemoryStorageFactory()
+                    print("\n" + "=" * 50)
+                    print(">>> [STORAGE DESTINATION]: LOCALDB (DB connection failed)")
+                    print("=" * 50 + "\n", flush=True)
+            except Exception:
+                target_app.state.storage = MemoryStorageFactory()
+                print("\n" + "=" * 50)
+                print(">>> [STORAGE DESTINATION]: LOCALDB (DB error)")
+                print("=" * 50 + "\n", flush=True)
+        elif settings.GOOGLE_SHEETS_BRIDGE_URL:
             target_app.state.storage = SheetsStorageFactory(settings.GOOGLE_SHEETS_BRIDGE_URL, settings.BRIDGE_TOKEN)
+            print("\n" + "=" * 50)
+            print(">>> [STORAGE DESTINATION]: SHEET")
+            print("=" * 50 + "\n", flush=True)
         else:
             target_app.state.storage = MemoryStorageFactory()
+            print("\n" + "=" * 50)
+            print(">>> [STORAGE DESTINATION]: LOCALDB")
+            print("=" * 50 + "\n", flush=True)
 
     target_app.add_middleware(
         CORSMiddleware,
@@ -85,6 +120,16 @@ with gr.Blocks(title="Molat Personal Book Library API") as demo:
     )
 
 if __name__ == "__main__":
+    if settings.DATABASE_URL and "[YOUR-DATABASE-PASSWORD]" not in settings.DATABASE_URL:
+        dest = "DB"
+    elif settings.GOOGLE_SHEETS_BRIDGE_URL:
+        dest = "SHEET"
+    else:
+        dest = "LOCALDB"
+    print("\n" + "=" * 50)
+    print(f">>> [STORAGE DESTINATION]: {dest}")
+    print("=" * 50 + "\n", flush=True)
+
     demo.launch(
         server_name="0.0.0.0",
         server_port=settings.PORT,

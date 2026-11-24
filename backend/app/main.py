@@ -32,16 +32,28 @@ async def lifespan(app: FastAPI):
         pool = await db_manager.init_pool(settings.DATABASE_URL)
         if pool:
             app.state.storage = PostgresStorageFactory(pool)
-            logger.info("Active storage engine: PostgreSQL (Supabase)")
+            print("\n" + "=" * 50)
+            print(">>> [STORAGE DESTINATION]: DB")
+            print("=" * 50 + "\n", flush=True)
+            logger.info("Storage destination: DB")
         else:
             app.state.storage = MemoryStorageFactory()
-            logger.info("Active storage engine: In-Memory fallback")
+            print("\n" + "=" * 50)
+            print(">>> [STORAGE DESTINATION]: LOCALDB (DB connection failed)")
+            print("=" * 50 + "\n", flush=True)
+            logger.info("Storage destination: LOCALDB")
     elif settings.GOOGLE_SHEETS_BRIDGE_URL:
         app.state.storage = SheetsStorageFactory(settings.GOOGLE_SHEETS_BRIDGE_URL, settings.BRIDGE_TOKEN)
-        logger.info("Active storage engine: Google Sheets Bridge")
+        print("\n" + "=" * 50)
+        print(">>> [STORAGE DESTINATION]: SHEET")
+        print("=" * 50 + "\n", flush=True)
+        logger.info("Storage destination: SHEET")
     else:
         app.state.storage = MemoryStorageFactory()
-        logger.info("Active storage engine: In-Memory")
+        print("\n" + "=" * 50)
+        print(">>> [STORAGE DESTINATION]: LOCALDB")
+        print("=" * 50 + "\n", flush=True)
+        logger.info("Storage destination: LOCALDB")
 
     yield
 
