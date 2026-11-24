@@ -91,11 +91,10 @@ export const AuthScreen: React.FC = () => {
           <button
             type="button"
             onClick={() => { setMode('login'); setErrorMsg(null); }}
-            className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-semibold rounded-lg transition-all ${
-              mode === 'login'
+            className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-semibold rounded-lg transition-all ${mode === 'login'
                 ? 'bg-white dark:bg-[#1A1D24] text-[#1E293B] dark:text-[#F1F5F9] shadow-xs'
                 : 'text-[#475569] dark:text-[#94A3B8] hover:text-[#1E293B] dark:hover:text-[#F1F5F9]'
-            }`}
+              }`}
           >
             <LogIn size={14} />
             <span>Sign In</span>
@@ -103,11 +102,10 @@ export const AuthScreen: React.FC = () => {
           <button
             type="button"
             onClick={() => { setMode('signup'); setErrorMsg(null); }}
-            className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-semibold rounded-lg transition-all ${
-              mode === 'signup'
+            className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-semibold rounded-lg transition-all ${mode === 'signup'
                 ? 'bg-white dark:bg-[#1A1D24] text-[#1E293B] dark:text-[#F1F5F9] shadow-xs'
                 : 'text-[#475569] dark:text-[#94A3B8] hover:text-[#1E293B] dark:hover:text-[#F1F5F9]'
-            }`}
+              }`}
           >
             <UserPlus size={14} />
             <span>New Reader</span>
@@ -130,16 +128,16 @@ export const AuthScreen: React.FC = () => {
                 Email or Username
               </label>
               <div className="relative">
-                <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-[#475569] dark:text-[#94A3B8]">
-                  <AtSign size={15} />
+                <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-[#475569] dark:text-[#94A3B8] font-serif font-bold text-xs select-none">
+                  ❧
                 </span>
                 <input
                   type="text"
                   required
-                  placeholder="e.g. reader@molat.local or akdey"
+                  placeholder="e.g. reader@molat.local or ex/akdey"
                   value={loginIdent}
                   onChange={(e) => setLoginIdent(e.target.value)}
-                  className="w-full pl-9 pr-3 py-2 text-sm rounded-xl bg-white dark:bg-[#121316] border border-[#E2D9C8] dark:border-[#2A2F3A] text-[#1E293B] dark:text-[#F1F5F9] focus:outline-hidden focus:ring-2 focus:ring-[#C2410C]/40 transition-shadow"
+                  className="w-full pl-8 pr-3 py-2 text-sm rounded-xl bg-white dark:bg-[#121316] border border-[#E2D9C8] dark:border-[#2A2F3A] text-[#1E293B] dark:text-[#F1F5F9] focus:outline-hidden focus:ring-2 focus:ring-[#C2410C]/40 transition-shadow"
                 />
               </div>
             </div>
@@ -195,26 +193,24 @@ export const AuthScreen: React.FC = () => {
 
             <div>
               <label className="block text-xs font-medium text-[#475569] dark:text-[#94A3B8] mb-1.5">
-                Reader Handle (Ex Libris Handle)
+                Ex Libris Handle
               </label>
-              <div className="relative">
-                <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-[#475569] dark:text-[#94A3B8]">
-                  <AtSign size={15} />
+              <div className="relative flex items-center">
+                <span className="absolute left-3 font-serif font-bold text-[#C2410C] dark:text-[#D97706] text-sm select-none pointer-events-none">
+                  ❧ ex/
                 </span>
                 <input
                   type="text"
                   required
-                  placeholder="e.g. reader_jane"
+                  placeholder="handle"
                   value={signupUsername}
-                  onChange={(e) => setSignupUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))}
-                  className="w-full pl-9 pr-3 py-2 text-sm rounded-xl bg-white dark:bg-[#121316] border border-[#E2D9C8] dark:border-[#2A2F3A] text-[#1E293B] dark:text-[#F1F5F9] focus:outline-hidden focus:ring-2 focus:ring-[#C2410C]/40 transition-shadow"
+                  onChange={(e) => setSignupUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, ''))}
+                  className="w-full pl-14 pr-3 py-2 text-sm font-mono rounded-xl bg-white dark:bg-[#121316] border border-[#E2D9C8] dark:border-[#2A2F3A] text-[#1E293B] dark:text-[#F1F5F9] focus:outline-hidden focus:ring-2 focus:ring-[#C2410C]/40 transition-shadow"
                 />
               </div>
-              {signupUsername && (
-                <p className="text-3xs text-[#475569] dark:text-[#94A3B8] mt-1 pl-1">
-                  Provenance tag: <span className="font-mono text-[#C2410C] dark:text-[#D97706]">❧ ex/{signupUsername}</span>
-                </p>
-              )}
+              <p className="text-3xs text-[#475569] dark:text-[#94A3B8] mt-1 pl-1">
+                Your Ex Libris bookplate slug: <span className="font-mono text-[#C2410C] dark:text-[#D97706]">❧ ex/{signupUsername || 'handle'}</span>
+              </p>
             </div>
 
             <div>
