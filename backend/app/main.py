@@ -36,6 +36,12 @@ async def lifespan(app: FastAPI):
             print(">>> [STORAGE DESTINATION]: DB")
             print("=" * 50 + "\n", flush=True)
             logger.info("Storage destination: DB")
+        elif settings.GOOGLE_SHEETS_BRIDGE_URL:
+            app.state.storage = SheetsStorageFactory(settings.GOOGLE_SHEETS_BRIDGE_URL, settings.BRIDGE_TOKEN)
+            print("\n" + "=" * 50)
+            print(">>> [STORAGE DESTINATION]: SHEET (DB failed, fell back to Sheet)")
+            print("=" * 50 + "\n", flush=True)
+            logger.info("Storage destination: SHEET (fallback from DB)")
         else:
             app.state.storage = MemoryStorageFactory()
             print("\n" + "=" * 50)
