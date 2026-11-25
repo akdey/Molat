@@ -1,7 +1,7 @@
 # backend/app/core/database.py
 import logging
 from typing import AsyncGenerator, Optional
-from urllib.parse import urlparse
+from urllib.parse import urlparse, quote, unquote
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncEngine, AsyncSession, async_sessionmaker
 from sqlalchemy.orm import DeclarativeBase
 
@@ -14,13 +14,44 @@ class Base(DeclarativeBase):
 
 
 def _normalize_database_url(dsn: str) -> str:
-    """Ensures database DSN uses the asyncpg driver dialect (postgresql+asyncpg://)."""
+    """
+    Ensures database DSN uses the asyncpg driver dialect (postgresql+asyncpg://)
+    and safely URL-percent-encodes user credentials if special characters (like '@' or ':')
+    exist in the username or password without prior encoding.
+    """
     clean_dsn = dsn.strip()
     if clean_dsn.startswith("postgresql://"):
         clean_dsn = "postgresql+asyncpg://" + clean_dsn[len("postgresql://"):]
     elif clean_dsn.startswith("postgres://"):
         clean_dsn = "postgresql+asyncpg://" + clean_dsn[len("postgres://"):]
-    return clean_dsn
+
+    prefix, sep, rest = clean_dsn.partition("://")
+    if not sep:
+        return clean_dsn
+
+    # Find the boundary of authority (before / or ?)
+    path_start = len(rest)
+    for ch in ("/", "?"):
+        idx = rest.find(ch)
+        if idx != -1 and idx < path_start:
+            path_start = idx
+
+    authority = rest[:path_start]
+    remainder = rest[path_start:]
+
+    # In authority: user:password@host:port
+    # The LAST "@" separates user credentials from host[:port]
+    if "@" in authority:
+        userinfo, hostport = authority.rsplit("@", 1)
+        if ":" in userinfo:
+            user, pwd = userinfo.split(":", 1)
+            # URL-encode user and password to prevent '@' or ':' in credentials breaking host extraction
+            userinfo = f"{quote(unquote(user), safe='')}:{quote(unquote(pwd), safe='')}"
+        else:
+            userinfo = quote(unquote(userinfo), safe='')
+        authority = f"{userinfo}@{hostport}"
+
+    return f"{prefix}://{authority}{remainder}"
 
 
 class DatabaseManager:

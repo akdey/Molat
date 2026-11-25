@@ -48,5 +48,19 @@ async def test_batch_update_covers(db_session):
     assert count == 1
 
     updated = await repo.get(new_book.book_id, user_id="usr_test")
-    assert updated is not None
     assert updated.cover_url == new_cover
+
+
+def test_normalize_database_url_encodes_special_chars():
+    from app.core.database import _normalize_database_url
+    from sqlalchemy.engine import make_url
+
+    raw_url = "postgresql://postgres.user:Secret@Pass#123@aws-1-ap-south-1.pooler.supabase.com:5432/postgres"
+    normalized = _normalize_database_url(raw_url)
+    assert normalized.startswith("postgresql+asyncpg://")
+
+    u = make_url(normalized)
+    assert u.host == "aws-1-ap-south-1.pooler.supabase.com"
+    assert u.port == 5432
+    assert u.username == "postgres.user"
+    assert u.password == "Secret@Pass#123"
