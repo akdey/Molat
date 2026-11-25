@@ -19,7 +19,6 @@ class BookCondition(str, Enum):
     DAMAGED = "Damaged"
 
 
-# Google Sheets Tab Column Order (for sheets serialization)
 BOOKS_SCHEMA_COLUMNS = [
     "book_id", "title", "subtitle", "authors", "isbn_10", "isbn_13",
     "publisher", "publication_year", "language", "genre", "cover_url",

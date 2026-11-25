@@ -2,9 +2,9 @@
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from app.core.security import get_current_user_id, require_authenticated_user
-from app.storage.provider import get_storage
-from app.storage.base import StorageFactory
 from app.features.books.models import Book, BookCreate, BookUpdate
+from app.features.books.repository import BookRepository
+from app.features.books.dependencies import get_book_repository
 from app.core.responses import BookListResponse, EnrichCoversResponse
 from app.features.books.service import calculate_portfolio_summary, filter_books
 from app.features.books.cover_enrichment import cover_enricher
@@ -19,11 +19,11 @@ async def list_books(
     genre: Optional[str] = Query(None, description="Filter by genre"),
     location: Optional[str] = Query(None, description="Filter by shelf location"),
     refresh: bool = Query(False, description="Bypass cache and force refresh"),
-    storage: StorageFactory = Depends(get_storage),
+    book_repo: BookRepository = Depends(get_book_repository),
     user_id: str = Depends(get_current_user_id),
 ):
     """Returns all books for the current user and financial portfolio statistics."""
-    books = await storage.books.list(user_id=user_id, force_refresh=refresh)
+    books = await book_repo.list(user_id=user_id, force_refresh=refresh)
     filtered = filter_books(books, search=search, reading_status=reading_status, genre=genre, location=location)
     portfolio = calculate_portfolio_summary(filtered)
     return BookListResponse(books=filtered, portfolio=portfolio)
@@ -32,11 +32,11 @@ async def list_books(
 @router.get("/{book_id}", response_model=Book)
 async def get_book(
     book_id: str,
-    storage: StorageFactory = Depends(get_storage),
+    book_repo: BookRepository = Depends(get_book_repository),
     user_id: str = Depends(get_current_user_id),
 ):
     """Fetches a single book by book_id."""
-    book = await storage.books.get(book_id, user_id=user_id)
+    book = await book_repo.get(book_id, user_id=user_id)
     if not book:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -48,22 +48,23 @@ async def get_book(
 @router.post("", response_model=Book, status_code=status.HTTP_201_CREATED)
 async def create_book(
     book_in: BookCreate,
-    storage: StorageFactory = Depends(get_storage),
+    book_repo: BookRepository = Depends(get_book_repository),
     user_id: str = Depends(require_authenticated_user),
 ):
-    """Appends a new book record (BOOK-XXX) for the authenticated user."""
-    return await storage.books.create(book_in, user_id=user_id)
+    """Appends a new book to the user's personal catalogue."""
+    return await book_repo.create(book_in, user_id=user_id)
 
 
+@router.put("/{book_id}", response_model=Book)
 @router.patch("/{book_id}", response_model=Book)
 async def update_book(
     book_id: str,
-    updates: BookUpdate,
-    storage: StorageFactory = Depends(get_storage),
+    book_in: BookUpdate,
+    book_repo: BookRepository = Depends(get_book_repository),
     user_id: str = Depends(require_authenticated_user),
 ):
-    """Updates fields of an existing book by book_id."""
-    updated = await storage.books.update(book_id, updates, user_id=user_id)
+    """Updates an existing book record."""
+    updated = await book_repo.update(book_id, book_in, user_id=user_id)
     if not updated:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -75,12 +76,12 @@ async def update_book(
 @router.delete("/{book_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_book(
     book_id: str,
-    storage: StorageFactory = Depends(get_storage),
+    book_repo: BookRepository = Depends(get_book_repository),
     user_id: str = Depends(require_authenticated_user),
 ):
-    """Deletes a book record."""
-    success = await storage.books.delete(book_id, user_id=user_id)
-    if not success:
+    """Permanently deletes a book record from the catalogue."""
+    deleted = await book_repo.delete(book_id, user_id=user_id)
+    if not deleted:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Book with ID '{book_id}' not found",
@@ -89,18 +90,36 @@ async def delete_book(
 
 
 @router.post("/enrich-covers", response_model=EnrichCoversResponse)
-async def enrich_covers(
-    storage: StorageFactory = Depends(get_storage),
+async def enrich_missing_covers(
+    limit: int = Query(50, ge=1, le=100),
+    book_repo: BookRepository = Depends(get_book_repository),
     user_id: str = Depends(require_authenticated_user),
 ):
-    """Enriches books missing cover artwork using multi-tier fallback pipeline."""
-    all_books = await storage.books.list(user_id=user_id)
-    missing_count = sum(1 for b in all_books if not b.cover_url or b.cover_url.strip() == "")
-    updates = await cover_enricher.enrich_missing_covers(all_books)
-    updated_count = await storage.books.batch_update_covers(updates, user_id=user_id)
+    """Scans catalogue for books with missing covers and enriches them via multi-tier fallback."""
+    books = await book_repo.list(user_id=user_id)
+    missing = [b for b in books if not b.cover_url or b.cover_url.strip() == ""]
+    target_books = missing[:limit]
+
+    if not target_books:
+        return EnrichCoversResponse(
+            scanned=len(books),
+            enriched=0,
+            updated_books=[],
+            message="All books in catalogue already have cover images.",
+        )
+
+    updated_pairs = []
+    for b in target_books:
+        cover = await cover_enricher.enrich(title=b.title, authors=b.authors, isbn_13=b.isbn_13, isbn_10=b.isbn_10)
+        if cover:
+            updated_pairs.append({"book_id": b.book_id, "cover_url": cover})
+
+    if updated_pairs:
+        await book_repo.batch_update_covers(updated_pairs, user_id=user_id)
+
     return EnrichCoversResponse(
-        scanned=missing_count,
-        enriched=updated_count,
-        updated_books=updates,
-        message=f"Scanned {missing_count} books with missing covers. Enriched and updated {updated_count} covers.",
+        scanned=len(target_books),
+        enriched=len(updated_pairs),
+        updated_books=updated_pairs,
+        message=f"Successfully enriched {len(updated_pairs)} of {len(target_books)} scanned books with covers.",
     )

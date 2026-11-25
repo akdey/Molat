@@ -3,15 +3,16 @@ from enum import Enum
 from typing import Optional
 from pydantic import BaseModel, Field
 
-LENDING_COLUMNS = [
-    "lending_id", "book_id", "borrower_name", "borrower_contact",
-    "lent_date", "due_date", "returned_date", "status", "notes", "created_at",
-]
-
 
 class LendingStatus(str, Enum):
     ACTIVE = "ACTIVE"
     RETURNED = "RETURNED"
+
+
+LENDING_COLUMNS = [
+    "lending_id", "book_id", "borrower_name", "borrower_contact",
+    "lent_date", "due_date", "returned_date", "status", "notes", "created_at",
+]
 
 
 class LendingRecordBase(BaseModel):

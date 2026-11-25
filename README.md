@@ -148,50 +148,45 @@ flowchart TD
 
     subgraph FeatureSlices["Feature Slices (app/features/)"]
         direction TB
-        BooksSlice["features/books/\n• models.py (Pure Schemas)\n• repository.py (ABC)\n• router.py"]
-        ReadingSlice["features/reading/\n• models.py\n• repository.py\n• router.py"]
-        LendingSlice["features/lending/\n• models.py\n• repository.py\n• router.py"]
-        WishlistSlice["features/wishlist/\n• models.py\n• repository.py\n• router.py"]
-        SettingsSlice["features/settings/\n• models.py\n• repository.py\n• router.py"]
+        BooksSlice["features/books/\n• entity.py (SQLAlchemy 2.0)\n• models.py (Pydantic DTOs)\n• repository.py\n• router.py"]
+        ReadingSlice["features/reading/\n• entity.py\n• models.py\n• repository.py\n• router.py"]
+        LendingSlice["features/lending/\n• entity.py\n• models.py\n• repository.py\n• router.py"]
+        WishlistSlice["features/wishlist/\n• entity.py\n• models.py\n• repository.py\n• router.py"]
+        SettingsSlice["features/settings/\n• entity.py\n• models.py\n• repository.py\n• router.py"]
     end
 
-    subgraph Engines["Storage Engine (app/storage/)"]
-        PGEngine["PostgresStorageFactory\n(PostgreSQL / Supabase asyncpg Pool)"]
+    subgraph DatabaseLayer["Database Layer (app/core/database.py)"]
+        SQLEngine["SQLAlchemy 2.0 AsyncEngine\n(asyncpg pool / Supabase PostgreSQL)"]
     end
 
     UI <-->|REST API + JWT Bearer Auth| FeatureSlices
-    FeatureSlices -->|Depends(get_storage)| Provider
-    SF -.-> PGEngine
+    FeatureSlices -->|Depends(get_db)| SQLEngine
 ```
 
-### Feature-Driven Folder Structure
+### Feature-Driven Vertical-Slice Structure
 ```text
 backend/app/
 ├── core/
 │   ├── config.py              # Application settings & environment
-│   ├── database.py            # Asyncpg pool lifecycle (init_pool / close_pool)
+│   ├── database.py            # SQLAlchemy 2.0 AsyncEngine, Base & get_db dependency
 │   ├── rbac.py                # Multi-tenant user RBAC middleware
 │   └── security.py            # Password hashing & JWT token verification
 │
-├── storage/                   # Abstract Storage Factory & PostgreSQL engine
-│   ├── base.py                # StorageFactory ABC (contract)
-│   ├── postgres.py            # PostgresStorageFactory (wires Postgres repos)
-│   └── provider.py            # get_storage(request) FastAPI dependency
-│
-└── features/                  # Independent domain slices
-    ├── auth/                  # Multi-tenant registration, login, token issuance
-    ├── books/                 # models.py, repository.py, postgres_repo.py, service.py, router.py
-    ├── reading/               # Reading logs, streak engine, 3-shield freeze bank, 365-day heatmap
-    ├── lending/               # Loan contracts, due dates, borrower WhatsApp follow-ups
-    ├── wishlist/              # Budget planning, 1-click shelf acquisition
-    └── settings/              # Reading profile, velocity goals, visual theme
+└── features/                  # Self-Contained Domain Slices (Router -> Service -> Repository -> Entity & Model)
+    ├── auth/                  # entity.py, models.py, repository.py, dependencies.py, router.py
+    ├── books/                 # entity.py, models.py, repository.py, dependencies.py, service.py, router.py
+    ├── reading/               # entity.py, models.py, repository.py, dependencies.py, streak_calculator.py, router.py
+    ├── lending/               # entity.py, models.py, repository.py, dependencies.py, router.py
+    ├── wishlist/              # entity.py, models.py, repository.py, dependencies.py, router.py
+    ├── settings/              # entity.py, models.py, repository.py, dependencies.py, router.py
+    └── health/                # router.py
 ```
 
 ---
 
 ## 🗄️ Multi-User Database Architecture (PostgreSQL / Supabase)
 
-Molat runs on a relational PostgreSQL database schema (`backend/schema.sql`) hosted on Supabase, featuring native multi-tenancy and high-performance connection pooling via `asyncpg`:
+Molat runs on a relational PostgreSQL database schema defined via self-contained slice entities (`features/*/entity.py`) and hosted on Supabase, featuring native multi-tenancy and high-performance connection pooling via SQLAlchemy 2.0 with `asyncpg`:
 
 ### 1. `users` Table
 Multi-tenant user registry:
@@ -237,8 +232,8 @@ Individual reading profiles and preferences:
 ### 1. Database Setup (PostgreSQL / Supabase)
 
 1. Provision a PostgreSQL instance or a free project on [Supabase](https://supabase.com).
-2. Execute the relational schema found in [`backend/schema.sql`](backend/schema.sql) in the Supabase SQL Editor.
-3. Copy your database connection string URI (`postgresql://postgres:[PASSWORD]@db.[PROJECT].supabase.co:5432/postgres`).
+2. Copy your database connection string URI (`postgresql://postgres:[PASSWORD]@db.[PROJECT].supabase.co:5432/postgres`).
+3. Database tables are automatically discovered and initialized by SQLAlchemy 2.0 slice entities on startup (`Base.metadata.create_all`).
 
 ---
 

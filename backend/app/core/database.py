@@ -1,69 +1,106 @@
 # backend/app/core/database.py
 import logging
-import os
-from typing import Optional
-from urllib.parse import urlparse, unquote
-import asyncpg
-from app.config import settings
+from typing import AsyncGenerator, Optional
+from urllib.parse import urlparse
+from sqlalchemy.ext.asyncio import create_async_engine, AsyncEngine, AsyncSession, async_sessionmaker
+from sqlalchemy.orm import DeclarativeBase
 
 logger = logging.getLogger("molat.database")
-SCHEMA_FILE = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "schema.sql")
+
+
+class Base(DeclarativeBase):
+    """SQLAlchemy 2.0 Declarative Base shared across all feature slice entities."""
+    pass
+
+
+def _normalize_database_url(dsn: str) -> str:
+    """Ensures database DSN uses the asyncpg driver dialect (postgresql+asyncpg://)."""
+    clean_dsn = dsn.strip()
+    if clean_dsn.startswith("postgresql://"):
+        clean_dsn = "postgresql+asyncpg://" + clean_dsn[len("postgresql://"):]
+    elif clean_dsn.startswith("postgres://"):
+        clean_dsn = "postgresql+asyncpg://" + clean_dsn[len("postgres://"):]
+    return clean_dsn
 
 
 class DatabaseManager:
-    """Manages the asyncpg connection pool and schema migrations."""
+    """Manages the SQLAlchemy 2.0 async engine and session factory."""
 
     def __init__(self):
-        self.pool: Optional[asyncpg.Pool] = None
+        self.engine: Optional[AsyncEngine] = None
+        self.session_factory: Optional[async_sessionmaker[AsyncSession]] = None
 
     @property
     def is_connected(self) -> bool:
-        return self.pool is not None
+        return self.engine is not None and self.session_factory is not None
 
-    async def init_pool(self, dsn: str) -> Optional[asyncpg.Pool]:
+    async def init_engine(self, dsn: Optional[str]) -> Optional[async_sessionmaker[AsyncSession]]:
         if not dsn or "[YOUR-DATABASE-PASSWORD]" in dsn or "[YOUR-PASSWORD]" in dsn:
-            logger.info("Database URL placeholder detected or empty. Skipping PostgreSQL connection.")
+            logger.info("Database URL placeholder detected or empty. Skipping database initialization.")
             return None
 
         try:
-            logger.info("Initializing asyncpg connection pool...")
-            u = urlparse(dsn)
-            user = unquote(u.username or "")
-            password = unquote(u.password or "")
-            database = unquote(u.path.lstrip("/") or "postgres")
-            host = u.hostname or "localhost"
-            port = u.port or 5432
+            logger.info("Initializing SQLAlchemy 2.0 AsyncEngine...")
+            normalized_url = _normalize_database_url(dsn)
 
-            self.pool = await asyncpg.create_pool(
-                host=host,
-                port=port,
-                user=user,
-                password=password,
-                database=database,
-                min_size=1,
-                max_size=10,
-                ssl="require",
-                command_timeout=30.0,
-                statement_cache_size=0,
+            # SSL handling for hosted PostgreSQL (Supabase / AWS / GCP)
+            connect_args = {}
+            if "supabase" in normalized_url or "ssl" in normalized_url:
+                connect_args["ssl"] = "require"
+
+            # Strip any query parameters asyncpg does not natively support
+            parsed = urlparse(normalized_url)
+            clean_url = f"{parsed.scheme}://{parsed.netloc}{parsed.path}"
+
+            self.engine = create_async_engine(
+                clean_url,
+                echo=False,
+                pool_size=10,
+                max_overflow=5,
+                pool_pre_ping=True,
+                connect_args=connect_args,
             )
-            # Auto-run schema migrations
-            if os.path.exists(SCHEMA_FILE):
-                with open(SCHEMA_FILE, "r", encoding="utf-8") as f:
-                    schema_sql = f.read()
-                async with self.pool.acquire() as conn:
-                    await conn.execute(schema_sql)
-                logger.info("PostgreSQL schema initialized and verified.")
-            return self.pool
+
+            self.session_factory = async_sessionmaker(
+                bind=self.engine,
+                expire_on_commit=False,
+                class_=AsyncSession,
+            )
+
+            # Auto-register all slice entity models onto Base.metadata
+            import app.features.auth.entity  # noqa
+            import app.features.books.entity  # noqa
+            import app.features.reading.entity  # noqa
+            import app.features.lending.entity  # noqa
+            import app.features.wishlist.entity  # noqa
+            import app.features.settings.entity  # noqa
+
+            async with self.engine.begin() as conn:
+                await conn.run_sync(Base.metadata.create_all)
+
+            logger.info("SQLAlchemy 2.0 AsyncEngine and slice entities initialized successfully.")
+            return self.session_factory
+
         except Exception as e:
-            logger.error(f"Could not connect to PostgreSQL: {e}", exc_info=True)
-            self.pool = None
+            logger.error(f"Failed to initialize SQLAlchemy 2.0 engine: {e}", exc_info=True)
+            self.engine = None
+            self.session_factory = None
             return None
 
-    async def close_pool(self) -> None:
-        if self.pool:
-            logger.info("Closing asyncpg connection pool...")
-            await self.pool.close()
-            self.pool = None
+    async def close(self) -> None:
+        if self.engine:
+            logger.info("Disposing SQLAlchemy AsyncEngine...")
+            await self.engine.dispose()
+            self.engine = None
+            self.session_factory = None
 
 
 db_manager = DatabaseManager()
+
+
+async def get_db() -> AsyncGenerator[AsyncSession, None]:
+    """FastAPI dependency yielding an isolated async database session per request."""
+    if not db_manager.session_factory:
+        raise RuntimeError("Database engine is not initialized. Please verify DATABASE_URL.")
+    async with db_manager.session_factory() as session:
+        yield session

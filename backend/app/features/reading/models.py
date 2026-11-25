@@ -1,5 +1,5 @@
 # backend/app/features/reading/models.py
-from typing import Optional, Dict, Any
+from typing import Optional
 from pydantic import BaseModel, Field, model_validator
 
 READING_LOGS_COLUMNS = [
