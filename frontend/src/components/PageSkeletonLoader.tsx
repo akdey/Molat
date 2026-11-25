@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { motion } from 'motion/react';
 import { BookLoader } from './BookLoader';
 
@@ -26,28 +26,14 @@ export const PageSkeletonLoader: React.FC<PageSkeletonLoaderProps> = ({
 }) => {
   const displayCaption = caption || TAB_CAPTIONS[activeTab] || 'Opening library catalogue...';
 
-  // Lock body scroll while the loader is active so there is zero window scroll during loading
-  useEffect(() => {
-    const originalOverflow = document.body.style.overflow;
-    const originalOverscroll = document.body.style.overscrollBehavior;
-    document.body.style.overflow = 'hidden';
-    document.body.style.overscrollBehavior = 'none';
-    window.scrollTo({ top: 0, behavior: 'instant' });
-
-    return () => {
-      document.body.style.overflow = originalOverflow;
-      document.body.style.overscrollBehavior = originalOverscroll;
-    };
-  }, []);
-
   return (
     <div
-      className={`relative w-full h-[calc(100dvh-7rem)] md:h-[calc(100dvh-8rem)] min-h-[360px] max-h-[760px] overflow-hidden rounded-3xl select-none ${className}`}
+      className={`relative w-full flex-1 flex flex-col overflow-hidden rounded-3xl select-none ${className}`}
       aria-busy="true"
       aria-live="polite"
     >
       {/* 1. BACKGROUND SKELETON LAYOUT (ACCURATE TO ACTIVE TAB, CLAMPED TO VIEWPORT) */}
-      <div className="absolute inset-0 p-1 sm:p-2 pointer-events-none opacity-40 dark:opacity-30 overflow-hidden select-none" aria-hidden="true">
+      <div className="absolute inset-0 p-2 sm:p-4 pointer-events-none opacity-40 dark:opacity-30 overflow-hidden select-none" aria-hidden="true">
         {/* TAB 1: HOME SKELETON */}
         {activeTab === 'home' && (
           <div className="space-y-6">
@@ -253,8 +239,8 @@ export const PageSkeletonLoader: React.FC<PageSkeletonLoaderProps> = ({
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        transition={{ duration: 0.2 }}
-        className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-canvas/75 dark:bg-canvas-dark/75 backdrop-blur-xs rounded-3xl min-h-[460px] p-6 text-center"
+        transition={{ duration: 0.18 }}
+        className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-canvas/80 dark:bg-canvas-dark/80 backdrop-blur-xs rounded-3xl p-6 text-center"
       >
         <BookLoader size="lg" caption={displayCaption} />
       </motion.div>
