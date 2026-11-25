@@ -620,7 +620,7 @@ export default function App() {
         )}
 
         {/* Animated View Transitions across Main Tabs with Tab-Accurate Skeleton & BookLoader Overlays */}
-        {loading && books.length === 0 ? (
+        {(loading || refreshing) && books.length === 0 ? (
           <PageSkeletonLoader activeTab={activeTab} />
         ) : (
           <AnimatePresence mode="wait">

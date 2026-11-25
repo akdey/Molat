@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { motion } from 'motion/react';
 import { BookLoader } from './BookLoader';
 
@@ -26,10 +26,19 @@ export const PageSkeletonLoader: React.FC<PageSkeletonLoaderProps> = ({
 }) => {
   const displayCaption = caption || TAB_CAPTIONS[activeTab] || 'Opening library catalogue...';
 
+  // Ensure window is at the top when the skeleton loader mounts so the loader is directly in view
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  }, []);
+
   return (
-    <div className={`relative w-full overflow-hidden rounded-3xl ${className}`}>
-      {/* 1. BACKGROUND SKELETON LAYOUT (ACCURATE TO ACTIVE TAB) */}
-      <div className="w-full space-y-6 pointer-events-none select-none opacity-45 dark:opacity-35" aria-hidden="true">
+    <div
+      className={`relative w-full h-[calc(100dvh-8rem)] min-h-[380px] max-h-[760px] overflow-hidden rounded-3xl select-none ${className}`}
+      aria-busy="true"
+      aria-live="polite"
+    >
+      {/* 1. BACKGROUND SKELETON LAYOUT (ACCURATE TO ACTIVE TAB, CLAMPED TO VIEWPORT) */}
+      <div className="w-full space-y-5 pointer-events-none opacity-40 dark:opacity-30 overflow-hidden select-none" aria-hidden="true">
         {/* TAB 1: HOME SKELETON */}
         {activeTab === 'home' && (
           <div className="space-y-6">
@@ -107,7 +116,7 @@ export const PageSkeletonLoader: React.FC<PageSkeletonLoaderProps> = ({
             </div>
             {/* Cover Grid */}
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
-              {[...Array(12)].map((_, i) => (
+              {[...Array(6)].map((_, i) => (
                 <div key={i} className="space-y-2 p-2 rounded-xl border border-rule/40 dark:border-rule-dark/40 bg-surface dark:bg-surface-dark">
                   <div className="aspect-[2/3] rounded-lg bg-rule/50 dark:bg-rule-dark/50 animate-pulse" />
                   <div className="h-3 w-4/5 bg-rule/50 dark:bg-rule-dark/50 rounded animate-pulse" />
@@ -170,7 +179,7 @@ export const PageSkeletonLoader: React.FC<PageSkeletonLoaderProps> = ({
               <div className="h-9 w-32 bg-rule/60 rounded-xl animate-pulse" />
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {[...Array(6)].map((_, i) => (
+              {[...Array(3)].map((_, i) => (
                 <div key={i} className="p-4 rounded-2xl border border-rule/50 dark:border-rule-dark/50 bg-surface dark:bg-surface-dark space-y-3">
                   <div className="h-4 w-3/4 bg-rule/60 rounded animate-pulse" />
                   <div className="h-3 w-1/2 bg-rule/40 rounded animate-pulse" />
@@ -192,7 +201,7 @@ export const PageSkeletonLoader: React.FC<PageSkeletonLoaderProps> = ({
               <div className="h-9 w-32 bg-rule/60 rounded-xl animate-pulse" />
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {[...Array(4)].map((_, i) => (
+              {[...Array(2)].map((_, i) => (
                 <div key={i} className="p-4 rounded-2xl border border-rule/50 dark:border-rule-dark/50 bg-surface dark:bg-surface-dark space-y-3 flex gap-3">
                   <div className="w-16 aspect-[2/3] rounded-lg bg-rule/50 animate-pulse shrink-0" />
                   <div className="flex-1 space-y-2">
