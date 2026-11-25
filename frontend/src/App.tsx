@@ -612,7 +612,7 @@ export default function App() {
       </header>
 
       {/* Main Container across all 6 viewports */}
-      <main className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 pt-4 sm:pt-6 pb-0 md:pb-6 space-y-6 flex-1 flex flex-col w-full">
+      <main className={`max-w-7xl mx-auto px-3 sm:px-4 md:px-6 pt-4 sm:pt-6 pb-0 md:pb-6 space-y-6 flex-1 flex flex-col w-full ${(loading || refreshing) && books.length === 0 ? 'overflow-hidden' : ''}`}>
         {error && (
           <div className="p-4 rounded-xl bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/40 text-red-700 dark:text-red-400 text-sm">
             {error}
