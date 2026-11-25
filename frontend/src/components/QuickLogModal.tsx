@@ -25,7 +25,6 @@ export const QuickLogModal: React.FC = () => {
     closeQuickLog,
     setVoiceAssistantOpen,
     submitReadingLog,
-    setKeyModalOpen,
     authToken,
     activeBookId,
     setActiveBookId,
@@ -259,7 +258,6 @@ export const QuickLogModal: React.FC = () => {
     } catch (err: any) {
       if (err.message && err.message.includes('401')) {
         setErrorMsg('Please sign in to log reading sessions.');
-        setKeyModalOpen(true);
       } else {
         setErrorMsg(err.message || 'Failed to record session.');
       }

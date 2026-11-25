@@ -40,7 +40,6 @@ export const BarcodeScannerModal: React.FC = () => {
     loadBooks,
     authToken,
     addToast,
-    setKeyModalOpen,
   } = useLibraryStore();
 
   const [scannedIsbn, setScannedIsbn] = useState<string>('');
@@ -407,7 +406,6 @@ export const BarcodeScannerModal: React.FC = () => {
     } catch (err: any) {
       if (err.message && err.message.includes('401')) {
         setErrorMsg('Please sign in to add books to your library.');
-        setKeyModalOpen(true);
       } else {
         setErrorMsg(err.message || 'Failed to save book.');
       }

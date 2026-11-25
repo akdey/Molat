@@ -24,7 +24,6 @@ export const LendingLedger: React.FC = () => {
     loadLendingRecords,
     returnBookRecord,
     openLendModal,
-    setKeyModalOpen,
   } = useLibraryStore();
 
   const [activeSubTab, setActiveSubTab] = useState<'active' | 'returned'>('active');
@@ -40,9 +39,7 @@ export const LendingLedger: React.FC = () => {
     try {
       await returnBookRecord(lendingId, 'Home Shelf');
     } catch (err: any) {
-      if (err.message && err.message.includes('401')) {
-        setKeyModalOpen(true);
-      }
+      console.warn('Failed to return book:', err);
     } finally {
       setReturningId(null);
     }

@@ -124,7 +124,6 @@ export const BookDetailDrawer: React.FC = () => {
     updateBookDetails,
     openQuickLog,
     openFocusRoom,
-    setKeyModalOpen,
     lendingRecords,
     openLendModal,
     returnBookRecord,
@@ -457,9 +456,7 @@ export const BookDetailDrawer: React.FC = () => {
                                     try {
                                       await returnBookRecord(activeLend.lending_id, 'Home Shelf');
                                     } catch (err: any) {
-                                      if (err.message && err.message.includes('401')) {
-                                        setKeyModalOpen(true);
-                                      }
+                                      setErrorMsg(err.message || 'Failed to return volume.');
                                     } finally {
                                       setReturningLend(false);
                                     }

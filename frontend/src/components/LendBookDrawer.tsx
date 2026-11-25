@@ -11,7 +11,6 @@ export const LendBookDrawer: React.FC = () => {
     lendingModalBook,
     closeLendModal,
     lendBookRecord,
-    setKeyModalOpen,
     addToast,
   } = useLibraryStore();
 
@@ -118,7 +117,6 @@ export const LendBookDrawer: React.FC = () => {
     } catch (err: any) {
       if (err.message && err.message.includes('401')) {
         setErrorMsg('Please sign in to record book lending.');
-        setKeyModalOpen(true);
       } else {
         setErrorMsg(err.message || 'Failed to record lending.');
       }

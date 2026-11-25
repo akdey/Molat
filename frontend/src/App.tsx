@@ -41,7 +41,6 @@ import { QuickLogModal } from './components/QuickLogModal';
 import { HeatmapScreen } from './components/HeatmapScreen';
 import { WishlistScreen } from './components/WishlistScreen';
 import { BarcodeScannerModal } from './components/BarcodeScannerModal';
-import { KeySettingsModal } from './components/KeySettingsModal';
 import { ToastContainer } from './components/ToastContainer';
 import { GenreFilterPopover } from './components/GenreFilterPopover';
 import { LibraryInsights } from './components/LibraryInsights';
@@ -53,6 +52,7 @@ import { FocusReadingRoomModal } from './components/FocusReadingRoomModal';
 import { HoldToSpeakAssistant } from './components/HoldToSpeakAssistant';
 import { AuthScreen } from './components/AuthScreen';
 import { ProfileScreen } from './components/ProfileScreen';
+import { BookLoader } from './components/BookLoader';
 
 export default function App() {
   const {
@@ -90,8 +90,8 @@ export default function App() {
     setPickNextModalOpen,
     setVoiceAssistantOpen,
     updateBookDetails,
+    triggerCoverEnrichment,
     setScannerOpen,
-    setKeyModalOpen,
     loadAllData,
     authToken,
     authUser,
@@ -102,6 +102,7 @@ export default function App() {
 
   const [centerMenuOpen, setCenterMenuOpen] = useState(false);
   const [headerMenuOpen, setHeaderMenuOpen] = useState(false);
+  const [enrichingCovers, setEnrichingCovers] = useState(false);
 
   const activeLentCount = lendingRecords.filter((r) => r.status === 'ACTIVE').length;
   const overdueLentCount = lendingRecords.filter((r) => r.status === 'ACTIVE' && r.is_overdue).length;
@@ -367,63 +368,69 @@ export default function App() {
             </button>
           </nav>
 
-          {/* Action Tools — Clean, Uniform Icons with Native Tooltips */}
-          <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
-            {/* Desktop Only: Pick My Next Read (TBR Randomizer) */}
-            <button
-              onClick={() => setPickNextModalOpen(true)}
-              className="hidden md:flex p-2 rounded-xl text-ink-secondary hover:text-ink hover:bg-surface dark:hover:bg-surface-dark transition-colors"
-              title="Pick My Next Read (TBR Randomizer)"
-              aria-label="Pick Next Book"
-            >
-              <Dices size={16} />
-            </button>
+          {/* Action Tools — Structured into Creation & Utilities Clusters */}
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+            {/* 1. Desktop Creation & Serendipity Cluster */}
+            <div className="hidden md:flex items-center bg-surface dark:bg-surface-dark p-0.5 rounded-xl border border-rule dark:border-rule-dark">
+              {/* Scan Barcode / Add Volume */}
+              <button
+                onClick={() => setScannerOpen(true)}
+                className="p-2 rounded-lg text-ink-secondary hover:text-ink hover:bg-canvas dark:hover:bg-canvas-dark transition-all"
+                title="Scan ISBN Barcode / Add Volume"
+                aria-label="Scan ISBN Barcode"
+              >
+                <Camera size={15} />
+              </button>
 
-            {/* Desktop Only: Scan ISBN Barcode / Add Book */}
-            <button
-              onClick={() => setScannerOpen(true)}
-              className="hidden md:flex p-2 rounded-xl text-ink-secondary hover:text-ink hover:bg-surface dark:hover:bg-surface-dark transition-colors"
-              title="Scan ISBN Barcode / Add Book"
-              aria-label="Scan ISBN Barcode"
-            >
-              <Camera size={16} />
-            </button>
+              {/* Pick My Next Read (TBR Randomizer) */}
+              <button
+                onClick={() => setPickNextModalOpen(true)}
+                className="p-2 rounded-lg text-ink-secondary hover:text-ink hover:bg-canvas dark:hover:bg-canvas-dark transition-all"
+                title="Pick My Next Read (TBR Serendipity)"
+                aria-label="Pick Next Book"
+              >
+                <Dices size={15} />
+              </button>
+            </div>
 
-            {/* Sync button (accessible with 1 tap, spins when refreshing) */}
-            <button
-              onClick={() => loadAllData(true)}
-              disabled={loading || refreshing}
-              className="p-2 rounded-xl text-ink-secondary hover:text-ink hover:bg-surface dark:hover:bg-surface-dark transition-colors relative"
-              title="Force Refresh Catalogue"
-              aria-label="Refresh Data"
-            >
-              <RefreshCw
-                size={16}
-                className={loading || refreshing ? 'animate-spin text-accent dark:text-accent-dark' : ''}
-              />
-            </button>
+            {/* 2. System Utilities & Voice */}
+            <div className="flex items-center gap-1">
+              {/* Voice Assistant Trigger */}
+              <button
+                onClick={() => setVoiceAssistantOpen(true)}
+                className="p-2 rounded-xl text-accent hover:bg-accent/10 border border-transparent hover:border-accent/30 transition-colors"
+                title="Molat Voice Assistant"
+                aria-label="Open Voice Assistant"
+              >
+                <Mic size={16} />
+              </button>
 
-            {/* Voice Assistant Trigger */}
-            <button
-              onClick={() => setVoiceAssistantOpen(true)}
-              className="p-2 rounded-xl text-accent hover:bg-accent/10 border border-transparent hover:border-accent/30 transition-colors"
-              title="Molat Voice Assistant"
-              aria-label="Open Voice Assistant"
-            >
-              <Mic size={16} />
-            </button>
+              {/* Force Refresh / Sync (spins when syncing) */}
+              <button
+                onClick={() => loadAllData(true)}
+                disabled={loading || refreshing}
+                className="p-2 rounded-xl text-ink-secondary hover:text-ink hover:bg-surface dark:hover:bg-surface-dark transition-colors relative"
+                title="Force Refresh Catalogue"
+                aria-label="Refresh Data"
+              >
+                <RefreshCw
+                  size={15}
+                  className={loading || refreshing ? 'animate-spin text-accent dark:text-accent-dark' : ''}
+                />
+              </button>
 
-            {/* Desktop Only: Theme Toggle */}
-            <button
-              onClick={toggleTheme}
-              className="hidden md:flex p-2 rounded-xl text-ink-secondary hover:text-ink hover:bg-surface dark:hover:bg-surface-dark transition-colors"
-              title="Toggle Dark/Light Mode"
-              aria-label="Toggle Theme"
-            >
-              {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
-            </button>
+              {/* Desktop Only: Theme Toggle */}
+              <button
+                onClick={toggleTheme}
+                className="hidden md:flex p-2 rounded-xl text-ink-secondary hover:text-ink hover:bg-surface dark:hover:bg-surface-dark transition-colors"
+                title={theme === 'dark' ? 'Switch to Warm Ivory Paper' : 'Switch to Deep Charcoal Ink'}
+                aria-label="Toggle Theme"
+              >
+                {theme === 'dark' ? <Sun size={15} className="text-amber-500" /> : <Moon size={15} />}
+              </button>
+            </div>
 
-            {/* Desktop: Editorial Reader Profile Avatar Chip */}
+            {/* 3. Desktop: Editorial Reader Profile Avatar Chip */}
             <button
               onClick={() => switchTab(activeTab === 'profile' ? 'home' : 'profile')}
               className={`hidden md:flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs font-medium transition-all shrink-0 cursor-pointer ${
@@ -662,14 +669,22 @@ export default function App() {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <Wrench className="text-accent h-5 w-5" />
-                        <h2 className="font-serif text-lg font-medium">Catalogue Health & Audit</h2>
+                        <h2 className="font-serif text-lg font-medium">Needs Attention (Audit)</h2>
                       </div>
                       <button
-                        onClick={() => setKeyModalOpen(true)}
-                        className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-accent text-white text-xs font-medium min-h-[44px]"
+                        onClick={async () => {
+                          setEnrichingCovers(true);
+                          try {
+                            await triggerCoverEnrichment();
+                          } finally {
+                            setEnrichingCovers(false);
+                          }
+                        }}
+                        disabled={enrichingCovers}
+                        className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-accent hover:bg-accent-hover text-white text-xs font-medium min-h-[44px] cursor-pointer disabled:opacity-50 transition-colors shadow-xs"
                       >
-                        <Sparkles size={14} />
-                        <span>Run Cover Enrichment</span>
+                        <Sparkles size={14} className={enrichingCovers ? 'animate-spin' : ''} />
+                        <span>{enrichingCovers ? 'Enriching Jackets...' : 'Enrich Missing Covers'}</span>
                       </button>
                     </div>
                     <p className="text-xs text-ink-secondary">
@@ -865,14 +880,11 @@ export default function App() {
                   </div>
                 </div>
 
-                {/* Collection View Renderers */}
+                {/* Collection View Renderers with Tactile Animated Book Loader */}
                 {loading && books.length === 0 ? (
-                  <div className="space-y-4 py-8">
-                    <div className="flex items-center justify-center gap-2 text-xs text-ink-muted animate-pulse">
-                      <RefreshCw size={14} className="animate-spin text-accent" />
-                      <span>Loading library catalogue...</span>
-                    </div>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
+                  <div className="space-y-6 py-12 flex flex-col items-center justify-center">
+                    <BookLoader size="lg" caption="Opening your library catalogue..." />
+                    <div className="w-full grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 pt-2 opacity-50">
                       {[...Array(6)].map((_, i) => (
                         <div
                           key={i}
@@ -1227,7 +1239,6 @@ export default function App() {
       <FocusReadingRoomModal />
       <BarcodeScannerModal />
       <LendBookDrawer />
-      <KeySettingsModal />
       <PickNextReadModal
         isOpen={pickNextModalOpen}
         onClose={() => setPickNextModalOpen(false)}

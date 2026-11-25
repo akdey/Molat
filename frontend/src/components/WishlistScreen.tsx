@@ -11,7 +11,6 @@ export const WishlistScreen: React.FC = () => {
     loadWishlist,
     authToken,
     addToast,
-    setKeyModalOpen,
   } = useLibraryStore();
 
   const [acquireModalItem, setAcquireModalItem] = useState<WishlistItem | null>(null);

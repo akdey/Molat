@@ -567,18 +567,18 @@ export const HoldToSpeakAssistant: React.FC<HoldToSpeakAssistantProps> = ({
           onMouseLeave={onMouseLeave}
           className={`relative w-12 h-12 rounded-full flex items-center justify-center transition-all select-none cursor-pointer outline-none ${
             overlayOpen || isListening
-              ? 'scale-110 bg-gradient-to-tr from-indigo-600 via-violet-600 to-cyan-400 shadow-[0_0_30px_rgba(99,102,241,0.65)] ring-2 ring-white/40'
+              ? 'scale-110 bg-gradient-to-tr from-[#C2410C] via-[#EA580C] to-[#D97706] shadow-[0_0_24px_rgba(194,65,12,0.5)] ring-2 ring-white/40'
               : 'bg-accent hover:bg-accent-hover text-white shadow-lg shadow-accent/30 active:scale-95'
           }`}
           aria-label={overlayOpen ? 'Close Assistant' : 'Tap for menu • Hold for Voice Assistant'}
           title={overlayOpen ? 'Close Voice Assistant' : 'Tap for menu • Hold to speak voice assistant'}
         >
-          {/* Subtle spinning iridescent ring while listening */}
+          {/* Subtle spinning warm terracotta/gold ring while listening */}
           {(overlayOpen || isListening) && (
             <motion.div
               animate={{ rotate: 360 }}
               transition={{ repeat: Infinity, duration: 2.2, ease: 'linear' }}
-              className="absolute -inset-1 rounded-full bg-gradient-to-r from-cyan-400 via-indigo-400 to-fuchsia-400 opacity-75 blur-xs -z-10"
+              className="absolute -inset-1 rounded-full bg-gradient-to-r from-amber-400 via-orange-500 to-amber-300 opacity-75 blur-xs -z-10"
             />
           )}
 

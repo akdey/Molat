@@ -36,6 +36,7 @@ export const PickNextReadModal: React.FC<PickNextReadModalProps> = ({
   const [selectedGenre, setSelectedGenre] = useState<string>('ALL');
   const [currentBook, setCurrentBook] = useState<Book | null>(null);
   const [isShuffling, setIsShuffling] = useState(false);
+  const [startingReading, setStartingReading] = useState(false);
   const [drawCount, setDrawCount] = useState(0);
 
   // Filter pool: Only UNREAD or PAUSED books from your physical shelf
@@ -423,14 +424,20 @@ export const PickNextReadModal: React.FC<PickNextReadModalProps> = ({
 
                 <button
                   type="button"
-                  onClick={() => {
-                    onStartReading(currentBook);
-                    onClose();
+                  disabled={startingReading}
+                  onClick={async () => {
+                    setStartingReading(true);
+                    try {
+                      await onStartReading(currentBook);
+                      onClose();
+                    } finally {
+                      setStartingReading(false);
+                    }
                   }}
-                  className="flex-1 sm:flex-initial px-4 py-2.5 rounded-xl bg-accent hover:bg-accent-hover text-white text-xs font-medium flex items-center justify-center gap-2 shadow-sm transition-all active:scale-95 cursor-pointer"
+                  className="flex-1 sm:flex-initial px-4 py-2.5 rounded-xl bg-accent hover:bg-accent-hover text-white text-xs font-medium flex items-center justify-center gap-2 shadow-sm transition-all active:scale-95 cursor-pointer disabled:opacity-50"
                 >
-                  <BookOpen size={14} />
-                  <span>Start Reading Now</span>
+                  <BookOpen size={14} className={startingReading ? 'animate-spin' : ''} />
+                  <span>{startingReading ? 'Opening...' : 'Start Reading Now'}</span>
                 </button>
               </div>
             </div>
