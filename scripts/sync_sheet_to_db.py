@@ -1,18 +1,16 @@
 #!/usr/bin/env python3
 """
-Sync Script: Migrates all data from Google Sheets (via Apps Script bridge)
-into PostgreSQL database using SQLAlchemy 2.0 entities with strict relational
-and composite foreign key constraints.
+scripts/sync_sheet_to_db.py
 
-Supports:
-  - Deleting/resetting all database tables or user records
-  - Recreating the schema via SQLAlchemy Base.metadata.create_all
-  - Preserving/seeding the target user (usr_65af3d94e2c6)
-  - Bulk upserting Books, Reading Logs, Lending records, Wishlist, and Settings
-  - Enforcing composite foreign keys: (user_id, book_id) -> books(user_id, book_id)
+Populates PostgreSQL database from Google Sheets Apps Script Bridge with:
+  1. Standalone UUID primary keys for books, logs, lending, wishlist.
+  2. 3NF normalized 'genres' table and 'book_genres' many-to-many junction table.
+  3. Deletion of the redundant 'genre' column from the 'books' table.
+  4. Direct foreign keys (e.g. reading_logs.book_id -> books.book_id).
+  5. Seeding user_settings and user authentication record.
 
 Usage:
-    python scripts/sync_sheet_to_db.py [--user-id usr_65af3d94e2c6] [--delete-all] [--recreate-schema] [--dry-run]
+    python scripts/sync_sheet_to_db.py --user-id usr_65af3d94e2c6 --delete-all
 """
 
 import argparse
@@ -20,9 +18,10 @@ import asyncio
 import os
 import re
 import sys
+import uuid
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Set
 from zoneinfo import ZoneInfo
 
 # Setup import path to find backend modules
@@ -60,12 +59,14 @@ from app.core.config import settings
 from app.core.database import Base, db_manager
 from app.features.auth.entity import UserEntity
 from app.features.books.entity import BookEntity
+from app.features.genres.entity import GenreEntity, BookGenreEntity
 from app.features.reading.entity import ReadingLogEntity
 from app.features.lending.entity import LendingEntity
 from app.features.wishlist.entity import WishlistEntity
 from app.features.settings.entity import UserSettingsEntity
 
 IST = ZoneInfo("Asia/Kolkata")
+UUID_NAMESPACE = uuid.NAMESPACE_DNS
 
 DEFAULT_BRIDGE_URL = (
     os.getenv("GOOGLE_SHEETS_BRIDGE_URL")
@@ -73,7 +74,6 @@ DEFAULT_BRIDGE_URL = (
 )
 DEFAULT_BRIDGE_TOKEN = os.getenv("BRIDGE_TOKEN") or "molat-secret-token-3232"
 
-# Default owner / user seed details
 DEFAULT_USER = {
     "id": "usr_65af3d94e2c6",
     "email": "amitkr.dey1998@gmail.com",
@@ -81,6 +81,18 @@ DEFAULT_USER = {
     "password_hash": "$2b$12$M1p/uVTQEJuXUFb2N8M6U.rj9ERxOQ298QnaATfjJwDrz3kVNT/J2",
     "role": "reader",
 }
+
+
+def to_uuid(user_id: str, prefix: str, raw_id: str) -> str:
+    """Deterministically map a sheet identifier (e.g. BOOK-001) to a stable UUIDv5."""
+    clean_id = (raw_id or "").strip()
+    return str(uuid.uuid5(UUID_NAMESPACE, f"molat:{user_id}:{prefix}:{clean_id}"))
+
+
+def genre_to_uuid(name: str) -> str:
+    """Deterministically map a genre name to a stable UUIDv5."""
+    clean_name = name.strip().lower()
+    return str(uuid.uuid5(UUID_NAMESPACE, f"molat:genre:{clean_name}"))
 
 
 def parse_float(val: Any) -> Optional[float]:
@@ -107,29 +119,25 @@ def parse_int(val: Any) -> Optional[int]:
             return val
         if isinstance(val, float):
             return int(val)
-        cleaned = re.sub(r"[^\d.-]", "", str(val).strip())
-        if not cleaned or cleaned in ("-", ".", "-."):
+        cleaned = re.sub(r"[^\d-]", "", str(val).strip())
+        if not cleaned:
             return None
-        return int(float(cleaned))
+        return int(cleaned)
     except (ValueError, TypeError):
         return None
 
 
 def sanitize_str(val: Any) -> Optional[str]:
-    """Convert value to string, stripping formula quotes and whitespace."""
+    """Trim and clean string value, returning None if empty."""
     if val is None:
         return None
     s = str(val).strip()
-    if not s:
-        return None
-    if s.startswith("'"):
-        s = s[1:]
-    return s.strip() if s.strip() else None
+    return s if s else None
 
 
 async def fetch_sheet_table(client: httpx.AsyncClient, bridge_url: str, table_name: str, token: Optional[str]) -> List[Dict[str, Any]]:
-    """Fetch raw JSON rows for a given table from the Google Sheets Apps Script bridge."""
-    params = {"table": table_name}
+    """Fetch rows from Google Apps Script bridge for a given sheet."""
+    params = {"action": f"get{table_name}"}
     if token:
         params["token"] = token
     resp = await client.get(bridge_url, params=params, timeout=45.0)
@@ -144,14 +152,12 @@ async def sync_data(
     bridge_url: str,
     bridge_token: Optional[str],
     delete_all: bool = False,
-    recreate_schema: bool = False,
     dry_run: bool = False,
 ):
     print("=" * 70)
-    print("Molat Google Sheets -> PostgreSQL Relational Sync")
+    print("Molat Google Sheets -> PostgreSQL Relational Sync (UUIDs + 3NF Genres)")
     print(f"Target User ID   : {user_id}")
-    print(f"Delete Everything: {'YES' if delete_all else 'NO'}")
-    print(f"Recreate Schema  : {'YES' if recreate_schema else 'NO'}")
+    print(f"Delete All Tables: {'YES' if delete_all else 'NO'}")
     print(f"Dry Run Mode     : {'YES' if dry_run else 'NO'}")
     print("=" * 70)
 
@@ -181,7 +187,7 @@ async def sync_data(
         settings_raw = await fetch_sheet_table(client, bridge_url, "Settings", bridge_token)
         print(f"  -> Fetched {len(settings_raw)} settings records")
 
-    # 2. Connect to PostgreSQL using SQLAlchemy 2.0 AsyncEngine
+    # 2. Connect to PostgreSQL via SQLAlchemy 2.0 AsyncEngine
     print("\n[2/3] Connecting to PostgreSQL database...")
     session_factory = await db_manager.init_engine(database_url)
     if not session_factory:
@@ -200,20 +206,23 @@ async def sync_data(
 
     try:
         async with session_factory() as session:
-            # Step A: Drop & Recreate schema or Truncate all tables if requested
-            if delete_all or recreate_schema:
-                print("  -> Deleting all tables and recreating clean relational schema...")
+            # Step A: Drop and Recreate Schema if delete_all requested
+            if delete_all:
+                print("  -> Dropping all tables (including legacy categories) and creating 3NF schema...")
                 async with db_manager.engine.begin() as conn:
-                    await conn.run_sync(Base.metadata.drop_all)
+                    await conn.execute(text(
+                        "DROP TABLE IF EXISTS book_categories, categories, book_genres, genres, "
+                        "lending, reading_logs, wishlist, user_settings, books, users CASCADE"
+                    ))
                     await conn.run_sync(Base.metadata.create_all)
-                print("  -> Schema recreated successfully with all constraints and relations.")
+                print("  -> Clean 3NF schema created with UUID primary keys and 'genres'/'book_genres' tables.")
 
             # Step B: Ensure target user exists in 'users' table
             user_stmt = select(UserEntity).where(UserEntity.id == user_id)
             user_ent = (await session.execute(user_stmt)).scalar_one_or_none()
 
             if not user_ent:
-                print(f"  -> User '{user_id}' not found in 'users' table. Seeding user...")
+                print(f"  -> User '{user_id}' not found. Seeding user record...")
                 new_user = UserEntity(
                     id=user_id,
                     email=DEFAULT_USER["email"] if user_id == DEFAULT_USER["id"] else f"{user_id}@molat.local",
@@ -227,13 +236,20 @@ async def sync_data(
             else:
                 print(f"  -> Verified user '{user_id}': {user_ent.username} ({user_ent.email})")
 
-            # Step C: Migrate Books (Parent table for composite relations)
-            print("\n[3/3] Migrating entities into PostgreSQL with relational integrity...")
-            valid_book_ids = set()
+            # Map from original sheet book_id (e.g. 'BOOK-001') to new book UUID
+            sheet_to_uuid_map: Dict[str, str] = {}
+            genres_map: Dict[str, str] = {}  # genre_name -> genre_id UUID
+            book_genres_to_insert: Set[tuple] = set()
+
+            # Step C: Migrate Books (NO genre column on books table!)
+            print("\n[3/3] Migrating entities into PostgreSQL (UUIDs & 3NF Genres)...")
             books_count = 0
 
             for idx, r in enumerate(books_raw, start=1):
-                book_id = sanitize_str(r.get("book_id")) or f"BOOK-{idx:03d}"
+                raw_book_id = sanitize_str(r.get("book_id")) or f"BOOK-{idx:03d}"
+                book_uuid = to_uuid(user_id, "book", raw_book_id)
+                sheet_to_uuid_map[raw_book_id] = book_uuid
+
                 title = sanitize_str(r.get("title")) or "Untitled"
                 subtitle = sanitize_str(r.get("subtitle"))
                 authors = sanitize_str(r.get("authors"))
@@ -242,7 +258,7 @@ async def sync_data(
                 publisher = sanitize_str(r.get("publisher"))
                 publication_year = parse_int(r.get("publication_year"))
                 language = sanitize_str(r.get("language")) or "English"
-                genre = sanitize_str(r.get("genre"))
+                genre_raw = sanitize_str(r.get("genre"))
                 cover_url = sanitize_str(r.get("cover_url"))
 
                 raw_status = sanitize_str(r.get("reading_status"))
@@ -264,10 +280,19 @@ async def sync_data(
                 created_at = sanitize_str(r.get("created_at")) or datetime.now(IST).strftime("%Y-%m-%d")
                 updated_at = sanitize_str(r.get("updated_at")) or created_at
 
-                # Upsert into books table
+                # 3NF Normalization: extract distinct genres into genres_map & book_genres_to_insert
+                if genre_raw:
+                    for g_name in [c.strip() for c in genre_raw.split(",") if c.strip()]:
+                        if g_name not in genres_map:
+                            gid = genre_to_uuid(g_name)
+                            genres_map[g_name] = gid
+                        gid = genres_map[g_name]
+                        book_genres_to_insert.add((book_uuid, gid))
+
+                # Notice: genre column is NOT included here as it is normalized into genres/book_genres
                 stmt = pg_insert(BookEntity).values(
+                    book_id=book_uuid,
                     user_id=user_id,
-                    book_id=book_id,
                     title=title,
                     subtitle=subtitle,
                     authors=authors,
@@ -276,7 +301,6 @@ async def sync_data(
                     publisher=publisher,
                     publication_year=publication_year,
                     language=language,
-                    genre=genre,
                     cover_url=cover_url,
                     reading_status=reading_status,
                     condition=condition,
@@ -289,7 +313,7 @@ async def sync_data(
                     created_at=created_at,
                     updated_at=updated_at,
                 ).on_conflict_do_update(
-                    index_elements=["user_id", "book_id"],
+                    index_elements=["book_id"],
                     set_={
                         "title": title,
                         "subtitle": subtitle,
@@ -299,7 +323,6 @@ async def sync_data(
                         "publisher": publisher,
                         "publication_year": publication_year,
                         "language": language,
-                        "genre": genre,
                         "cover_url": cover_url,
                         "reading_status": reading_status,
                         "condition": condition,
@@ -314,41 +337,61 @@ async def sync_data(
                     }
                 )
                 await session.execute(stmt)
-                valid_book_ids.add(book_id)
                 books_count += 1
 
             await session.commit()
-            print(f"  -> Upserted {books_count} books into 'books' table")
+            print(f"  -> Upserted {books_count} books into 'books' table (with UUID primary keys, no genre column)")
 
-            # Step D: Migrate Reading Logs with composite foreign key (user_id, book_id)
+            # Step D: Insert Genres and BookGenres (3NF Normalization)
+            for g_name, g_id in genres_map.items():
+                g_stmt = pg_insert(GenreEntity).values(
+                    id=g_id,
+                    name=g_name,
+                ).on_conflict_do_nothing(index_elements=["id"])
+                await session.execute(g_stmt)
+
+            await session.commit()
+            print(f"  -> Upserted {len(genres_map)} distinct genres into 'genres' table")
+
+            for b_id, g_id in book_genres_to_insert:
+                bg_stmt = pg_insert(BookGenreEntity).values(
+                    book_id=b_id,
+                    genre_id=g_id,
+                ).on_conflict_do_nothing(index_elements=["book_id", "genre_id"])
+                await session.execute(bg_stmt)
+
+            await session.commit()
+            print(f"  -> Linked {len(book_genres_to_insert)} entries into 'book_genres' junction table")
+
+            # Step E: Migrate Reading Logs with UUIDs and direct FK book_id -> books.book_id
             logs_count = 0
             for idx, r in enumerate(reading_logs_raw, start=1):
-                book_id = sanitize_str(r.get("book_id"))
-                if not book_id:
-                    continue
-                if book_id not in valid_book_ids:
-                    print(f"  [WARN] Skipping reading log {r.get('log_id')}: book_id '{book_id}' does not exist in 'books'!")
+                raw_book_id = sanitize_str(r.get("book_id"))
+                book_uuid = sheet_to_uuid_map.get(raw_book_id)
+                if not book_uuid:
+                    print(f"  [WARN] Skipping log {r.get('log_id')}: book_id '{raw_book_id}' not found in books!")
                     continue
 
-                log_id = sanitize_str(r.get("log_id")) or f"LOG-{idx:03d}"
+                raw_log_id = sanitize_str(r.get("log_id")) or f"LOG-{idx:03d}"
+                log_uuid = to_uuid(user_id, "reading_log", raw_log_id)
+
                 session_date = sanitize_str(r.get("session_date")) or datetime.now(IST).strftime("%Y-%m-%d")
+                pages_read = parse_int(r.get("pages_read")) or 0
                 start_page = parse_int(r.get("start_page")) or 0
-                end_page = parse_int(r.get("end_page")) or 0
-                raw_pages = parse_int(r.get("pages_read"))
-                calc_pages = (end_page - start_page + 1) if (end_page >= start_page and start_page >= 1) else max(0, end_page - start_page)
-                pages_read = raw_pages if raw_pages is not None else calc_pages
+                end_page = parse_int(r.get("end_page")) or (start_page + pages_read if pages_read > 0 else 0)
+
                 duration_minutes = parse_int(r.get("duration_minutes")) or 0
-                session_note = sanitize_str(r.get("session_note"))
+                session_note = sanitize_str(r.get("session_note")) or sanitize_str(r.get("notes"))
                 created_at = sanitize_str(r.get("created_at")) or session_date
 
                 stmt = pg_insert(ReadingLogEntity).values(
-                    log_id=log_id,
+                    log_id=log_uuid,
                     user_id=user_id,
-                    book_id=book_id,
+                    book_id=book_uuid,
                     session_date=session_date,
+                    pages_read=pages_read,
                     start_page=start_page,
                     end_page=end_page,
-                    pages_read=pages_read,
                     duration_minutes=duration_minutes,
                     session_note=session_note,
                     created_at=created_at,
@@ -356,11 +399,11 @@ async def sync_data(
                     index_elements=["log_id"],
                     set_={
                         "user_id": user_id,
-                        "book_id": book_id,
+                        "book_id": book_uuid,
                         "session_date": session_date,
+                        "pages_read": pages_read,
                         "start_page": start_page,
                         "end_page": end_page,
-                        "pages_read": pages_read,
                         "duration_minutes": duration_minutes,
                         "session_note": session_note,
                         "created_at": created_at,
@@ -370,20 +413,20 @@ async def sync_data(
                 logs_count += 1
 
             await session.commit()
-            print(f"  -> Upserted {logs_count} reading logs into 'reading_logs' table (composite FK satisfied)")
+            print(f"  -> Upserted {logs_count} reading logs into 'reading_logs' table (direct FK -> books.book_id)")
 
-            # Step E: Migrate Lending Records with composite foreign key (user_id, book_id)
+            # Step F: Migrate Lending with UUIDs and direct FK book_id -> books.book_id
             lending_count = 0
             for idx, r in enumerate(lending_raw, start=1):
-                book_id = sanitize_str(r.get("book_id"))
+                raw_book_id = sanitize_str(r.get("book_id"))
+                book_uuid = sheet_to_uuid_map.get(raw_book_id)
                 borrower = sanitize_str(r.get("borrower_name"))
-                if not book_id or not borrower:
-                    continue
-                if book_id not in valid_book_ids:
-                    print(f"  [WARN] Skipping lending record {r.get('lending_id')}: book_id '{book_id}' does not exist in 'books'!")
+                if not book_uuid or not borrower:
                     continue
 
-                lending_id = sanitize_str(r.get("lending_id")) or f"LEND-{idx:03d}"
+                raw_lend_id = sanitize_str(r.get("lending_id")) or f"LEND-{idx:03d}"
+                lending_uuid = to_uuid(user_id, "lending", raw_lend_id)
+
                 borrower_contact = sanitize_str(r.get("borrower_contact"))
                 lent_date = sanitize_str(r.get("lent_date")) or datetime.now(IST).strftime("%Y-%m-%d")
                 due_date = sanitize_str(r.get("due_date"))
@@ -399,9 +442,9 @@ async def sync_data(
                 created_at = sanitize_str(r.get("created_at")) or lent_date
 
                 stmt = pg_insert(LendingEntity).values(
-                    lending_id=lending_id,
+                    lending_id=lending_uuid,
                     user_id=user_id,
-                    book_id=book_id,
+                    book_id=book_uuid,
                     borrower_name=borrower,
                     borrower_contact=borrower_contact,
                     lent_date=lent_date,
@@ -414,7 +457,7 @@ async def sync_data(
                     index_elements=["lending_id"],
                     set_={
                         "user_id": user_id,
-                        "book_id": book_id,
+                        "book_id": book_uuid,
                         "borrower_name": borrower,
                         "borrower_contact": borrower_contact,
                         "lent_date": lent_date,
@@ -429,15 +472,18 @@ async def sync_data(
                 lending_count += 1
 
             await session.commit()
-            print(f"  -> Upserted {lending_count} lending records into 'lending' table (composite FK satisfied)")
+            print(f"  -> Upserted {lending_count} lending records into 'lending' table (direct FK -> books.book_id)")
 
-            # Step F: Migrate Wishlist
+            # Step G: Migrate Wishlist with UUIDs
             wishlist_count = 0
             for idx, r in enumerate(wishlist_raw, start=1):
                 title = sanitize_str(r.get("title"))
                 if not title:
                     continue
-                wishlist_id = sanitize_str(r.get("wishlist_id")) or f"WISH-{idx:03d}"
+
+                raw_wish_id = sanitize_str(r.get("wishlist_id")) or f"WISH-{idx:03d}"
+                wishlist_uuid = to_uuid(user_id, "wishlist", raw_wish_id)
+
                 authors = sanitize_str(r.get("authors"))
                 isbn_13 = sanitize_str(r.get("isbn_13"))
                 genre = sanitize_str(r.get("genre"))
@@ -449,7 +495,7 @@ async def sync_data(
                 created_at = sanitize_str(r.get("created_at")) or datetime.now(IST).strftime("%Y-%m-%d")
 
                 stmt = pg_insert(WishlistEntity).values(
-                    wishlist_id=wishlist_id,
+                    wishlist_id=wishlist_uuid,
                     user_id=user_id,
                     title=title,
                     authors=authors,
@@ -479,9 +525,9 @@ async def sync_data(
                 wishlist_count += 1
 
             await session.commit()
-            print(f"  -> Upserted {wishlist_count} wishlist items into 'wishlist' table")
+            print(f"  -> Upserted {wishlist_count} wishlist items into 'wishlist' table (with UUID primary keys)")
 
-            # Step G: User Settings
+            # Step H: User Settings
             settings_dict = {}
             for r in settings_raw:
                 k = r.get("key")
@@ -490,64 +536,59 @@ async def sync_data(
                     settings_dict[k] = str(v) if v is not None else ""
 
             daily_goal = parse_int(settings_dict.get("daily_goal_pages")) or 15
-            active_book = sanitize_str(settings_dict.get("active_book_id"))
+            raw_active_book = sanitize_str(settings_dict.get("active_book_id"))
+            active_book_uuid = sheet_to_uuid_map.get(raw_active_book) if raw_active_book else None
             theme = sanitize_str(settings_dict.get("theme")) or "light"
 
-            # Derive active_book if not specified in Settings
-            if not active_book or active_book not in valid_book_ids:
-                # 1. From latest reading log
+            # Derive active_book_uuid from latest reading log if not set
+            if not active_book_uuid:
                 latest_log_stmt = (
                     select(ReadingLogEntity.book_id)
                     .where(ReadingLogEntity.user_id == user_id)
                     .order_by(ReadingLogEntity.session_date.desc(), ReadingLogEntity.created_at.desc())
                     .limit(1)
                 )
-                active_book = (await session.execute(latest_log_stmt)).scalar_one_or_none()
-
-            if not active_book or active_book not in valid_book_ids:
-                # 2. From first READING book
-                reading_book_stmt = (
-                    select(BookEntity.book_id)
-                    .where(BookEntity.user_id == user_id, BookEntity.reading_status == "READING")
-                    .limit(1)
-                )
-                active_book = (await session.execute(reading_book_stmt)).scalar_one_or_none()
+                active_book_uuid = (await session.execute(latest_log_stmt)).scalar_one_or_none()
 
             now_str = datetime.now(IST).strftime("%Y-%m-%d %H:%M:%S")
             settings_stmt = pg_insert(UserSettingsEntity).values(
                 user_id=user_id,
                 daily_goal_pages=daily_goal,
-                active_book_id=active_book,
+                active_book_id=active_book_uuid,
                 theme=theme,
                 updated_at=now_str,
             ).on_conflict_do_update(
                 index_elements=["user_id"],
                 set_={
                     "daily_goal_pages": daily_goal,
-                    "active_book_id": active_book,
+                    "active_book_id": active_book_uuid,
                     "theme": theme,
                     "updated_at": now_str,
                 }
             )
             await session.execute(settings_stmt)
             await session.commit()
-            print(f"  -> Upserted user_settings (daily_goal={daily_goal}, active_book={active_book}, theme='{theme}')")
+            print(f"  -> Upserted user_settings (daily_goal={daily_goal}, active_book={active_book_uuid}, theme='{theme}')")
 
-            # Step H: Final verification query
+            # Final Verification
             print("\n" + "=" * 70)
             print("MIGRATION COMPLETED! Verifying database counts:")
             b_cnt = (await session.execute(text("SELECT count(*) FROM books WHERE user_id = :u"), {"u": user_id})).scalar()
+            g_cnt = (await session.execute(text("SELECT count(*) FROM genres"))).scalar()
+            bg_cnt = (await session.execute(text("SELECT count(*) FROM book_genres"))).scalar()
             l_cnt = (await session.execute(text("SELECT count(*) FROM reading_logs WHERE user_id = :u"), {"u": user_id})).scalar()
             w_cnt = (await session.execute(text("SELECT count(*) FROM wishlist WHERE user_id = :u"), {"u": user_id})).scalar()
             len_cnt = (await session.execute(text("SELECT count(*) FROM lending WHERE user_id = :u"), {"u": user_id})).scalar()
             set_row = (await session.execute(text("SELECT * FROM user_settings WHERE user_id = :u"), {"u": user_id})).mappings().first()
 
-            print(f"  Total Books in DB        : {b_cnt}")
-            print(f"  Total Reading Logs in DB : {l_cnt}")
-            print(f"  Total Wishlist in DB     : {w_cnt}")
-            print(f"  Total Lending in DB      : {len_cnt}")
+            print(f"  Total Books in DB           : {b_cnt} (UUID PK, no genre column)")
+            print(f"  Total Genres in DB          : {g_cnt} (UUID PK)")
+            print(f"  Total Book-Genre Links      : {bg_cnt} (Junction PK)")
+            print(f"  Total Reading Logs in DB    : {l_cnt} (UUID PK -> Book UUID FK)")
+            print(f"  Total Wishlist in DB        : {w_cnt} (UUID PK)")
+            print(f"  Total Lending in DB         : {len_cnt} (UUID PK -> Book UUID FK)")
             if set_row:
-                print(f"  User Settings in DB      : daily_goal={set_row['daily_goal_pages']}, active_book={set_row['active_book_id']}, theme={set_row['theme']}")
+                print(f"  User Settings in DB         : daily_goal={set_row['daily_goal_pages']}, active_book={set_row['active_book_id']}")
             print("=" * 70 + "\n")
 
     finally:
@@ -555,13 +596,12 @@ async def sync_data(
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Fill Molat PostgreSQL DB from Google Sheets bridge for a user")
+    parser = argparse.ArgumentParser(description="Fill Molat PostgreSQL DB from Google Sheets with UUIDs & Normalized Genres")
     parser.add_argument("--user-id", default="usr_65af3d94e2c6", help="Target user ID (default: usr_65af3d94e2c6)")
     parser.add_argument("--database-url", default=os.getenv("DATABASE_URL") or settings.DATABASE_URL, help="PostgreSQL DSN")
     parser.add_argument("--bridge-url", default=DEFAULT_BRIDGE_URL, help="Google Sheets Apps Script Bridge URL")
     parser.add_argument("--bridge-token", default=DEFAULT_BRIDGE_TOKEN, help="Google Sheets Apps Script Bridge Token")
-    parser.add_argument("--delete-all", action="store_true", help="Delete all domain table records before filling")
-    parser.add_argument("--recreate-schema", action="store_true", help="Drop and recreate all tables and constraints")
+    parser.add_argument("--delete-all", action="store_true", help="Drop and recreate all tables and seed from scratch")
     parser.add_argument("--dry-run", action="store_true", help="Fetch sheet data without writing to database")
 
     args = parser.parse_args()
@@ -571,7 +611,6 @@ def main():
         bridge_url=args.bridge_url,
         bridge_token=args.bridge_token,
         delete_all=args.delete_all,
-        recreate_schema=args.recreate_schema,
         dry_run=args.dry_run,
     ))
 

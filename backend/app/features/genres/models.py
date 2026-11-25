@@ -1,18 +1,18 @@
-# backend/app/features/categories/models.py
+# backend/app/features/genres/models.py
 from datetime import datetime
 from typing import Optional
 from pydantic import BaseModel, Field
 
 
-class CategoryBase(BaseModel):
+class GenreBase(BaseModel):
     name: str = Field(..., min_length=1, max_length=100)
     color: Optional[str] = Field(None, max_length=30)
 
 
-class CategoryCreate(CategoryBase):
+class GenreCreate(GenreBase):
     pass
 
 
-class Category(CategoryBase):
+class Genre(GenreBase):
     id: str
     created_at: Optional[datetime] = None

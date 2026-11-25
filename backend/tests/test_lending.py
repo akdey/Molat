@@ -63,7 +63,7 @@ async def test_lend_and_return_book_lifecycle():
     lending_record = auth_res.json()
     lending_id = lending_record["lending_id"]
 
-    assert lending_id.startswith("LEND-")
+    assert len(lending_id) == 36
     assert lending_record["borrower_name"] == "Arun Kumar"
     assert lending_record["status"] == "ACTIVE"
     assert lending_record["book_id"] == book_id

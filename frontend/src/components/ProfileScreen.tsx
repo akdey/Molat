@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
-  User,
   Shield,
   BookOpen,
   Flame,
@@ -15,22 +14,18 @@ import {
   Target,
   Sun,
   Moon,
-  Clock,
   CheckCircle2,
   AlertCircle,
   Copy,
   Check,
-  Headphones,
-  Wrench,
-  KeyRound,
-  ExternalLink,
-  ChevronRight,
   ShieldCheck,
   TrendingUp,
   Handshake,
+  Mail,
+  Zap,
 } from 'lucide-react';
 import { useLibraryStore } from '../store/useLibraryStore';
-import { changePassword, fetchCurrentUser, AuthUser } from '../api/client';
+import { changePassword } from '../api/client';
 
 export const ProfileScreen: React.FC = () => {
   const {
@@ -40,7 +35,8 @@ export const ProfileScreen: React.FC = () => {
     wishlist,
     lendingRecords,
     authUser,
-    authToken,
+    authEmail,
+    authRole,
     dailyGoal,
     setDailyGoal,
     theme,
@@ -49,10 +45,9 @@ export const ProfileScreen: React.FC = () => {
     triggerCoverEnrichment,
     setActiveTab,
     addToast,
+    syncUserProfile,
   } = useLibraryStore();
 
-  const [userProfile, setUserProfile] = useState<AuthUser | null>(null);
-  const [loadingProfile, setLoadingProfile] = useState(false);
   const [copiedHandle, setCopiedHandle] = useState(false);
 
   // Change Password Form State
@@ -71,25 +66,12 @@ export const ProfileScreen: React.FC = () => {
   // Sign out confirmation state
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
+  // Background silent sync if email or profile hasn't been cached yet
   useEffect(() => {
-    let mounted = true;
-    const loadProfile = async () => {
-      if (!authToken) return;
-      setLoadingProfile(true);
-      try {
-        const u = await fetchCurrentUser();
-        if (mounted) setUserProfile(u);
-      } catch (err) {
-        console.warn('Could not fetch user profile details:', err);
-      } finally {
-        if (mounted) setLoadingProfile(false);
-      }
-    };
-    loadProfile();
-    return () => {
-      mounted = false;
-    };
-  }, [authToken]);
+    if (!authEmail) {
+      syncUserProfile();
+    }
+  }, [authEmail, syncUserProfile]);
 
   // Derived metrics
   const completedBooks = books.filter((b) => b.reading_status === 'COMPLETED').length;
@@ -97,16 +79,11 @@ export const ProfileScreen: React.FC = () => {
   const unreadBooks = books.filter((b) => b.reading_status === 'UNREAD').length;
   const activeLoans = lendingRecords.filter((l) => l.status === 'ACTIVE').length;
 
-  const totalPagesRead = books.reduce((acc, b) => {
-    if (b.reading_status === 'COMPLETED' && b.notes && b.notes.includes('pages')) {
-      return acc + 300; // conservative fallback if pages aren't noted
-    }
-    return acc;
-  }, 0);
-
   // User Monogram Initials
-  const username = authUser || userProfile?.username || 'Reader';
+  const username = authUser || 'Reader';
   const monogram = username.slice(0, 2).toUpperCase();
+  const displayEmail = authEmail || null;
+  const isOwner = authRole === 'admin' || authRole === 'owner';
 
   const handleCopyHandle = () => {
     navigator.clipboard.writeText(`ex/${username}`);
@@ -244,7 +221,7 @@ export const ProfileScreen: React.FC = () => {
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-6 sm:py-8 space-y-6 sm:space-y-8 animate-in fade-in duration-200">
-      {/* 1. EX LIBRIS BOOKPLATE READER CARD */}
+      {/* 1. EX LIBRIS PROVENANCE READER CARD */}
       <section
         aria-label="Reader Profile & Ex Libris Bookplate"
         className="relative overflow-hidden rounded-3xl border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark p-6 sm:p-8 shadow-xs"
@@ -256,44 +233,51 @@ export const ProfileScreen: React.FC = () => {
 
         <div className="relative flex flex-col sm:flex-row sm:items-center justify-between gap-6">
           <div className="flex items-start sm:items-center gap-4 sm:gap-5">
-            {/* Monogram Bookplate Crest */}
+            {/* Monogram Bookplate Seal */}
             <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-gradient-to-br from-[#C2410C] to-[#9A3412] text-white flex flex-col items-center justify-center shadow-sm shrink-0 border-2 border-[#E2D9C8]/40 dark:border-white/10 select-none">
               <span className="text-2xs uppercase tracking-widest font-mono opacity-80">EX</span>
               <span className="font-serif text-xl sm:text-2xl font-bold tracking-tight">{monogram}</span>
             </div>
 
-            <div className="space-y-1">
-              <div className="flex items-center gap-2 flex-wrap">
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-2.5 flex-wrap">
                 <h1 className="font-serif text-2xl sm:text-3xl font-medium tracking-tight text-ink dark:text-ink-dark">
                   {username}
                 </h1>
                 <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-2xs font-medium bg-accent-subtle dark:bg-accent-dark-subtle text-accent dark:text-accent-dark border border-accent/20">
                   <ShieldCheck size={11} />
-                  {userProfile?.role === 'admin' ? 'Owner & Head Curator' : 'Private Reader'}
+                  {isOwner ? 'Head Curator & Owner' : 'Private Reader'}
                 </span>
               </div>
 
-              <div className="flex items-center gap-2 text-xs text-ink-secondary dark:text-ink-dark-secondary">
+              <div className="flex items-center gap-2.5 flex-wrap text-xs text-ink-secondary dark:text-ink-dark-secondary">
                 <button
                   type="button"
                   onClick={handleCopyHandle}
-                  className="font-mono text-2xs px-2 py-0.5 rounded-md bg-stone-100 dark:bg-stone-800 hover:bg-stone-200 dark:hover:bg-stone-700 text-ink dark:text-ink-dark inline-flex items-center gap-1 transition-colors cursor-pointer"
+                  className="font-mono text-2xs px-2.5 py-0.5 rounded-md bg-stone-100 dark:bg-stone-800 hover:bg-stone-200 dark:hover:bg-stone-700 text-ink dark:text-ink-dark inline-flex items-center gap-1.5 transition-colors cursor-pointer"
                   title="Click to copy Ex Libris provenance handle"
                 >
                   <span>ex/{username}</span>
                   {copiedHandle ? <Check size={11} className="text-emerald-600" /> : <Copy size={11} className="opacity-60" />}
                 </button>
-                <span>•</span>
-                <span className="text-2xs">Timezone: Asia/Kolkata (IST)</span>
-              </div>
 
-              <p className="text-3xs text-ink-muted pt-0.5">
-                {userProfile?.email ? userProfile.email : 'Local Session'} • Database Sync: Active
-              </p>
+                {displayEmail && (
+                  <>
+                    <span className="text-ink-muted">•</span>
+                    <span className="inline-flex items-center gap-1 text-2xs text-ink-muted">
+                      <Mail size={11} className="opacity-70" />
+                      {displayEmail}
+                    </span>
+                  </>
+                )}
+
+                <span className="text-ink-muted">•</span>
+                <span className="text-2xs text-ink-muted">Asia/Kolkata (IST)</span>
+              </div>
             </div>
           </div>
 
-          {/* Quick Sign Out Action */}
+          {/* Quick Security & Account Actions */}
           <div className="flex items-center gap-2 shrink-0">
             <button
               type="button"
@@ -315,38 +299,39 @@ export const ProfileScreen: React.FC = () => {
         </div>
       </section>
 
-      {/* 2. LIFETIME READING LEDGER & HABIT METRICS */}
+      {/* 2. LIFETIME READING JOURNEY & STREAK PROTECTION */}
       <section className="space-y-3">
         <div className="flex items-center justify-between">
           <h2 className="font-serif text-lg font-medium text-ink dark:text-ink-dark flex items-center gap-2">
             <BookOpen size={18} className="text-accent" />
-            <span>Lifetime Reading Ledger</span>
+            <span>Reading Journey & Milestone Ledger</span>
           </h2>
           <button
             type="button"
             onClick={() => setActiveTab('tracker')}
-            className="text-xs text-accent hover:underline inline-flex items-center gap-1 cursor-pointer"
+            className="text-xs text-accent hover:underline inline-flex items-center gap-1 cursor-pointer font-medium"
           >
-            <span>View 365-Day Heatmap</span>
-            <ChevronRight size={13} />
+            <span>View 365-Day Reading Matrix →</span>
           </button>
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+          {/* 1. Finished Volumes */}
           <div className="p-4 rounded-2xl border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark space-y-1">
             <div className="flex items-center justify-between text-ink-muted">
-              <span className="text-3xs uppercase tracking-wider font-medium">Finished Books</span>
+              <span className="text-3xs uppercase tracking-wider font-medium">Finished Volumes</span>
               <Award size={15} className="text-emerald-600 dark:text-emerald-400" />
             </div>
             <p className="font-serif text-2xl font-bold text-ink dark:text-ink-dark tabular-nums">
               {completedBooks}
             </p>
-            <span className="text-3xs text-ink-muted block">Volumes completed</span>
+            <span className="text-3xs text-ink-muted block">Books fully read</span>
           </div>
 
+          {/* 2. Current Streak */}
           <div className="p-4 rounded-2xl border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark space-y-1">
             <div className="flex items-center justify-between text-ink-muted">
-              <span className="text-3xs uppercase tracking-wider font-medium">Current Streak</span>
+              <span className="text-3xs uppercase tracking-wider font-medium">Reading Streak</span>
               <Flame size={15} className="text-accent animate-pulse" />
             </div>
             <p className="font-serif text-2xl font-bold text-ink dark:text-ink-dark tabular-nums">
@@ -357,19 +342,32 @@ export const ProfileScreen: React.FC = () => {
             </span>
           </div>
 
+          {/* 3. Shield Bank (Streak Freeze) */}
           <div className="p-4 rounded-2xl border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark space-y-1">
             <div className="flex items-center justify-between text-ink-muted">
-              <span className="text-3xs uppercase tracking-wider font-medium">Shield Bank</span>
+              <span className="text-3xs uppercase tracking-wider font-medium">Streak Shield Bank</span>
               <Shield size={15} className="text-cyan-600 dark:text-cyan-400" />
             </div>
-            <p className="font-serif text-2xl font-bold text-cyan-700 dark:text-cyan-400 tabular-nums">
-              {streakSummary?.freeze_bank_count || 0} / 3
-            </p>
+            <div className="flex items-baseline gap-1.5">
+              <p className="font-serif text-2xl font-bold text-cyan-700 dark:text-cyan-400 tabular-nums">
+                {streakSummary?.freeze_bank_count ?? 0}
+              </p>
+              <span className="text-xs font-medium text-ink-muted">/ 3 banked</span>
+            </div>
             <span className="text-3xs text-ink-muted block">
-              {streakSummary?.freeze_recovery_active ? '⚡ In Fast Recovery' : 'Emergency freezes armed'}
+              {streakSummary?.freeze_recovery_active ? (
+                <span className="text-amber-600 dark:text-amber-400 font-medium inline-flex items-center gap-0.5">
+                  <Zap size={10} /> Fast Recovery (3d/5d/7d)
+                </span>
+              ) : (streakSummary?.freeze_bank_count ?? 0) >= 3 ? (
+                'Full Protection Armed'
+              ) : (
+                'Earn shield every 7 days'
+              )}
             </span>
           </div>
 
+          {/* 4. Reading Velocity */}
           <div className="p-4 rounded-2xl border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark space-y-1">
             <div className="flex items-center justify-between text-ink-muted">
               <span className="text-3xs uppercase tracking-wider font-medium">Reading Velocity</span>
@@ -388,24 +386,23 @@ export const ProfileScreen: React.FC = () => {
         <div className="flex items-center justify-between">
           <h2 className="font-serif text-lg font-medium text-ink dark:text-ink-dark flex items-center gap-2">
             <Award size={18} className="text-[#C2410C]" />
-            <span>Collection Portfolio & Valuation</span>
+            <span>Library Valuation & Shelves</span>
           </h2>
           <button
             type="button"
             onClick={() => setActiveTab('insights')}
-            className="text-xs text-accent hover:underline inline-flex items-center gap-1 cursor-pointer"
+            className="text-xs text-accent hover:underline inline-flex items-center gap-1 cursor-pointer font-medium"
           >
-            <span>Portfolio Breakdown</span>
-            <ChevronRight size={13} />
+            <span>Portfolio Breakdown →</span>
           </button>
         </div>
 
         <div className="p-5 rounded-2xl border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark space-y-4">
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pb-4 border-b border-rule/50 dark:border-rule-dark/50">
             <div>
-              <span className="text-3xs uppercase tracking-wider font-medium text-ink-muted block">Total Catalogued</span>
+              <span className="text-3xs uppercase tracking-wider font-medium text-ink-muted block">Catalogued Volumes</span>
               <p className="font-serif text-xl sm:text-2xl font-bold text-ink dark:text-ink-dark tabular-nums mt-0.5">
-                {books.length} <span className="text-xs font-normal text-ink-muted">Volumes</span>
+                {books.length} <span className="text-xs font-normal text-ink-muted">Books</span>
               </p>
             </div>
 
@@ -426,17 +423,17 @@ export const ProfileScreen: React.FC = () => {
             <div>
               <span className="text-3xs uppercase tracking-wider font-medium text-ink-muted block">Active Lending</span>
               <p className="font-serif text-xl sm:text-2xl font-bold text-accent dark:text-accent-dark tabular-nums mt-0.5">
-                {activeLoans} <span className="text-xs font-normal text-ink-muted">Lent Out</span>
+                {activeLoans} <span className="text-xs font-normal text-ink-muted">Volumes</span>
               </p>
             </div>
           </div>
 
           <div className="flex flex-wrap items-center justify-between gap-3 text-2xs text-ink-secondary dark:text-ink-dark-secondary">
-            <div className="flex items-center gap-4 flex-wrap">
+            <div className="flex items-center gap-3 sm:gap-4 flex-wrap">
               <span>Currently Reading: <strong className="font-medium text-ink dark:text-ink-dark">{readingBooks}</strong></span>
-              <span>•</span>
+              <span className="text-ink-muted">•</span>
               <span>To Be Read (TBR): <strong className="font-medium text-ink dark:text-ink-dark">{unreadBooks}</strong></span>
-              <span>•</span>
+              <span className="text-ink-muted">•</span>
               <span>Wishlist Queue: <strong className="font-medium text-ink dark:text-ink-dark">{wishlist.length}</strong></span>
             </div>
             <button
@@ -451,11 +448,11 @@ export const ProfileScreen: React.FC = () => {
         </div>
       </section>
 
-      {/* 4. READING PREFERENCES & DAILY TARGET */}
+      {/* 4. READING HABITS & AESTHETIC CONTROLS */}
       <section className="space-y-3">
         <h2 className="font-serif text-lg font-medium text-ink dark:text-ink-dark flex items-center gap-2">
           <Target size={18} className="text-accent" />
-          <span>Reading Habits & Preferences</span>
+          <span>Reading Pace & Interface Craft</span>
         </h2>
 
         <div className="p-5 rounded-2xl border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark space-y-4">
@@ -463,16 +460,16 @@ export const ProfileScreen: React.FC = () => {
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs font-medium text-ink dark:text-ink-dark">Target Daily Reading Goal</p>
-                <p className="text-3xs text-ink-muted">Page pace required daily to keep streak healthy without pressure.</p>
+                <p className="text-xs font-medium text-ink dark:text-ink-dark">Daily Target Reading Pace</p>
+                <p className="text-3xs text-ink-muted">Page goal required daily to maintain active reading streak without fatigue.</p>
               </div>
-              <span className="font-mono text-sm font-bold text-accent dark:text-accent-dark px-2.5 py-1 rounded-lg bg-accent/10 border border-accent/20">
-                {dailyGoal || 15} pgs/day
+              <span className="font-mono text-xs font-bold text-accent dark:text-accent-dark px-2.5 py-1 rounded-lg bg-accent/10 border border-accent/20">
+                {dailyGoal || 15} pages/day
               </span>
             </div>
 
             <div className="flex items-center gap-2 flex-wrap pt-1">
-              <span className="text-3xs text-ink-muted mr-1">Presets:</span>
+              <span className="text-3xs text-ink-muted mr-1 font-medium">Presets:</span>
               {[10, 15, 20, 25, 30, 50].map((preset) => (
                 <button
                   key={preset}
@@ -493,15 +490,15 @@ export const ProfileScreen: React.FC = () => {
           {/* Theme & Display Mode */}
           <div className="pt-3 border-t border-rule/50 dark:border-rule-dark/50 flex items-center justify-between">
             <div>
-              <p className="text-xs font-medium text-ink dark:text-ink-dark">Reading Interface Appearance</p>
+              <p className="text-xs font-medium text-ink dark:text-ink-dark">Reading Interface Palette</p>
               <p className="text-3xs text-ink-muted">
-                {theme === 'dark' ? 'Deep Charcoal Ink for nighttime reading' : 'Warm Ivory Paper for tactile bookish clarity'}
+                {theme === 'dark' ? 'Deep Charcoal Ink for relaxed nighttime reading' : 'Warm Ivory Paper for tactile archival bookish warmth'}
               </p>
             </div>
             <button
               type="button"
               onClick={toggleTheme}
-              className="px-3 py-1.5 rounded-xl border border-rule dark:border-rule-dark bg-canvas dark:bg-canvas-dark text-ink dark:text-ink-dark hover:border-accent/40 text-xs font-medium inline-flex items-center gap-2 transition-colors cursor-pointer"
+              className="px-3.5 py-1.5 rounded-xl border border-rule dark:border-rule-dark bg-canvas dark:bg-canvas-dark text-ink dark:text-ink-dark hover:border-accent/40 text-xs font-medium inline-flex items-center gap-2 transition-colors cursor-pointer"
             >
               {theme === 'dark' ? <Sun size={14} className="text-amber-500" /> : <Moon size={14} className="text-indigo-600" />}
               <span>{theme === 'dark' ? 'Switch to Ivory Paper' : 'Switch to Charcoal Ink'}</span>
@@ -510,11 +507,11 @@ export const ProfileScreen: React.FC = () => {
         </div>
       </section>
 
-      {/* 5. DATA OWNERSHIP, EXPORT & MAINTENANCE TOOLS */}
+      {/* 5. DATA OWNERSHIP & ARCHIVAL EXPORTS */}
       <section className="space-y-3">
         <h2 className="font-serif text-lg font-medium text-ink dark:text-ink-dark flex items-center gap-2">
           <Download size={18} className="text-accent" />
-          <span>Library Data Ownership & Archival Tools</span>
+          <span>Data Ownership & Shelf Maintenance</span>
         </h2>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
@@ -525,8 +522,8 @@ export const ProfileScreen: React.FC = () => {
                 <FileJson size={16} className="text-amber-600" />
                 <span>Full Library Backup (JSON)</span>
               </div>
-              <p className="text-3xs text-ink-muted mt-1">
-                Complete relational export containing your books, reading logs, wishlist items, and lending records.
+              <p className="text-3xs text-ink-muted mt-1 leading-relaxed">
+                Complete relational snapshot containing books, logs, wishlist items, and lending records.
               </p>
             </div>
             <button
@@ -535,7 +532,7 @@ export const ProfileScreen: React.FC = () => {
               className="w-full py-2 px-3 rounded-xl border border-rule dark:border-rule-dark bg-canvas dark:bg-canvas-dark hover:bg-rule/40 text-xs font-medium text-ink dark:text-ink-dark inline-flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
             >
               <Download size={13} />
-              <span>Download JSON</span>
+              <span>Download JSON Backup</span>
             </button>
           </div>
 
@@ -546,8 +543,8 @@ export const ProfileScreen: React.FC = () => {
                 <FileSpreadsheet size={16} className="text-emerald-600" />
                 <span>Catalogue Sheet (CSV)</span>
               </div>
-              <p className="text-3xs text-ink-muted mt-1">
-                Spreadsheet-ready table of your volumes including purchase prices, replacement values, and ISBNs.
+              <p className="text-3xs text-ink-muted mt-1 leading-relaxed">
+                Spreadsheet-ready table of volumes with purchase prices, replacement values, location, and ISBN.
               </p>
             </div>
             <button
@@ -556,18 +553,18 @@ export const ProfileScreen: React.FC = () => {
               className="w-full py-2 px-3 rounded-xl border border-rule dark:border-rule-dark bg-canvas dark:bg-canvas-dark hover:bg-rule/40 text-xs font-medium text-ink dark:text-ink-dark inline-flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
             >
               <Download size={13} />
-              <span>Export CSV</span>
+              <span>Export CSV Catalogue</span>
             </button>
           </div>
 
-          {/* Cover Enrichment Waterfall */}
+          {/* Auto-Fetch Book Jackets */}
           <div className="p-4 rounded-2xl border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark space-y-2.5 flex flex-col justify-between">
             <div>
               <div className="flex items-center gap-2 text-xs font-medium text-ink dark:text-ink-dark">
                 <Sparkles size={16} className="text-accent" />
-                <span>Cover Enrichment Waterfall</span>
+                <span>Auto-Fetch Book Jackets</span>
               </div>
-              <p className="text-3xs text-ink-muted mt-1">
+              <p className="text-3xs text-ink-muted mt-1 leading-relaxed">
                 Scans volumes missing covers and auto-populates jackets via Google Books, Apple Books India & Open Library.
               </p>
             </div>
@@ -577,8 +574,8 @@ export const ProfileScreen: React.FC = () => {
               disabled={enriching}
               className="w-full py-2 px-3 rounded-xl bg-accent hover:bg-accent-hover text-white text-xs font-medium inline-flex items-center justify-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50"
             >
-              <Sparkles size={13} />
-              <span>{enriching ? 'Enriching Jackets...' : 'Run Cover Waterfall'}</span>
+              <Sparkles size={13} className={enriching ? 'animate-spin' : ''} />
+              <span>{enriching ? 'Enriching Jackets...' : 'Enrich Missing Jackets'}</span>
             </button>
           </div>
         </div>
@@ -719,7 +716,7 @@ export const ProfileScreen: React.FC = () => {
                   Sign Out of Molat?
                 </h3>
                 <p className="text-xs text-ink-muted">
-                  Your reading streak and catalogue remain safe in the cloud database. You will need to sign back in.
+                  Your reading streak and catalogue remain safe in the cloud database. You can sign back in anytime.
                 </p>
               </div>
 

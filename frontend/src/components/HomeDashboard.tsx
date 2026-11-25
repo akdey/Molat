@@ -22,7 +22,6 @@ import {
 import type { Book, StreakSummary, ReadingLog } from '../types/book';
 import { BookCover } from './BookCover';
 import { useLibraryStore } from '../store/useLibraryStore';
-import { fetchReadingLogs } from '../api/client';
 
 interface HomeDashboardProps {
   books: Book[];
@@ -39,7 +38,7 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({
   setSelectedBook,
   setActiveTab,
 }) => {
-  const { activeBookId, setActiveBookId, lendingRecords, setPickNextModalOpen, openFocusRoom } = useLibraryStore();
+  const { activeBookId, setActiveBookId, lendingRecords, setPickNextModalOpen, openFocusRoom, readingLogs } = useLibraryStore();
   const activeBooks = useMemo(() => books.filter((b) => b.reading_status === 'READING'), [books]);
 
   // Selected active book index, sourced from database activeBookId
@@ -74,25 +73,6 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({
 
   const safeActiveIndex = selectedActiveIndex < activeBooks.length ? selectedActiveIndex : 0;
   const primaryBook = activeBooks[safeActiveIndex] || activeBooks[0] || null;
-
-  // Load reading logs to compute distinct volume-level metrics for each active book
-  const [readingLogs, setReadingLogs] = useState<ReadingLog[]>([]);
-
-  useEffect(() => {
-    let isMounted = true;
-    fetchReadingLogs()
-      .then((logs) => {
-        if (isMounted && logs) {
-          setReadingLogs(logs);
-        }
-      })
-      .catch((err) => {
-        console.warn('Could not load reading logs for book stats:', err);
-      });
-    return () => {
-      isMounted = false;
-    };
-  }, [books]);
 
   // Volume-specific statistics computed dynamically per active book
   const activeBookStatsMap = useMemo(() => {
@@ -398,9 +378,9 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({
             </AnimatePresence>
           </motion.div>
 
-          {/* Pagination Dots at Bottom */}
+          {/* Pagination Dots at Bottom with Accessible Mobile Touch Targets (>= 36px hit box) */}
           {activeBooks.length > 1 && (
-            <div className="flex items-center justify-center gap-1.5 pt-0.5">
+            <div className="flex items-center justify-center gap-1 pt-0.5">
               {activeBooks.map((b, idx) => {
                 const isSelected = safeActiveIndex === idx;
                 return (
@@ -412,13 +392,17 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({
                       setSelectedActiveIndex(idx);
                       setActiveBookId(b.book_id);
                     }}
-                    className={`h-1.5 rounded-full transition-all cursor-pointer ${isSelected
-                        ? 'w-5 bg-accent shadow-[0_0_6px_rgba(251,191,36,0.6)]'
-                        : 'w-1.5 bg-ink-muted/30 hover:bg-ink-muted/60'
-                      }`}
+                    className="p-2 min-w-[36px] min-h-[36px] flex items-center justify-center cursor-pointer group"
                     title={`Switch to "${b.title}"`}
                     aria-label={`Go to book ${idx + 1}`}
-                  />
+                  >
+                    <span
+                      className={`h-1.5 rounded-full transition-all block ${isSelected
+                          ? 'w-5 bg-accent shadow-[0_0_6px_rgba(251,191,36,0.6)]'
+                          : 'w-1.5 bg-ink-muted/30 group-hover:bg-ink-muted/60'
+                        }`}
+                    />
+                  </button>
                 );
               })}
             </div>

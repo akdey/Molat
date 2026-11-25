@@ -1,4 +1,5 @@
 # backend/app/features/wishlist/repository.py
+import uuid
 from datetime import datetime
 from typing import List, Optional
 from zoneinfo import ZoneInfo
@@ -15,7 +16,7 @@ IST = ZoneInfo("Asia/Kolkata")
 
 def _to_wishlist(e: WishlistEntity) -> WishlistItem:
     return WishlistItem(
-        wishlist_id=e.wishlist_id,
+        wishlist_id=str(e.wishlist_id),
         user_id=e.user_id,
         title=e.title,
         authors=e.authors,
@@ -39,41 +40,17 @@ class WishlistRepository:
         stmt = (
             select(WishlistEntity)
             .where(WishlistEntity.user_id == user_id)
-            .order_by(WishlistEntity.wishlist_id.asc())
+            .order_by(WishlistEntity.created_at.asc())
         )
         result = await self.session.execute(stmt)
         entities = result.scalars().all()
         return [_to_wishlist(e) for e in entities]
 
     async def _generate_next_wishlist_id(self, user_id: str) -> str:
-        stmt = select(WishlistEntity.wishlist_id).where(WishlistEntity.user_id == user_id)
-        result = await self.session.execute(stmt)
-        wishlist_ids = result.scalars().all()
-        max_num = 0
-        for wid in wishlist_ids:
-            if wid.startswith("WISH-"):
-                try:
-                    num = int(wid.split("-")[1])
-                    if num > max_num:
-                        max_num = num
-                except (IndexError, ValueError):
-                    pass
-        return f"WISH-{max_num + 1:03d}"
+        return str(uuid.uuid4())
 
     async def _generate_next_book_id(self, user_id: str) -> str:
-        stmt = select(BookEntity.book_id).where(BookEntity.user_id == user_id)
-        result = await self.session.execute(stmt)
-        book_ids = result.scalars().all()
-        max_num = 0
-        for bid in book_ids:
-            if bid.startswith("BOOK-"):
-                try:
-                    num = int(bid.split("-")[1])
-                    if num > max_num:
-                        max_num = num
-                except (IndexError, ValueError):
-                    pass
-        return f"BOOK-{max_num + 1:03d}"
+        return str(uuid.uuid4())
 
     async def create(self, data: WishlistItemCreate, user_id: str = "owner") -> WishlistItem:
         new_id = await self._generate_next_wishlist_id(user_id)
@@ -120,18 +97,29 @@ class WishlistRepository:
             title=w_item.title,
             authors=w_item.authors,
             isbn_13=w_item.isbn_13,
-            genre=w_item.genre,
-            reading_status="UNREAD",
-            condition=req.condition.value if hasattr(req.condition, "value") else str(req.condition or "Good"),
+            purchase_price=req.purchase_price,
+            rp=w_item.expected_rp,
+            condition=req.condition.value if hasattr(req.condition, "value") else str(req.condition),
             location=req.location or "Home Shelf",
-            purchase_price=req.purchase_price if req.purchase_price is not None else (float(w_item.target_price) if w_item.target_price else 0.0),
-            rp=float(w_item.expected_rp) if w_item.expected_rp else (req.purchase_price or 0.0),
             purchase_date=purchase_date,
-            notes=f"Acquired from Wishlist ({wishlist_id}). {w_item.notes or ''}".strip(),
+            reading_status=ReadingStatus.UNREAD.value,
             created_at=now_str,
             updated_at=now_str,
         )
         self.session.add(book_entity)
+
+        if w_item.genre:
+            from app.features.genres.entity import GenreEntity, BookGenreEntity
+            for gname in [g.strip() for g in w_item.genre.split(",") if g.strip()]:
+                g_stmt = select(GenreEntity).where(GenreEntity.name == gname)
+                g_res = await self.session.execute(g_stmt)
+                genre_ent = g_res.scalar_one_or_none()
+                if not genre_ent:
+                    genre_ent = GenreEntity(id=str(uuid.uuid4()), name=gname)
+                    self.session.add(genre_ent)
+                    await self.session.flush()
+                self.session.add(BookGenreEntity(book_id=new_book_id, genre_id=genre_ent.id))
+
         await self.session.delete(w_item)
         await self.session.commit()
         await self.session.refresh(book_entity)

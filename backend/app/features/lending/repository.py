@@ -1,4 +1,5 @@
 # backend/app/features/lending/repository.py
+import uuid
 import logging
 from datetime import datetime
 from typing import List, Optional
@@ -32,8 +33,8 @@ def _to_lending(e: LendingEntity, book: Optional[BookEntity] = None) -> LendingR
             logger.warning(f"Could not parse due_date '{e.due_date}': {err}")
 
     return LendingRecord(
-        lending_id=e.lending_id,
-        book_id=e.book_id,
+        lending_id=str(e.lending_id),
+        book_id=str(e.book_id),
         user_id=e.user_id,
         borrower_name=e.borrower_name,
         borrower_contact=e.borrower_contact,
@@ -60,7 +61,7 @@ class LendingRepository:
     async def list(self, status: Optional[str] = None, user_id: str = "owner", force_refresh: bool = False) -> List[LendingRecord]:
         stmt = (
             select(LendingEntity, BookEntity)
-            .outerjoin(BookEntity, (BookEntity.user_id == LendingEntity.user_id) & (BookEntity.book_id == LendingEntity.book_id))
+            .outerjoin(BookEntity, BookEntity.book_id == LendingEntity.book_id)
             .where(LendingEntity.user_id == user_id)
         )
         if status:
@@ -74,7 +75,7 @@ class LendingRepository:
     async def get_active_for_book(self, book_id: str, user_id: str = "owner") -> Optional[LendingRecord]:
         stmt = (
             select(LendingEntity, BookEntity)
-            .outerjoin(BookEntity, (BookEntity.user_id == LendingEntity.user_id) & (BookEntity.book_id == LendingEntity.book_id))
+            .outerjoin(BookEntity, BookEntity.book_id == LendingEntity.book_id)
             .where(
                 LendingEntity.user_id == user_id,
                 LendingEntity.book_id == book_id,
@@ -88,81 +89,60 @@ class LendingRepository:
         return None
 
     async def _generate_next_lending_id(self, user_id: str) -> str:
-        stmt = select(LendingEntity.lending_id).where(LendingEntity.user_id == user_id)
-        result = await self.session.execute(stmt)
-        lending_ids = result.scalars().all()
-        max_num = 0
-        for lid in lending_ids:
-            if lid.startswith("LEND-"):
-                try:
-                    num = int(lid.split("-")[1])
-                    if num > max_num:
-                        max_num = num
-                except (IndexError, ValueError):
-                    pass
-        return f"LEND-{max_num + 1:03d}"
+        return str(uuid.uuid4())
 
-    async def create(self, data: LendingRecordCreate, user_id: str = "owner") -> LendingRecord:
+    async def create(self, payload: LendingRecordCreate, user_id: str = "owner") -> LendingRecord:
         new_id = await self._generate_next_lending_id(user_id)
+        lent_date = payload.lent_date or datetime.now(IST).strftime("%Y-%m-%d")
         now_str = datetime.now(IST).strftime("%Y-%m-%d %H:%M:%S")
-        clean_lent_date = data.lent_date or datetime.now(IST).strftime("%Y-%m-%d")
 
         entity = LendingEntity(
             lending_id=new_id,
             user_id=user_id,
-            book_id=data.book_id,
-            borrower_name=data.borrower_name,
-            borrower_contact=data.borrower_contact,
-            lent_date=clean_lent_date,
-            due_date=data.due_date,
-            returned_date=None,
-            status="ACTIVE",
-            notes=data.notes,
+            book_id=payload.book_id,
+            borrower_name=payload.borrower_name,
+            borrower_contact=payload.borrower_contact,
+            lent_date=lent_date,
+            due_date=payload.due_date,
+            status=LendingStatus.ACTIVE.value,
+            notes=payload.notes,
             created_at=now_str,
         )
         self.session.add(entity)
 
-        # Update book location to Lent
-        book_stmt = select(BookEntity).where(BookEntity.user_id == user_id, BookEntity.book_id == data.book_id)
+        # Update book location to lent
+        book_stmt = select(BookEntity).where(BookEntity.user_id == user_id, BookEntity.book_id == payload.book_id)
         book_res = await self.session.execute(book_stmt)
         book = book_res.scalar_one_or_none()
         if book:
-            book.location = f"Lent to {data.borrower_name}"
+            book.location = f"Lent to {payload.borrower_name}"
             book.updated_at = now_str
 
         await self.session.commit()
         await self.session.refresh(entity)
         return _to_lending(entity, book)
 
-    async def return_book(self, lending_id: str, return_data: LendingRecordReturn, user_id: str = "owner") -> Optional[LendingRecord]:
+    async def return_book(self, lending_id: str, payload: LendingRecordReturn, user_id: str = "owner") -> Optional[LendingRecord]:
         stmt = select(LendingEntity).where(LendingEntity.user_id == user_id, LendingEntity.lending_id == lending_id)
         result = await self.session.execute(stmt)
         entity = result.scalar_one_or_none()
         if not entity:
             return None
 
-        now_date = datetime.now(IST).strftime("%Y-%m-%d")
+        today_str = datetime.now(IST).strftime("%Y-%m-%d")
         now_str = datetime.now(IST).strftime("%Y-%m-%d %H:%M:%S")
+        entity.status = LendingStatus.RETURNED.value
+        entity.returned_date = today_str
+        if payload.notes:
+            entity.notes = (entity.notes + " | " + payload.notes) if entity.notes else payload.notes
 
-        entity.status = "RETURNED"
-        entity.returned_date = now_date
-        if return_data.notes:
-            entity.notes = f"{entity.notes}\n{return_data.notes}".strip() if entity.notes else return_data.notes
-
-        # Restore book location
         book_stmt = select(BookEntity).where(BookEntity.user_id == user_id, BookEntity.book_id == entity.book_id)
         book_res = await self.session.execute(book_stmt)
         book = book_res.scalar_one_or_none()
         if book:
-            book.location = return_data.return_location or "Home Shelf"
+            book.location = payload.return_location or "Home Shelf"
             book.updated_at = now_str
 
         await self.session.commit()
         await self.session.refresh(entity)
         return _to_lending(entity, book)
-
-    async def delete(self, lending_id: str, user_id: str = "owner") -> bool:
-        stmt = delete(LendingEntity).where(LendingEntity.user_id == user_id, LendingEntity.lending_id == lending_id)
-        res = await self.session.execute(stmt)
-        await self.session.commit()
-        return res.rowcount > 0

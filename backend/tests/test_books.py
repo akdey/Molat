@@ -72,7 +72,7 @@ def test_book_crud_lifecycle():
     assert create_res.status_code == 201
     created = create_res.json()
     book_id = created["book_id"]
-    assert book_id.startswith("BOOK-")
+    assert len(book_id) == 36
     assert created["title"] == "Clear and Present Danger"
 
     # 2. Get book by id

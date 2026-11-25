@@ -55,6 +55,10 @@ export async function apiFetch<T>(endpoint: string, options: ApiFetchOptions = {
     if (res.status === 401 && !options.skipAuth) {
       if (typeof localStorage !== 'undefined') {
         localStorage.removeItem('molat_auth_token');
+        localStorage.removeItem('molat_auth_user');
+        localStorage.removeItem('molat_auth_email');
+        localStorage.removeItem('molat_auth_role');
+        localStorage.removeItem('molat_active_focus_session_v1');
       }
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new CustomEvent('molat:unauthorized'));

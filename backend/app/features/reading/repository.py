@@ -1,4 +1,5 @@
 # backend/app/features/reading/repository.py
+import uuid
 from datetime import datetime
 from typing import List, Optional
 from zoneinfo import ZoneInfo
@@ -13,8 +14,8 @@ IST = ZoneInfo("Asia/Kolkata")
 
 def _to_reading_log(e: ReadingLogEntity) -> ReadingLog:
     return ReadingLog(
-        log_id=e.log_id,
-        book_id=e.book_id,
+        log_id=str(e.log_id),
+        book_id=str(e.book_id),
         user_id=e.user_id,
         session_date=e.session_date,
         start_page=e.start_page or 0,
@@ -43,19 +44,7 @@ class ReadingRepository:
         return [_to_reading_log(e) for e in entities]
 
     async def _generate_next_log_id(self, user_id: str) -> str:
-        stmt = select(ReadingLogEntity.log_id).where(ReadingLogEntity.user_id == user_id)
-        result = await self.session.execute(stmt)
-        log_ids = result.scalars().all()
-        max_num = 0
-        for lid in log_ids:
-            if lid.startswith("LOG-"):
-                try:
-                    num = int(lid.split("-")[1])
-                    if num > max_num:
-                        max_num = num
-                except (IndexError, ValueError):
-                    pass
-        return f"LOG-{max_num + 1:03d}"
+        return str(uuid.uuid4())
 
     async def create(self, data: ReadingLogCreate, user_id: str = "owner") -> ReadingLog:
         new_log_id = await self._generate_next_log_id(user_id)
@@ -92,9 +81,3 @@ class ReadingRepository:
         await self.session.commit()
         await self.session.refresh(entity)
         return _to_reading_log(entity)
-
-    async def delete(self, log_id: str, user_id: str = "owner") -> bool:
-        stmt = delete(ReadingLogEntity).where(ReadingLogEntity.user_id == user_id, ReadingLogEntity.log_id == log_id)
-        res = await self.session.execute(stmt)
-        await self.session.commit()
-        return res.rowcount > 0

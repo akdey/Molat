@@ -1,11 +1,9 @@
 # backend/app/features/books/entity.py
-from typing import Optional, List, TYPE_CHECKING
+from typing import Optional, List
 from sqlalchemy import String, Integer, Numeric, Text, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.core.database import Base
-
-if TYPE_CHECKING:
-    from app.features.categories.entity import CategoryEntity
+from app.features.genres.entity import GenreEntity
 
 
 class BookEntity(Base):
@@ -21,7 +19,6 @@ class BookEntity(Base):
     publisher: Mapped[Optional[str]] = mapped_column(String(200), nullable=True)
     publication_year: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     language: Mapped[Optional[str]] = mapped_column(String(100), default="English")
-    genre: Mapped[Optional[str]] = mapped_column(String(200), nullable=True, index=True)
     cover_url: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     reading_status: Mapped[str] = mapped_column(String(50), default="UNREAD", index=True)
     condition: Mapped[str] = mapped_column(String(50), default="Good")
@@ -34,6 +31,9 @@ class BookEntity(Base):
     created_at: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
     updated_at: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
 
-    categories: Mapped[List["CategoryEntity"]] = relationship(
-        "CategoryEntity", secondary="book_categories", back_populates="books", lazy="selectin"
+    # 3NF Relationship: Normalized genres linked via book_genres junction table
+    genres: Mapped[List[GenreEntity]] = relationship(
+        "GenreEntity",
+        secondary="book_genres",
+        lazy="selectin",
     )

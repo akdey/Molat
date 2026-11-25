@@ -22,7 +22,7 @@ async def test_sqlalchemy_book_crud(db_session):
         BookCreate(title="Test Invalidation Book", purchase_price=100.0, rp=200.0),
         user_id="usr_test",
     )
-    assert new_book.book_id.startswith("BOOK-")
+    assert len(new_book.book_id) == 36
 
     # 3. List contains book
     books_2 = await repo.list(user_id="usr_test")

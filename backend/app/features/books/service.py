@@ -46,7 +46,8 @@ def filter_books(
         g = genre.lower().strip()
         filtered = [
             b for b in filtered
-            if b.genre and g in [part.strip().lower() for part in b.genre.split(",") if part.strip()]
+            if (b.genres and g in [part.lower() for part in b.genres])
+            or (b.genre and g in [part.strip().lower() for part in b.genre.split(",") if part.strip()])
         ]
     if location:
         loc = location.lower().strip()

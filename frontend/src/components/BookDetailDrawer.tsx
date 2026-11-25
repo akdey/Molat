@@ -224,8 +224,7 @@ export const BookDetailDrawer: React.FC = () => {
       setTimeout(() => setSaveSuccess(false), 3000);
     } catch (err: any) {
       if (err.message && err.message.includes('401')) {
-        setErrorMsg('Authentication key required to edit books.');
-        setKeyModalOpen(true);
+        setErrorMsg('Please sign in to update books in your catalogue.');
       } else {
         setErrorMsg(err.message || 'Failed to update book.');
       }

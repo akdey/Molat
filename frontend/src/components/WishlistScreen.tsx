@@ -54,8 +54,7 @@ export const WishlistScreen: React.FC = () => {
       setAcquireModalItem(null);
     } catch (err: any) {
       if (err.message && err.message.includes('401')) {
-        setErrorMsg('Authentication key required to acquire wishlist items.');
-        setKeyModalOpen(true);
+        setErrorMsg('Please sign in to acquire wishlist items.');
       } else {
         setErrorMsg(err.message || 'Failed to acquire item.');
       }
@@ -89,8 +88,7 @@ export const WishlistScreen: React.FC = () => {
       await loadWishlist();
     } catch (err: any) {
       if (err.message && err.message.includes('401')) {
-        setErrorMsg('Authentication key required to add wishlist items.');
-        setKeyModalOpen(true);
+        setErrorMsg('Please sign in to add items to your wishlist.');
       } else {
         setErrorMsg(err.message || 'Failed to add item to wishlist.');
       }

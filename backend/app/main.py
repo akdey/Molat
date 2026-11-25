@@ -14,6 +14,7 @@ from app.features.reading.router import router as reading_router
 from app.features.wishlist.router import router as wishlist_router
 from app.features.lending.router import router as lending_router
 from app.features.settings.router import router as settings_router
+from app.features.genres.router import router as genres_router
 
 logging.basicConfig(
     level=logging.INFO if not settings.DEBUG else logging.DEBUG,
@@ -58,6 +59,7 @@ app.include_router(reading_router, prefix="/api/v1")
 app.include_router(wishlist_router, prefix="/api/v1")
 app.include_router(lending_router, prefix="/api/v1")
 app.include_router(settings_router, prefix="/api/v1")
+app.include_router(genres_router, prefix="/api/v1")
 
 
 @app.get("/")

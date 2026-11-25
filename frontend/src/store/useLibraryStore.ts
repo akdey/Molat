@@ -9,12 +9,14 @@ import type {
   LendingRecord,
   LendingRecordCreate,
   LendingRecordReturn,
+  ReadingLog,
 } from '../types/book';
 import {
   fetchBooks,
   fetchStreakSummary,
   fetchWishlist,
   fetchLendingRecords,
+  fetchReadingLogs,
   lendBook as apiLendBook,
   returnBook as apiReturnBook,
   logReadingSession,
@@ -23,6 +25,7 @@ import {
   enrichCovers,
   loginUser,
   signupUser,
+  fetchCurrentUser,
   fetchSettings,
   updateSettings,
 } from '../api/client';
@@ -81,6 +84,7 @@ interface LibraryState {
   lendingModalOpen: boolean;
   lendingModalBook: Book | null;
   lendingRecords: LendingRecord[];
+  readingLogs: ReadingLog[];
   pickNextModalOpen: boolean;
   voiceAssistantOpen: boolean;
   focusRoomOpen: boolean;
@@ -90,6 +94,8 @@ interface LibraryState {
   // Auth & Settings
   authToken: string | null;
   authUser: string | null;
+  authEmail: string | null;
+  authRole: string | null;
   theme: 'light' | 'dark';
   dailyGoal: number;
   activeBookId: string | null;
@@ -123,6 +129,7 @@ interface LibraryState {
   signupReader: (email: string, username: string, password: string) => Promise<void>;
   logout: () => void;
   logoutOwner: () => void;
+  syncUserProfile: () => Promise<void>;
   toggleTheme: () => void;
   addToast: (
     message: string,
@@ -138,6 +145,7 @@ interface LibraryState {
   loadBooks: (forceRefresh?: boolean) => Promise<void>;
   loadStreak: () => Promise<void>;
   loadWishlist: () => Promise<void>;
+  loadReadingLogs: () => Promise<void>;
   loadLendingRecords: (forceRefresh?: boolean) => Promise<void>;
   lendBookRecord: (payload: LendingRecordCreate) => Promise<void>;
   returnBookRecord: (lendingId: string, returnLocation?: string) => Promise<void>;
@@ -175,6 +183,7 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
   lendingModalOpen: false,
   lendingModalBook: null,
   lendingRecords: [],
+  readingLogs: [],
   pickNextModalOpen: false,
   voiceAssistantOpen: false,
   focusRoomOpen: false,
@@ -182,7 +191,9 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
   hasActiveFocusTimer: typeof localStorage !== 'undefined' && !!localStorage.getItem('molat_active_focus_session_v1'),
 
   authToken: typeof localStorage !== 'undefined' ? localStorage.getItem('molat_auth_token') : null,
-  authUser: null,
+  authUser: typeof localStorage !== 'undefined' ? localStorage.getItem('molat_auth_user') : null,
+  authEmail: typeof localStorage !== 'undefined' ? localStorage.getItem('molat_auth_email') : null,
+  authRole: typeof localStorage !== 'undefined' ? localStorage.getItem('molat_auth_role') : null,
   theme: 'light',
   dailyGoal: 15,
   activeBookId: null,
@@ -287,15 +298,25 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
   loginOwner: async (username, password) => {
     const user = await loginUser(username, password);
     const uName = user.username || user.email || 'reader';
+    const uEmail = user.email || '';
+    const uRole = user.role || 'reader';
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem('molat_auth_user', uName);
+      if (uEmail) localStorage.setItem('molat_auth_email', uEmail);
+      if (uRole) localStorage.setItem('molat_auth_role', uRole);
+    }
     const token = typeof localStorage !== 'undefined' ? localStorage.getItem('molat_auth_token') : null;
     set({
       authToken: token,
       authUser: uName,
+      authEmail: uEmail,
+      authRole: uRole,
       books: [],
       portfolio: null,
       streakSummary: null,
       wishlist: [],
       lendingRecords: [],
+  readingLogs: [],
     });
     get().addToast(`Welcome back, @${uName}!`, 'success');
     await get().loadAllData(true);
@@ -304,15 +325,25 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
   signupReader: async (email, username, password) => {
     const user = await signupUser(email, username, password);
     const uName = user.username || username;
+    const uEmail = user.email || email;
+    const uRole = user.role || 'reader';
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem('molat_auth_user', uName);
+      localStorage.setItem('molat_auth_email', uEmail);
+      localStorage.setItem('molat_auth_role', uRole);
+    }
     const token = typeof localStorage !== 'undefined' ? localStorage.getItem('molat_auth_token') : null;
     set({
       authToken: token,
       authUser: uName,
+      authEmail: uEmail,
+      authRole: uRole,
       books: [],
       portfolio: null,
       streakSummary: null,
       wishlist: [],
       lendingRecords: [],
+  readingLogs: [],
     });
     get().addToast(`Welcome to Molat, ex/${uName}! Your library account is ready.`, 'success');
     await get().loadAllData(true);
@@ -321,21 +352,50 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
   logout: () => {
     if (typeof localStorage !== 'undefined') {
       localStorage.removeItem('molat_auth_token');
+      localStorage.removeItem('molat_auth_user');
+      localStorage.removeItem('molat_auth_email');
+      localStorage.removeItem('molat_auth_role');
+      localStorage.removeItem('molat_active_focus_session_v1');
     }
     set({
       authToken: null,
       authUser: null,
+      authEmail: null,
+      authRole: null,
+      hasActiveFocusTimer: false,
+      focusRoomOpen: false,
+      focusRoomBook: null,
       books: [],
       portfolio: null,
       streakSummary: null,
       wishlist: [],
       lendingRecords: [],
+      readingLogs: [],
     });
     get().addToast('Signed out of reader session.', 'info');
   },
 
   logoutOwner: () => {
     get().logout();
+  },
+
+  syncUserProfile: async () => {
+    const token = typeof localStorage !== 'undefined' ? localStorage.getItem('molat_auth_token') : null;
+    if (!token) return;
+    try {
+      const user = await fetchCurrentUser(token);
+      const uName = user.username || user.email || 'reader';
+      const uEmail = user.email || '';
+      const uRole = user.role || 'reader';
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem('molat_auth_user', uName);
+        if (uEmail) localStorage.setItem('molat_auth_email', uEmail);
+        if (uRole) localStorage.setItem('molat_auth_role', uRole);
+      }
+      set({ authUser: uName, authEmail: uEmail, authRole: uRole });
+    } catch (err) {
+      // Retain existing session cached info
+    }
   },
 
   toggleTheme: () => {
@@ -358,17 +418,32 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
       set({ loading: true, error: null });
     }
     try {
-      const [bookRes, streakRes, wishRes, lendRes, settingsRes] = await Promise.allSettled([
+      const [bookRes, streakRes, wishRes, lendRes, settingsRes, userRes, logsRes] = await Promise.allSettled([
         fetchBooks(forceRefresh),
         fetchStreakSummary(get().dailyGoal),
         fetchWishlist(),
         fetchLendingRecords(undefined, forceRefresh),
         fetchSettings(),
+        fetchCurrentUser(),
+        fetchReadingLogs(),
       ]);
 
       let loadedGoal = get().dailyGoal;
       let loadedActiveBookId = get().activeBookId;
       let loadedTheme = get().theme;
+
+      if (userRes.status === 'fulfilled' && userRes.value) {
+        const u = userRes.value;
+        const uName = u.username || u.email || 'reader';
+        const uEmail = u.email || '';
+        const uRole = u.role || 'reader';
+        if (typeof localStorage !== 'undefined') {
+          localStorage.setItem('molat_auth_user', uName);
+          if (uEmail) localStorage.setItem('molat_auth_email', uEmail);
+          if (uRole) localStorage.setItem('molat_auth_role', uRole);
+        }
+        set({ authUser: uName, authEmail: uEmail, authRole: uRole });
+      }
 
       if (settingsRes.status === 'fulfilled' && settingsRes.value) {
         const s = settingsRes.value;
@@ -394,6 +469,7 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
         streakSummary: streakRes.status === 'fulfilled' ? streakRes.value : null,
         wishlist: wishRes.status === 'fulfilled' ? wishRes.value : [],
         lendingRecords: lendRes.status === 'fulfilled' ? lendRes.value : [],
+        readingLogs: logsRes.status === 'fulfilled' ? logsRes.value : [],
         dailyGoal: loadedGoal,
         activeBookId: loadedActiveBookId,
         theme: loadedTheme,
@@ -447,6 +523,15 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
     }
   },
 
+  loadReadingLogs: async () => {
+    try {
+      const logs = await fetchReadingLogs();
+      set({ readingLogs: logs || [] });
+    } catch (err: any) {
+      console.warn('Failed to fetch reading logs:', err);
+    }
+  },
+
   lendBookRecord: async (payload) => {
     const token = get().authToken;
     const record = await apiLendBook(payload, token || undefined);
@@ -465,7 +550,7 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
     const token = get().authToken;
     await logReadingSession(payload, token || undefined);
     get().addToast(`Recorded reading session (+${payload.pages_read} pages)!`, 'success');
-    await Promise.all([get().loadBooks(true), get().loadStreak()]);
+    await Promise.all([get().loadBooks(true), get().loadStreak(), get().loadReadingLogs()]);
   },
 
   acquireItem: async (wishlistId, payload) => {

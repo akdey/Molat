@@ -37,6 +37,7 @@ class BookBase(BaseModel):
     publication_year: Optional[int] = Field(None, ge=1000, le=2100)
     language: Optional[str] = "English"
     genre: Optional[str] = None
+    genres: list[str] = Field(default_factory=list)
     cover_url: Optional[str] = None
     reading_status: ReadingStatus = ReadingStatus.UNREAD
     condition: BookCondition = BookCondition.GOOD
@@ -92,6 +93,7 @@ class BookUpdate(BaseModel):
     publication_year: Optional[int] = Field(None, ge=1000, le=2100)
     language: Optional[str] = None
     genre: Optional[str] = None
+    genres: Optional[list[str]] = None
     cover_url: Optional[str] = None
     reading_status: Optional[ReadingStatus] = None
     condition: Optional[BookCondition] = None
@@ -106,6 +108,8 @@ class BookUpdate(BaseModel):
 class Book(BookBase):
     book_id: str
     user_id: str = "owner"
+    genres: list[str] = Field(default_factory=list)
+    categories: list[str] = Field(default_factory=list)
     created_at: Optional[str] = None
     updated_at: Optional[str] = None
 

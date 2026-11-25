@@ -43,7 +43,7 @@ def test_add_to_wishlist_auth_required():
     res_auth = client.post("/api/v1/wishlist", json=payload, headers=AUTH_HEADERS)
     assert res_auth.status_code == 201
     created = res_auth.json()
-    assert created["wishlist_id"].startswith("WISH-")
+    assert len(created["wishlist_id"]) == 36
     assert created["title"] == "Klara and the Sun"
     assert created["priority"] == "High"
 
@@ -79,7 +79,7 @@ async def test_acquire_wishlist_item_lifecycle():
     book_data = res.json()
 
     # 3. Verify newly created book record in Books
-    assert book_data["book_id"].startswith("BOOK-")
+    assert len(book_data["book_id"]) == 36
     assert book_data["title"] == "Never Let Me Go"
     assert book_data["purchase_price"] == 200.0
     assert book_data["rp"] == 450.0
