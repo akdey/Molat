@@ -6,14 +6,18 @@ from app.features.reading.models import ReadingLog, StreakSummaryResponse
 IST = ZoneInfo("Asia/Kolkata")
 
 # Progressive milestone ladder to earn each shield:
-# - Tier 1 (0 -> 1 shield): 3 active reading days (Fast recovery safety net)
+# - Habit Foundation (Streak < 7 or fresh/reset): 7 active reading days to earn 1st shield
+# - Active Streak Fast Recovery (Streak active & bank emptied): 3 active reading days to restore 1st shield
 # - Tier 2 (1 -> 2 shields): 5 active reading days (Weekend protection)
 # - Tier 3 (2 -> 3 shields): 7 active reading days (Vacation vault)
-TIER_REQUIREMENTS: Dict[int, int] = {
-    0: 3,
-    1: 5,
-    2: 7,
-}
+def get_needed_days(freeze_bank: int, in_recovery: bool) -> int:
+    if freeze_bank == 0:
+        return 3 if in_recovery else 7
+    elif freeze_bank == 1:
+        return 5
+    elif freeze_bank == 2:
+        return 7
+    return 7
 
 
 def get_today_ist() -> date:
@@ -73,8 +77,9 @@ def calculate_streak_summary(
     all_dates = sorted(daily_pages.keys())
     running_streak = 0
     longest_streak = 0
-    freeze_bank = 1  # Every reader starts with 1 initial welcome shield
+    freeze_bank = 0  # Starts with 0 shields (Earned model: 7-day habit foundation)
     progress_days = 0
+    in_recovery = False
     frozen_dates: Set[date] = set()
 
     if all_dates:
@@ -90,10 +95,11 @@ def calculate_streak_summary(
                     # Accumulate progress towards next shield if bank < 3
                     if freeze_bank < 3:
                         progress_days += 1
-                        needed = TIER_REQUIREMENTS.get(freeze_bank, 7)
+                        needed = get_needed_days(freeze_bank, in_recovery)
                         if progress_days >= needed:
                             freeze_bank += 1
                             progress_days = 0
+                            in_recovery = False
                 else:
                     # Missed past day
                     if running_streak > 0:
@@ -103,10 +109,13 @@ def calculate_streak_summary(
                             frozen_dates.add(scan_d)
                             # Streak is preserved! Progress towards next tier resets
                             progress_days = 0
+                            if freeze_bank == 0:
+                                in_recovery = True
                         else:
                             # Bank is empty, streak breaks
                             running_streak = 0
                             progress_days = 0
+                            in_recovery = False
             else:
                 # scan_d == today (In progress!)
                 if pgs > 0:
@@ -114,10 +123,11 @@ def calculate_streak_summary(
                     longest_streak = max(longest_streak, running_streak)
                     if freeze_bank < 3:
                         progress_days += 1
-                        needed = TIER_REQUIREMENTS.get(freeze_bank, 7)
+                        needed = get_needed_days(freeze_bank, in_recovery)
                         if progress_days >= needed:
                             freeze_bank += 1
                             progress_days = 0
+                            in_recovery = False
                 else:
                     # Today has 0 pages so far. Today is still active and in-progress.
                     # Does NOT consume a freeze and does NOT break streak.
@@ -132,7 +142,7 @@ def calculate_streak_summary(
     yesterday = today - timedelta(days=1)
     grace_freeze_used = (yesterday in frozen_dates)
 
-    next_tier_required = TIER_REQUIREMENTS.get(freeze_bank, 7) if freeze_bank < 3 else 7
+    next_tier_required = get_needed_days(freeze_bank, in_recovery) if freeze_bank < 3 else 7
     sorted_frozen_dates = sorted([d.strftime("%Y-%m-%d") for d in frozen_dates])
 
     return StreakSummaryResponse(
@@ -145,6 +155,7 @@ def calculate_streak_summary(
         freeze_max_bank=3,
         freeze_progress_days=progress_days,
         freeze_next_tier_required=next_tier_required,
+        freeze_recovery_active=in_recovery,
         frozen_dates=sorted_frozen_dates,
         grace_freeze_used=grace_freeze_used,
         grace_freeze_available=(freeze_bank > 0),

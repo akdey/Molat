@@ -30,10 +30,11 @@ export const StreakBanner: React.FC = () => {
     today_pages,
     daily_goal_pages,
     grace_freeze_used,
-    freeze_bank_count = 1,
+    freeze_bank_count = 0,
     freeze_max_bank = 3,
     freeze_progress_days = 0,
-    freeze_next_tier_required = 5,
+    freeze_next_tier_required = 7,
+    freeze_recovery_active = false,
     frozen_dates = [],
     reading_velocity_pages_per_day,
   } = streakSummary;
@@ -86,7 +87,13 @@ export const StreakBanner: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setShowFreezeModal(true)}
-                className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-cyan-50 dark:bg-cyan-950/40 border border-cyan-200 dark:border-cyan-800/40 text-cyan-800 dark:text-cyan-300 hover:border-cyan-400 dark:hover:border-cyan-600 transition-all cursor-pointer text-2xs font-medium"
+                className={`flex items-center gap-1.5 px-2.5 py-0.5 rounded-full transition-all cursor-pointer text-2xs font-medium ${
+                  freeze_bank_count > 0
+                    ? 'bg-cyan-50 dark:bg-cyan-950/40 border border-cyan-200 dark:border-cyan-800/40 text-cyan-800 dark:text-cyan-300 hover:border-cyan-400 dark:hover:border-cyan-600'
+                    : freeze_recovery_active
+                    ? 'bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-800/40 text-amber-800 dark:text-amber-300 hover:border-amber-400'
+                    : 'bg-stone-100 dark:bg-stone-800/60 border border-stone-200 dark:border-stone-700 text-stone-700 dark:text-stone-300 hover:border-stone-400'
+                }`}
                 title="Click to view Freeze Bank details & progress"
               >
                 <div className="flex items-center gap-0.5">
@@ -99,14 +106,20 @@ export const StreakBanner: React.FC = () => {
                         className={`inline-block w-2.5 h-2.5 rounded-full transition-all ${
                           isFilled
                             ? 'bg-cyan-500 shadow-[0_0_5px_rgba(6,182,212,0.7)]'
-                            : 'border border-cyan-400/40 bg-transparent'
+                            : freeze_recovery_active && slot === 1
+                            ? 'border border-amber-500/80 bg-amber-400/20 animate-pulse'
+                            : 'border border-stone-400/40 bg-transparent'
                         }`}
                       />
                     );
                   })}
                 </div>
                 <span>
-                  {freeze_bank_count}/{freeze_max_bank} Shield{freeze_bank_count === 1 ? '' : 's'}
+                  {freeze_bank_count > 0
+                    ? `${freeze_bank_count}/${freeze_max_bank} Shield${freeze_bank_count === 1 ? '' : 's'}`
+                    : freeze_recovery_active
+                    ? `0/3 • Fast Recovery (${freeze_progress_days}/3) ⚡`
+                    : `0/3 • Foundation (${freeze_progress_days}/7)`}
                 </span>
                 <Info size={10} className="opacity-60" />
               </button>
@@ -119,9 +132,21 @@ export const StreakBanner: React.FC = () => {
               {freeze_bank_count < freeze_max_bank && (
                 <>
                   <span>•</span>
-                  <span className="text-cyan-700 dark:text-cyan-400">
-                    Next Shield: <strong>{freeze_progress_days}/{freeze_next_tier_required}</strong> days read
-                  </span>
+                  {freeze_bank_count === 0 ? (
+                    freeze_recovery_active ? (
+                      <span className="text-amber-700 dark:text-amber-400 font-medium">
+                        ⚡ Fast Recovery: <strong>{freeze_progress_days}/3</strong> days to restore Shield 1
+                      </span>
+                    ) : (
+                      <span className="text-ink-secondary dark:text-ink-dark-secondary">
+                        🛡️ 7-Day Foundation: <strong>{freeze_progress_days}/7</strong> days to unlock 1st Shield
+                      </span>
+                    )
+                  ) : (
+                    <span className="text-cyan-700 dark:text-cyan-400">
+                      Next Shield: <strong>{freeze_progress_days}/{freeze_next_tier_required}</strong> days read
+                    </span>
+                  )}
                 </>
               )}
             </p>
@@ -272,7 +297,12 @@ export const StreakBanner: React.FC = () => {
             {/* 3 Slots Visual */}
             <div className="grid grid-cols-3 gap-2.5 pt-1">
               {[
-                { slot: 1, name: 'Shield 1', desc: 'Fast Recovery', req: '3 Active Days' },
+                {
+                  slot: 1,
+                  name: 'Shield 1',
+                  desc: freeze_bank_count >= 1 ? 'Armed' : freeze_recovery_active ? 'Fast Recovery' : '7-Day Habit',
+                  req: freeze_bank_count >= 1 ? 'Armed' : freeze_recovery_active ? '3 Active Days' : '7 Active Days',
+                },
                 { slot: 2, name: 'Shield 2', desc: 'Weekend Safe', req: '+5 More Days' },
                 { slot: 3, name: 'Shield 3', desc: 'Vacation Vault', req: '+7 More Days' },
               ].map((tier) => {
@@ -285,11 +315,13 @@ export const StreakBanner: React.FC = () => {
                       isHeld
                         ? 'border-cyan-300 dark:border-cyan-700 bg-cyan-50/60 dark:bg-cyan-950/30'
                         : isNext
-                        ? 'border-accent/40 bg-accent/5'
+                        ? freeze_recovery_active && tier.slot === 1
+                          ? 'border-amber-400 dark:border-amber-700 bg-amber-50/40 dark:bg-amber-950/30'
+                          : 'border-accent/40 bg-accent/5'
                         : 'border-rule dark:border-rule-dark opacity-60'
                     }`}
                   >
-                    <div className="text-xl mb-1">{isHeld ? '🛡️' : isNext ? '⏳' : '⚪'}</div>
+                    <div className="text-xl mb-1">{isHeld ? '🛡️' : isNext ? (freeze_recovery_active ? '⚡' : '⏳') : '⚪'}</div>
                     <p className="text-xs font-medium text-ink dark:text-ink-dark">{tier.name}</p>
                     <p className="text-3xs text-ink-muted">{tier.desc}</p>
                     <span
@@ -297,11 +329,13 @@ export const StreakBanner: React.FC = () => {
                         isHeld
                           ? 'bg-cyan-200 dark:bg-cyan-900 text-cyan-900 dark:text-cyan-200'
                           : isNext
-                          ? 'bg-accent/20 text-accent dark:text-accent-dark'
+                          ? freeze_recovery_active && tier.slot === 1
+                            ? 'bg-amber-100 dark:bg-amber-900/60 text-amber-900 dark:text-amber-200'
+                            : 'bg-accent/20 text-accent dark:text-accent-dark'
                           : 'bg-stone-100 dark:bg-stone-800 text-stone-500'
                       }`}
                     >
-                      {isHeld ? 'Armed' : tier.req}
+                      {tier.req}
                     </span>
                   </div>
                 );
@@ -313,7 +347,15 @@ export const StreakBanner: React.FC = () => {
               <div className="p-3 rounded-xl bg-stone-50 dark:bg-stone-900/60 border border-rule dark:border-rule-dark space-y-1.5">
                 <div className="flex items-center justify-between text-2xs">
                   <span className="text-ink dark:text-ink-dark font-medium">
-                    Progress toward Shield #{freeze_bank_count + 1}
+                    {freeze_bank_count === 0 ? (
+                      freeze_recovery_active ? (
+                        <span className="text-amber-700 dark:text-amber-400">⚡ Fast Recovery toward Shield #1</span>
+                      ) : (
+                        <span>🛡️ 7-Day Habit Foundation toward Shield #1</span>
+                      )
+                    ) : (
+                      <span>Progress toward Shield #{freeze_bank_count + 1}</span>
+                    )}
                   </span>
                   <span className="font-mono text-ink-muted">
                     {freeze_progress_days} / {freeze_next_tier_required} days
@@ -321,14 +363,24 @@ export const StreakBanner: React.FC = () => {
                 </div>
                 <div className="w-full h-1.5 rounded-full bg-rule/50 dark:bg-rule-dark overflow-hidden">
                   <div
-                    className="h-full bg-cyan-500 rounded-full transition-all duration-500"
+                    className={`h-full rounded-full transition-all duration-500 ${
+                      freeze_recovery_active && freeze_bank_count === 0 ? 'bg-amber-500' : 'bg-cyan-500'
+                    }`}
                     style={{
                       width: `${Math.min(100, Math.round((freeze_progress_days / freeze_next_tier_required) * 100))}%`,
                     }}
                   />
                 </div>
                 <p className="text-3xs text-ink-muted">
-                  Read {freeze_next_tier_required - freeze_progress_days} more day(s) to unlock this shield.
+                  {freeze_bank_count === 0 ? (
+                    freeze_recovery_active ? (
+                      `Danger Zone: read ${freeze_next_tier_required - freeze_progress_days} more day(s) to restore Shield 1.`
+                    ) : (
+                      `Read ${freeze_next_tier_required - freeze_progress_days} more consecutive day(s) to build your habit and unlock Shield 1.`
+                    )
+                  ) : (
+                    `Read ${freeze_next_tier_required - freeze_progress_days} more day(s) to unlock this shield.`
+                  )}
                 </p>
               </div>
             ) : (

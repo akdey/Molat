@@ -72,6 +72,7 @@ export interface StreakSummary {
   freeze_max_bank?: number;
   freeze_progress_days?: number;
   freeze_next_tier_required?: number;
+  freeze_recovery_active?: boolean;
   grace_freeze_used: boolean;
   grace_freeze_available?: boolean;
   freeze_cooldown_days_left?: number;

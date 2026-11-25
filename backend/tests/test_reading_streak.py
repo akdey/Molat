@@ -30,7 +30,7 @@ def make_dummy_log(log_id: str, session_date: str, pages_read: int) -> ReadingLo
 
 def test_streak_walk_continuous():
     ref_date = date(2026, 10, 30)
-    # 5 consecutive days of 25 pages each
+    # 5 consecutive days of 25 pages each (< 7 days habit foundation)
     logs = [
         make_dummy_log(f"LOG-{i}", (ref_date - timedelta(days=i)).strftime("%Y-%m-%d"), 25)
         for i in range(5)
@@ -41,6 +41,46 @@ def test_streak_walk_continuous():
     assert summary.streak_at_risk is False
     assert summary.today_pages == 25
     assert summary.grace_freeze_used is False
+    # Under 7 days: 0 shields earned yet, 5/7 days progress
+    assert summary.freeze_bank_count == 0
+    assert summary.freeze_progress_days == 5
+    assert summary.freeze_next_tier_required == 7
+    assert summary.freeze_recovery_active is False
+
+
+def test_no_freeze_earned_at_3_days_break_on_miss():
+    ref_date = date(2026, 10, 30)
+    # User reads 3 days (days 2, 3, 4), misses day 1, today active
+    logs = [
+        make_dummy_log("LOG-TODAY", ref_date.strftime("%Y-%m-%d"), 20),
+        make_dummy_log("LOG-2", (ref_date - timedelta(days=2)).strftime("%Y-%m-%d"), 20),
+        make_dummy_log("LOG-3", (ref_date - timedelta(days=3)).strftime("%Y-%m-%d"), 20),
+        make_dummy_log("LOG-4", (ref_date - timedelta(days=4)).strftime("%Y-%m-%d"), 20),
+    ]
+    summary = calculate_streak_summary(logs, daily_goal_pages=20, reference_date=ref_date)
+    # Reading 3 days did NOT earn a freeze (requires 7 days foundation)
+    # Missed day 1 broke the streak! Current streak is just today (1 day)
+    assert summary.current_streak_days == 1
+    assert summary.longest_streak_days == 3
+    assert summary.freeze_bank_count == 0
+    assert summary.grace_freeze_used is False
+
+
+def test_habit_foundation_unlock_at_7_days():
+    ref_date = date(2026, 10, 30)
+    # 7 consecutive days of reading
+    logs = [
+        make_dummy_log(f"LOG-{i}", (ref_date - timedelta(days=i)).strftime("%Y-%m-%d"), 20)
+        for i in range(7)
+    ]
+    summary = calculate_streak_summary(logs, daily_goal_pages=20, reference_date=ref_date)
+    assert summary.current_streak_days == 7
+    # Reaching 7 days unlocks Shield 1!
+    assert summary.freeze_bank_count == 1
+    assert summary.freeze_progress_days == 0
+    # Next shield (Shield 2) requires 5 more days
+    assert summary.freeze_next_tier_required == 5
+    assert summary.freeze_recovery_active is False
 
 
 def test_streak_at_risk_when_today_is_zero():
@@ -64,6 +104,7 @@ def test_grace_freeze_bridging_qualified():
     # Today active: 20 pages
     # Yesterday missed: 0 pages
     # Prior 7 days before yesterday (days 2 to 8): 20 pages each day
+    # User earned Shield 1 during days 2..8, which cushions yesterday!
     logs = [make_dummy_log("LOG-TODAY", ref_date.strftime("%Y-%m-%d"), 20)]
     for d in range(2, 9):
         logs.append(make_dummy_log(f"LOG-{d}", (ref_date - timedelta(days=d)).strftime("%Y-%m-%d"), 20))
@@ -75,18 +116,42 @@ def test_grace_freeze_bridging_qualified():
     assert summary.grace_freeze_used is True
     assert summary.streak_at_risk is False
     assert (ref_date - timedelta(days=1)).strftime("%Y-%m-%d") in summary.frozen_dates
+    # Bank dropped to 0, now in Fast Recovery mode!
+    assert summary.freeze_bank_count == 0
+    assert summary.freeze_recovery_active is True
+    assert summary.freeze_next_tier_required == 3
+
+
+def test_fast_recovery_restores_shield_in_3_days():
+    ref_date = date(2026, 10, 30)
+    # User reads 7 days (days 5..11) -> unlocks Shield 1
+    # Day 4: missed -> burns Shield 1 (bank = 0, in_recovery = True)
+    # Days 1, 2, 3: reads 3 consecutive days! (Fast Recovery completed)
+    # Day 0 (today): active
+    logs = [make_dummy_log("LOG-TODAY", ref_date.strftime("%Y-%m-%d"), 20)]
+    for d in range(1, 4):
+        logs.append(make_dummy_log(f"LOG-REC-{d}", (ref_date - timedelta(days=d)).strftime("%Y-%m-%d"), 20))
+    for d in range(5, 12):
+        logs.append(make_dummy_log(f"LOG-INIT-{d}", (ref_date - timedelta(days=d)).strftime("%Y-%m-%d"), 20))
+
+    summary = calculate_streak_summary(logs, daily_goal_pages=20, reference_date=ref_date)
+    # Streak is intact: 7 past + 3 recovery + 1 today = 11 days
+    assert summary.current_streak_days == 11
+    # Shield was restored after 3 days of fast recovery!
+    assert summary.freeze_bank_count >= 1
+    assert summary.freeze_recovery_active is False
 
 
 def test_progressive_freeze_bank_weekend_cushion():
     ref_date = date(2026, 10, 30)
-    # 1. User reads 12 days (days 3..14):
-    # - Starts with 1 initial welcome shield.
-    # - Reads 5 days -> unlocks Shield 2.
-    # - Reads 7 more days -> unlocks Shield 3 (bank is max 3/3).
-    # 2. Misses 2 consecutive days (days 1 and 2).
-    # 3. Today (Day 0) reads 20 pages.
+    # User reads 19 days (days 3..21):
+    # - 7 days (days 15..21) -> unlocks Shield 1
+    # - 5 days (days 10..14) -> unlocks Shield 2
+    # - 7 days (days 3..9) -> unlocks Shield 3 (bank = 3/3)
+    # Misses 2 consecutive days (days 1 and 2).
+    # Today (Day 0) reads 20 pages.
     logs = [make_dummy_log("LOG-TODAY", ref_date.strftime("%Y-%m-%d"), 20)]
-    for d in range(3, 15):
+    for d in range(3, 22):
         logs.append(make_dummy_log(f"LOG-{d}", (ref_date - timedelta(days=d)).strftime("%Y-%m-%d"), 20))
 
     summary = calculate_streak_summary(logs, daily_goal_pages=20, reference_date=ref_date)
@@ -95,8 +160,8 @@ def test_progressive_freeze_bank_weekend_cushion():
     assert (ref_date - timedelta(days=2)).strftime("%Y-%m-%d") in summary.frozen_dates
     # Bank dropped from 3 to 1
     assert summary.freeze_bank_count == 1
-    # Streak is intact: 12 past days + 1 today = 13 days!
-    assert summary.current_streak_days == 13
+    # Streak is intact: 19 past days + 1 today = 20 days!
+    assert summary.current_streak_days == 20
     assert summary.grace_freeze_used is True
 
 
@@ -105,13 +170,13 @@ def test_grace_freeze_adaptive_goal_and_frozen_dates():
     # Daily goal = 10 pages -> adaptive freeze threshold = max(20, 10 * 5) = 50 pages in prior 7 days
     # Day 0 (today): 10 pages
     # Day 1: missed (0) -> requires freeze
-    # Days 2..6: 12 pages each (60 pages total > 50 pages required for goal 10)
+    # Days 2..8: 7 consecutive days of 12 pages (earns Shield 1!)
     logs = [make_dummy_log("LOG-0", ref_date.strftime("%Y-%m-%d"), 10)]
-    for d in range(2, 7):
+    for d in range(2, 9):
         logs.append(make_dummy_log(f"LOG-{d}", (ref_date - timedelta(days=d)).strftime("%Y-%m-%d"), 12))
 
     summary = calculate_streak_summary(logs, daily_goal_pages=10, reference_date=ref_date)
-    assert summary.current_streak_days == 6
+    assert summary.current_streak_days == 8
     assert summary.grace_freeze_used is True
     missed_day_str = (ref_date - timedelta(days=1)).strftime("%Y-%m-%d")
     assert missed_day_str in summary.frozen_dates

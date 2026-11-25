@@ -50,7 +50,8 @@ class StreakSummaryResponse(BaseModel):
     freeze_bank_count: int = 1
     freeze_max_bank: int = 3
     freeze_progress_days: int = 0
-    freeze_next_tier_required: int = 5
+    freeze_next_tier_required: int = 7
+    freeze_recovery_active: bool = False
     frozen_dates: List[str] = Field(default_factory=list)
     grace_freeze_used: bool = False
     grace_freeze_available: bool = False
