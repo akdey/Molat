@@ -28,6 +28,7 @@ import {
   Dices,
   Mic,
   Timer,
+  User,
 } from 'lucide-react';
 
 import { StreakBanner } from './components/StreakBanner';
@@ -51,6 +52,7 @@ import { PickNextReadModal } from './components/PickNextReadModal';
 import { FocusReadingRoomModal } from './components/FocusReadingRoomModal';
 import { HoldToSpeakAssistant } from './components/HoldToSpeakAssistant';
 import { AuthScreen } from './components/AuthScreen';
+import { ProfileScreen } from './components/ProfileScreen';
 
 export default function App() {
   const {
@@ -421,18 +423,21 @@ export default function App() {
               {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
             </button>
 
-            {/* Desktop Only: Owner Authentication Pill */}
+            {/* Desktop: Editorial Reader Profile Avatar Chip */}
             <button
-              onClick={() => setKeyModalOpen(true)}
-              className={`hidden md:flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border text-xs font-medium transition-colors shrink-0 ${authToken
-                  ? 'border-emerald-300 dark:border-emerald-800/50 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-800 dark:text-emerald-300'
+              onClick={() => switchTab(activeTab === 'profile' ? 'home' : 'profile')}
+              className={`hidden md:flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs font-medium transition-all shrink-0 cursor-pointer ${
+                activeTab === 'profile'
+                  ? 'border-accent bg-accent/10 text-accent dark:text-accent-dark font-semibold shadow-xs'
                   : 'border-rule dark:border-rule-dark hover:bg-surface dark:hover:bg-surface-dark text-ink-secondary hover:text-ink'
-                }`}
-              title={authToken ? `Signed in as ${authUser || 'Owner'}` : 'Owner Sign In'}
-              aria-label="Owner Authentication"
+              }`}
+              title={`Ex Libris Profile • ex/${authUser || 'reader'}`}
+              aria-label="Reader Profile"
             >
-              <KeyRound size={13} />
-              <span className="hidden lg:inline">{authToken ? authUser || 'Owner' : 'Sign In'}</span>
+              <div className="w-5 h-5 rounded-full bg-gradient-to-br from-[#C2410C] to-[#9A3412] text-white flex items-center justify-center text-3xs font-serif font-bold shadow-2xs">
+                {(authUser || 'R').slice(0, 2).toUpperCase()}
+              </div>
+              <span className="hidden lg:inline">ex/{authUser || 'reader'}</span>
             </button>
 
             {/* Mobile Overflow Menu (replaces the 4 cluttered buttons on mobile) */}
@@ -474,17 +479,19 @@ export default function App() {
                       <button
                         onClick={() => {
                           setHeaderMenuOpen(false);
-                          setKeyModalOpen(true);
+                          switchTab('profile');
                         }}
-                        className="w-full flex items-center justify-between px-3 py-2 rounded-xl hover:bg-surface dark:hover:bg-surface-dark text-xs font-medium transition-colors text-left"
+                        className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium transition-colors text-left ${
+                          activeTab === 'profile'
+                            ? 'bg-accent/10 text-accent font-semibold'
+                            : 'hover:bg-surface dark:hover:bg-surface-dark'
+                        }`}
                       >
                         <span className="flex items-center gap-2.5">
-                          <KeyRound size={14} className={authToken ? 'text-emerald-600' : 'text-ink-muted'} />
-                          <span>{authToken ? 'Owner Account' : 'Sign In as Owner'}</span>
+                          <User size={14} className="text-accent" />
+                          <span>Ex Libris Profile</span>
                         </span>
-                        {authToken && (
-                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-600" />
-                        )}
+                        <span className="font-mono text-3xs text-accent">ex/{authUser || 'reader'}</span>
                       </button>
 
                       <button
@@ -643,7 +650,10 @@ export default function App() {
             {/* 5. LENT OUT BOOKS LEDGER */}
             {activeTab === 'lending' && <LendingLedger />}
 
-            {/* 6. VISUAL BOOKSHELF OR MAINTENANCE AUDIT */}
+            {/* 6. EX LIBRIS READER PROFILE */}
+            {activeTab === 'profile' && <ProfileScreen />}
+
+            {/* 7. VISUAL BOOKSHELF OR MAINTENANCE AUDIT */}
             {(activeTab === 'shelf' || activeTab === 'maintenance') && (
               <div className="space-y-5 flex-1 flex flex-col">
                 {/* Maintenance Audit Banner */}
@@ -1196,18 +1206,18 @@ export default function App() {
           <span className="text-3xs mt-1">Streak</span>
         </button>
 
-        {/* 5. Insights */}
+        {/* 5. Profile */}
         <button
-          onClick={() => switchTab('insights')}
-          className={`flex flex-col items-center justify-center min-w-[56px] min-h-[48px] rounded-xl transition-colors ${activeTab === 'insights'
+          onClick={() => switchTab('profile')}
+          className={`flex flex-col items-center justify-center min-w-[56px] min-h-[48px] rounded-xl transition-colors ${activeTab === 'profile'
               ? 'text-accent dark:text-accent-dark font-semibold'
               : 'text-ink-secondary hover:text-ink'
             }`}
-          title="Library Insights & Analytics"
-          aria-label="Insights"
+          title="Ex Libris Reader Profile"
+          aria-label="Profile"
         >
-          <PieChart size={19} />
-          <span className="text-3xs mt-1">Insights</span>
+          <User size={19} />
+          <span className="text-3xs mt-1">Profile</span>
         </button>
       </nav>
 

@@ -101,6 +101,7 @@ class DatabaseManager:
             # Auto-register all slice entity models onto Base.metadata
             import app.features.auth.entity  # noqa
             import app.features.books.entity  # noqa
+            import app.features.categories.entity  # noqa
             import app.features.reading.entity  # noqa
             import app.features.lending.entity  # noqa
             import app.features.wishlist.entity  # noqa

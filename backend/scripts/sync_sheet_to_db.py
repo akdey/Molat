@@ -1,0 +1,1 @@
+../../scripts/sync_sheet_to_db.py

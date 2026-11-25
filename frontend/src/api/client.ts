@@ -285,3 +285,23 @@ export async function updateSettings(
     token: tokenOrKey,
   });
 }
+
+// ==================== USER PROFILE & SECURITY ====================
+
+export async function fetchCurrentUser(tokenOrKey?: string): Promise<AuthUser> {
+  return apiFetch<AuthUser>('/auth/me', {
+    token: tokenOrKey,
+  });
+}
+
+export async function changePassword(
+  currentPassword: string,
+  newPassword: string,
+  tokenOrKey?: string
+): Promise<{ status: string; message: string }> {
+  return apiFetch<{ status: string; message: string }>('/auth/change-password', {
+    method: 'POST',
+    body: JSON.stringify({ current_password: currentPassword, new_password: newPassword }),
+    token: tokenOrKey,
+  });
+}

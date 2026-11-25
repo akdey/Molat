@@ -110,3 +110,13 @@ class UserRepository:
             role=user_entity.role,
             created_at=str(user_entity.created_at) if user_entity.created_at else None,
         )
+
+    async def update_password(self, user_id: str, new_password_hash: str) -> bool:
+        stmt = select(UserEntity).where(UserEntity.id == user_id)
+        result = await self.session.execute(stmt)
+        user_entity = result.scalar_one_or_none()
+        if user_entity:
+            user_entity.password_hash = new_password_hash
+            await self.session.commit()
+            return True
+        return False

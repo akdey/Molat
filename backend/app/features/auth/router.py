@@ -143,6 +143,15 @@ async def get_current_user_profile(
     user_repo: UserRepository = Depends(get_user_repository),
 ):
     """Returns the authenticated user's profile."""
+    # Handle legacy admin owner session
+    if user_id == "owner":
+        return UserResponse(
+            id="owner",
+            email="owner@molat.internal",
+            username=settings.ADMIN_USERNAME,
+            role="admin",
+        )
+
     user = await user_repo.get_by_id(user_id)
     if not user:
         raise HTTPException(
@@ -156,3 +165,45 @@ async def get_current_user_profile(
         role=user.role,
         created_at=user.created_at,
     )
+
+
+class ChangePasswordRequest(BaseModel):
+    current_password: str
+    new_password: str
+
+
+@router.post("/change-password")
+async def change_password(
+    req: ChangePasswordRequest,
+    user_id: str = Depends(require_authenticated_user),
+    user_repo: UserRepository = Depends(get_user_repository),
+):
+    """Securely updates password for the authenticated reader."""
+    if len(req.new_password) < 6:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="New password must be at least 6 characters long",
+        )
+
+    # Legacy admin check
+    if user_id == "owner":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Admin credentials are managed via environment variables.",
+        )
+
+    user = await user_repo.get_by_id(user_id)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User account not found",
+        )
+
+    if not verify_password(req.current_password, user.password_hash):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Current password does not match",
+        )
+
+    await user_repo.update_password(user_id, hash_password(req.new_password))
+    return {"status": "success", "message": "Password updated successfully"}

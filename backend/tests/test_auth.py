@@ -152,3 +152,39 @@ def test_auth_tampered_bearer_token(monkeypatch):
         headers={"Authorization": f"Bearer {fake_token}"},
     )
     assert res.status_code == 401
+
+
+def test_auth_change_password():
+    # 1. Create a user
+    signup_res = client.post("/api/v1/auth/signup", json={
+        "email": "pwd_test@example.com",
+        "username": "pwd_user",
+        "password": "initialPassword1",
+    })
+    assert signup_res.status_code == 201
+    token = signup_res.headers.get("x-auth-token") or signup_res.headers.get("authorization", "").replace("Bearer ", "").strip()
+    auth_hdr = {"Authorization": f"Bearer {token}"}
+
+    # 2. Change password with wrong current password -> 400
+    res_wrong = client.post(
+        "/api/v1/auth/change-password",
+        json={"current_password": "wrongOldPassword", "new_password": "newValidPassword123"},
+        headers=auth_hdr,
+    )
+    assert res_wrong.status_code == 400
+
+    # 3. Change password with valid credentials -> 200
+    res_ok = client.post(
+        "/api/v1/auth/change-password",
+        json={"current_password": "initialPassword1", "new_password": "newValidPassword123"},
+        headers=auth_hdr,
+    )
+    assert res_ok.status_code == 200
+    assert res_ok.json()["status"] == "success"
+
+    # 4. Verify login with new password works
+    login_res = client.post("/api/v1/auth/login", json={
+        "identifier": "pwd_user",
+        "password": "newValidPassword123",
+    })
+    assert login_res.status_code == 200
