@@ -27,8 +27,8 @@ import {
   Zap,
 } from 'lucide-react';
 import type { Book, PortfolioSummary, StreakSummary, ReadingLog } from '../types/book';
-import { fetchReadingLogs } from '../api/client';
 import { useLibraryStore } from '../store/useLibraryStore';
+import { PageSkeletonLoader } from './PageSkeletonLoader';
 
 interface LibraryInsightsProps {
   books: Book[];
@@ -55,15 +55,14 @@ export const LibraryInsights: React.FC<LibraryInsightsProps> = ({
   portfolio,
   streakSummary,
 }) => {
-  const { setSelectedBook, setActiveTab, setSelectedGenres, setSearch } = useLibraryStore();
+  const { setSelectedBook, setActiveTab, setSelectedGenres, setSearch, readingLogs, loading, refreshing } = useLibraryStore();
   const [hoveredGenre, setHoveredGenre] = useState<string | null>(null);
   const [growthViewMode, setGrowthViewMode] = useState<'combo' | 'annual' | 'cumulative'>('combo');
   const [hoveredWaveIndex, setHoveredWaveIndex] = useState<number | null>(null);
-  const [readingLogs, setReadingLogs] = useState<ReadingLog[]>([]);
 
-  useEffect(() => {
-    fetchReadingLogs().then(setReadingLogs).catch(() => {});
-  }, []);
+  if ((loading || refreshing) && books.length === 0) {
+    return <PageSkeletonLoader activeTab="insights" />;
+  }
 
   const totalBooks = books.length;
 

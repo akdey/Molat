@@ -17,6 +17,7 @@ import type { LendingRecord } from '../types/book';
 import { useLibraryStore } from '../store/useLibraryStore';
 import { BookCover } from './BookCover';
 import { WhatsAppReminderModal } from './WhatsAppReminderModal';
+import { PageSkeletonLoader } from './PageSkeletonLoader';
 
 export const LendingLedger: React.FC = () => {
   const {
@@ -24,6 +25,8 @@ export const LendingLedger: React.FC = () => {
     loadLendingRecords,
     returnBookRecord,
     openLendModal,
+    loading,
+    refreshing,
   } = useLibraryStore();
 
   const [activeSubTab, setActiveSubTab] = useState<'active' | 'returned'>('active');
@@ -137,7 +140,12 @@ export const LendingLedger: React.FC = () => {
       </div>
 
       {/* ACTIVE LENT BOOKS */}
-      {activeSubTab === 'active' && (
+      {(loading || refreshing) && lendingRecords.length === 0 ? (
+        <PageSkeletonLoader activeTab="lending" />
+      ) : (
+        <>
+          {/* ACTIVE LENT BOOKS */}
+          {activeSubTab === 'active' && (
         <>
           {activeRecords.length === 0 ? (
             <div className="py-16 text-center text-ink-muted border border-dashed border-rule dark:border-rule-dark rounded-2xl p-6 space-y-3">
@@ -338,6 +346,8 @@ export const LendingLedger: React.FC = () => {
               ))}
             </div>
           )}
+        </>
+      )}
         </>
       )}
 

@@ -53,6 +53,7 @@ import { HoldToSpeakAssistant } from './components/HoldToSpeakAssistant';
 import { AuthScreen } from './components/AuthScreen';
 import { ProfileScreen } from './components/ProfileScreen';
 import { BookLoader } from './components/BookLoader';
+import { PageSkeletonLoader } from './components/PageSkeletonLoader';
 
 export default function App() {
   const {
@@ -618,16 +619,19 @@ export default function App() {
           </div>
         )}
 
-        {/* Animated View Transitions across Main Tabs */}
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={activeTab}
-            initial={{ opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -4 }}
-            transition={{ duration: 0.16, ease: 'easeOut' }}
-            className="space-y-6 flex-1 flex flex-col"
-          >
+        {/* Animated View Transitions across Main Tabs with Tab-Accurate Skeleton & BookLoader Overlays */}
+        {loading && books.length === 0 ? (
+          <PageSkeletonLoader activeTab={activeTab} />
+        ) : (
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={activeTab}
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -4 }}
+              transition={{ duration: 0.16, ease: 'easeOut' }}
+              className="space-y-6 flex-1 flex flex-col"
+            >
             {/* 1. HOME / COMMAND DASHBOARD */}
             {activeTab === 'home' && (
               <HomeDashboard
@@ -880,19 +884,9 @@ export default function App() {
                   </div>
                 </div>
 
-                {/* Collection View Renderers with Tactile Animated Book Loader */}
+                {/* Collection View Renderers with Tactile Animated Book Loader Overlay */}
                 {loading && books.length === 0 ? (
-                  <div className="space-y-6 py-12 flex flex-col items-center justify-center">
-                    <BookLoader size="lg" caption="Opening your library catalogue..." />
-                    <div className="w-full grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 pt-2 opacity-50">
-                      {[...Array(6)].map((_, i) => (
-                        <div
-                          key={i}
-                          className="aspect-[2/3] rounded-xl bg-rule/30 dark:bg-rule-dark/30 animate-pulse border border-rule/50 dark:border-rule-dark/50"
-                        />
-                      ))}
-                    </div>
-                  </div>
+                  <PageSkeletonLoader activeTab="shelf" />
                 ) : filteredBooks.length === 0 ? (
                   <div className="py-16 flex-1 flex flex-col items-center justify-center text-center text-ink-muted space-y-2">
                     <p>No books match your active search or filters.</p>
@@ -996,6 +990,7 @@ export default function App() {
             )}
           </motion.div>
         </AnimatePresence>
+        )}
 
         {/* Subtle Brand & Creator Footer */}
         <footer className="mt-auto py-2.5 pb-[calc(4.5rem+env(safe-area-inset-bottom,0px))] md:pb-4 text-center">

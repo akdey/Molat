@@ -3,6 +3,7 @@ import { ShoppingBag, Plus, Check, Tag, DollarSign, X, AlertCircle, RefreshCw } 
 import type { WishlistItem, BookCondition } from '../types/book';
 import { useLibraryStore } from '../store/useLibraryStore';
 import { createWishlistItem } from '../api/client';
+import { PageSkeletonLoader } from './PageSkeletonLoader';
 
 export const WishlistScreen: React.FC = () => {
   const {
@@ -11,6 +12,8 @@ export const WishlistScreen: React.FC = () => {
     loadWishlist,
     authToken,
     addToast,
+    loading,
+    refreshing,
   } = useLibraryStore();
 
   const [acquireModalItem, setAcquireModalItem] = useState<WishlistItem | null>(null);
@@ -237,8 +240,10 @@ export const WishlistScreen: React.FC = () => {
         </form>
       )}
 
-      {/* Wishlist Items List */}
-      {wishlist.length === 0 ? (
+      {/* Wishlist Items List with Tactile BookLoader Overlay on Background Skeleton */}
+      {(loading || refreshing) && wishlist.length === 0 ? (
+        <PageSkeletonLoader activeTab="wishlist" />
+      ) : wishlist.length === 0 ? (
         <div className="py-20 flex-1 flex items-center justify-center text-center text-ink-muted">
           Your acquisition wishlist is empty. Add titles you are hunting for in bookshops!
         </div>

@@ -12,6 +12,7 @@ import {
   Columns3,
 } from 'lucide-react';
 import { useLibraryStore } from '../store/useLibraryStore';
+import { PageSkeletonLoader } from './PageSkeletonLoader';
 
 export type HeatmapLayout = 'continuous' | 'quarters';
 
@@ -99,7 +100,11 @@ export function getIntensityClass(intensity: number, isFrozen?: boolean): string
 }
 
 export const HeatmapScreen: React.FC = () => {
-  const { streakSummary, openQuickLog } = useLibraryStore();
+  const { streakSummary, openQuickLog, loading, refreshing } = useLibraryStore();
+
+  if ((loading || refreshing) && !streakSummary) {
+    return <PageSkeletonLoader activeTab="tracker" />;
+  }
   
   // View range: 'all' (Past Year), specific year e.g. '2026', '6m', '3m'
   const [selectedView, setSelectedView] = useState<string>('all');

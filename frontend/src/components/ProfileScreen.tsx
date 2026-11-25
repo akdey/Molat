@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 import { useLibraryStore } from '../store/useLibraryStore';
 import { changePassword } from '../api/client';
+import { PageSkeletonLoader } from './PageSkeletonLoader';
 
 export const ProfileScreen: React.FC = () => {
   const {
@@ -46,6 +47,8 @@ export const ProfileScreen: React.FC = () => {
     setActiveTab,
     addToast,
     syncUserProfile,
+    loading,
+    refreshing,
   } = useLibraryStore();
 
   const [copiedHandle, setCopiedHandle] = useState(false);
@@ -218,6 +221,10 @@ export const ProfileScreen: React.FC = () => {
     URL.revokeObjectURL(url);
     addToast('Catalogue CSV exported', 'success');
   };
+
+  if ((loading || refreshing) && !authUser) {
+    return <PageSkeletonLoader activeTab="profile" />;
+  }
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-6 sm:py-8 space-y-6 sm:space-y-8 animate-in fade-in duration-200">
