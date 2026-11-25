@@ -1,6 +1,6 @@
 # backend/app/features/books/models.py
 from enum import Enum
-from typing import Optional, Any
+from typing import Optional, Any, List, Dict
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 
@@ -108,3 +108,23 @@ class Book(BookBase):
     user_id: str = "owner"
     created_at: Optional[str] = None
     updated_at: Optional[str] = None
+
+
+class PortfolioSummary(BaseModel):
+    total_cp: float = 0.0          # Total Cost Price (purchase_price)
+    total_rp: float = 0.0          # Total Retail Price (rp)
+    total_saved: float = 0.0       # total_rp - total_cp
+    discount_pct: float = 0.0      # (total_saved / total_rp) * 100
+    total_books: int = 0
+
+
+class BookListResponse(BaseModel):
+    books: List[Book]
+    portfolio: PortfolioSummary
+
+
+class EnrichCoversResponse(BaseModel):
+    scanned: int
+    enriched: int
+    updated_books: List[Dict[str, str]]
+    message: str

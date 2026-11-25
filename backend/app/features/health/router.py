@@ -3,7 +3,7 @@ from datetime import datetime
 from fastapi import APIRouter
 from app.config import settings
 from app.core.database import db_manager
-from app.core.responses import HealthResponse
+from app.features.health.models import HealthResponse
 
 router = APIRouter(prefix="/health", tags=["Health"])
 

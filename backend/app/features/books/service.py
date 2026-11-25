@@ -1,7 +1,6 @@
 # backend/app/features/books/service.py
 from typing import List, Optional, Dict
-from app.features.books.models import Book
-from app.core.responses import PortfolioSummary
+from app.features.books.models import Book, PortfolioSummary
 from app.features.books.cover_enrichment import cover_enricher
 
 

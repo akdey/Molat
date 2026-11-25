@@ -2,10 +2,9 @@
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from app.core.security import get_current_user_id, require_authenticated_user
-from app.features.books.models import Book, BookCreate, BookUpdate
+from app.features.books.models import Book, BookCreate, BookUpdate, BookListResponse, EnrichCoversResponse
 from app.features.books.repository import BookRepository
 from app.features.books.dependencies import get_book_repository
-from app.core.responses import BookListResponse, EnrichCoversResponse
 from app.features.books.service import calculate_portfolio_summary, filter_books
 from app.features.books.cover_enrichment import cover_enricher
 

@@ -1,8 +1,7 @@
 from datetime import datetime, date, timedelta
 from typing import List, Dict, Set
 from zoneinfo import ZoneInfo
-from app.features.reading.models import ReadingLog
-from app.core.responses import StreakSummaryResponse
+from app.features.reading.models import ReadingLog, StreakSummaryResponse
 
 IST = ZoneInfo("Asia/Kolkata")
 

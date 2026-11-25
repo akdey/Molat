@@ -2,12 +2,11 @@
 from typing import List, Optional
 from fastapi import APIRouter, Depends, Query, status
 from app.core.security import get_current_user_id, require_authenticated_user
-from app.features.reading.models import ReadingLog, ReadingLogCreate
+from app.features.reading.models import ReadingLog, ReadingLogCreate, StreakSummaryResponse
 from app.features.reading.repository import ReadingRepository
 from app.features.reading.dependencies import get_reading_repository
 from app.features.settings.repository import SettingsRepository
 from app.features.settings.dependencies import get_settings_repository
-from app.core.responses import StreakSummaryResponse
 from app.features.reading.streak_calculator import calculate_streak_summary
 
 router = APIRouter(prefix="/reading", tags=["Reading & Streak Engine"])
