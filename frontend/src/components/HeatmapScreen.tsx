@@ -770,7 +770,7 @@ export const HeatmapScreen: React.FC = () => {
             <p className="text-3xs text-ink-muted pt-1 border-t border-rule/40 dark:border-rule-dark/40">
               • Target daily reading goal: <strong>{daily_goal_pages || 20} pages</strong>.<br />
               • Streak preservation cut-off: <strong>23:59:59 IST (Asia/Kolkata)</strong>.<br />
-              • Grace Freeze: Automatically cushions your streak if you miss a single day (requires ≥5× daily goal pages in prior 7 days; 1 freeze per 14-day rolling window).
+              • Grace Freeze Bank: Holds up to 3 shields. Automatically cushions your streak on missed days (earn shields every 3, 5, or 7 active reading days).
             </p>
           </div>
         )}
