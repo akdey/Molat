@@ -10,8 +10,8 @@ The application is a private single-owner digital library designed to manage phy
 
 - **Frontend**: React 18 + Vite + TypeScript + Tailwind CSS + Zustand + `vite-plugin-pwa` deployed on Vercel.
 - **Backend**: Python 3.11 + FastAPI + Pydantic v2 + `httpx` + `cachetools`, containerized for Hugging Face Spaces (port 7860, non-root user UID 1000).
-- **Persistent Data Store**: Google Sheets ONLY. No relational DB, No MongoDB, No Supabase.
-- **Bridge Protocol**: Container-bound Apps Script Web App (`Code.gs`) with `X-Bridge-Token` or Service Account adapter behind `GoogleSheetsRepository`.
+- **Persistent Data Store**: PostgreSQL (Supabase) relational database with asyncpg connection pooling, multi-tenant row isolation (`user_id`), and composite foreign key cascade integrity.
+- **Data Access Layer**: Clean repository pattern behind `StorageFactory` (`PostgresStorageFactory`). Unit tests run offline against in-memory test doubles (`FakeStorageFactory`).
 - **On-Device Voice Engine**: Hardware-accelerated browser Web Speech API (`webkitSpeechRecognition`), in-memory fuzzy title matcher, and native `speechSynthesis`. Zero audio or transcripts sent to external servers.
 - **Focus Reading Room**: Web Audio API ambient soundscape synthesis (zero bandwidth audio generator for Rain, Library, Cafe, Fireplace, Binaural Beats) with Screen Wake Lock toggle and local session persistence.
 

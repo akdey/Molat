@@ -2,7 +2,7 @@
   "openapi": "3.0.0",
   "info": {
     "title": "Molat Personal Library Assistant",
-    "description": "Voice assistant skill to search personal library shelves, check reading streaks, and log reading progress directly to Google Sheets.",
+    "description": "Voice assistant skill to search personal library shelves, check reading streaks, and log reading progress directly to database.",
     "version": "2.0.0"
   },
   "servers": [
@@ -109,8 +109,8 @@
     "/reading/logs": {
       "post": {
         "operationId": "logReadingSession",
-        "summary": "Log a reading session for a book to Google Sheets",
-        "description": "Records start_page and end_page for a book, updates the streak, and saves to Google Sheets.",
+        "summary": "Log a reading session for a book to database",
+        "description": "Records start_page and end_page for a book, updates the streak, and saves to database.",
         "requestBody": {
           "required": true,
           "content": {

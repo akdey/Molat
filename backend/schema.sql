@@ -64,7 +64,7 @@ CREATE INDEX IF NOT EXISTS idx_books_user_status ON books(user_id, reading_statu
 CREATE INDEX IF NOT EXISTS idx_books_user_genre ON books(user_id, genre);
 CREATE INDEX IF NOT EXISTS idx_books_user_isbn ON books(user_id, isbn_13);
 
--- 3. Reading Logs Table (Scoped to user_id)
+-- 3. Reading Logs Table (Scoped to user_id and book_id)
 CREATE TABLE IF NOT EXISTS reading_logs (
     user_id VARCHAR(50) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     log_id VARCHAR(50) NOT NULL,
@@ -76,7 +76,8 @@ CREATE TABLE IF NOT EXISTS reading_logs (
     duration_minutes INTEGER DEFAULT 0,
     session_note TEXT,
     created_at VARCHAR(50),
-    PRIMARY KEY (user_id, log_id)
+    PRIMARY KEY (user_id, log_id),
+    CONSTRAINT fk_reading_logs_book FOREIGN KEY (user_id, book_id) REFERENCES books(user_id, book_id) ON DELETE CASCADE
 );
 
 CREATE INDEX IF NOT EXISTS idx_reading_logs_user_date ON reading_logs(user_id, session_date DESC);
@@ -100,7 +101,7 @@ CREATE TABLE IF NOT EXISTS wishlist (
 
 CREATE INDEX IF NOT EXISTS idx_wishlist_user ON wishlist(user_id);
 
--- 5. Lending Table (Scoped to user_id)
+-- 5. Lending Table (Scoped to user_id and book_id)
 CREATE TABLE IF NOT EXISTS lending (
     user_id VARCHAR(50) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     lending_id VARCHAR(50) NOT NULL,
@@ -113,7 +114,8 @@ CREATE TABLE IF NOT EXISTS lending (
     status VARCHAR(20) DEFAULT 'ACTIVE',
     notes TEXT,
     created_at VARCHAR(50),
-    PRIMARY KEY (user_id, lending_id)
+    PRIMARY KEY (user_id, lending_id),
+    CONSTRAINT fk_lending_book FOREIGN KEY (user_id, book_id) REFERENCES books(user_id, book_id) ON DELETE CASCADE
 );
 
 CREATE INDEX IF NOT EXISTS idx_lending_user_status ON lending(user_id, status);
@@ -127,4 +129,22 @@ CREATE TABLE IF NOT EXISTS user_settings (
     theme VARCHAR(20) DEFAULT 'light',
     updated_at VARCHAR(50)
 );
+
+-- Migration safety for existing instances: inter-table relational foreign keys
+DO $$ 
+BEGIN 
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'fk_reading_logs_book'
+    ) THEN 
+        ALTER TABLE reading_logs ADD CONSTRAINT fk_reading_logs_book 
+        FOREIGN KEY (user_id, book_id) REFERENCES books(user_id, book_id) ON DELETE CASCADE;
+    END IF; 
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'fk_lending_book'
+    ) THEN 
+        ALTER TABLE lending ADD CONSTRAINT fk_lending_book 
+        FOREIGN KEY (user_id, book_id) REFERENCES books(user_id, book_id) ON DELETE CASCADE;
+    END IF; 
+EXCEPTION WHEN OTHERS THEN NULL;
+END $$;
 

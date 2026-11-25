@@ -1,5 +1,5 @@
 import pytest
-from app.storage.memory import MemoryStorageFactory
+from tests.fakes import FakeStorageFactory
 from app.features.books.models import BookCreate
 
 
@@ -11,7 +11,7 @@ def test_sanitize_cell_formula_injection():
 
 @pytest.mark.anyio
 async def test_memory_storage_book_crud():
-    storage = MemoryStorageFactory()
+    storage = FakeStorageFactory()
 
     # 1. Initially empty
     books_1 = await storage.books.list()
@@ -37,7 +37,7 @@ async def test_memory_storage_book_crud():
 
 @pytest.mark.anyio
 async def test_batch_update_covers():
-    storage = MemoryStorageFactory()
+    storage = FakeStorageFactory()
     new_book = await storage.books.create(
         BookCreate(title="Cover Update Book", purchase_price=120.0, rp=240.0)
     )

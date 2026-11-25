@@ -21,7 +21,7 @@ Most book tracking tools today are either bloated social networks, proprietary w
 
 1. **A beautiful, tactile digital twin of their physical bookshelf** that feels like browsing a private library.
 2. **Habit-forming reading accountability** inspired by Duolingo-style streaks and GitHub-style contribution heatmaps.
-3. **Multi-user scalable database architecture** powered by **PostgreSQL (Supabase)** with connection pooling and relational data integrity, alongside in-memory development fallback.
+3. **Multi-user scalable database architecture** powered by **PostgreSQL (Supabase)** with connection pooling, multi-tenant row isolation, and strict composite foreign key referential integrity.
 
 Whether cataloguing a multi-hundred volume collection, scanning new arrivals at a bookshop with your phone's camera, or celebrating a 30-day continuous reading streak, Molat gives you a private, lightning-fast, and distraction-free home for your library.
 
@@ -33,7 +33,7 @@ Whether cataloguing a multi-hundred volume collection, scanning new arrivals at 
 - **Hold-to-Talk Siri-Style Gesture**: Press and hold the elevated center `+` button from anywhere in the app to activate the ambient AI assistant with tactile haptic feedback.
 - **Zero Cloud & Zero Cost (0ms Latency)**: Runs 100% locally on your device using the browser's hardware-accelerated Web Speech API and an in-memory fuzzy title matching engine. Zero audio or transcripts sent to external servers.
 - **Natural Pause Processing**: Waits naturally until you finish speaking and pause before taking action, keeping the interface completely quiet and unobtrusive.
-- **Hands-Free Reading Log Submissions**: Say *"Log reading for The Fourth Protocol from page 45 to 80"* or *"Read 35 pages of Atomic Habits"*—automatically matches the volume, calculates pages read, updates the Google Sheets ledger, and advances your streak.
+- **Hands-Free Reading Log Submissions**: Say *"Log reading for The Fourth Protocol from page 45 to 80"* or *"Read 35 pages of Atomic Habits"*—automatically matches the volume, calculates pages read, updates the database reading ledger, and advances your streak.
 - **Voice-Activated Focus Reading Launch**: Say *"Start focus timer"*, *"Start focus room"*, or *"Focus on Dune"*—the assistant automatically opens the Focus Reading Room for that volume with ambient soundscapes and battery-saving timers.
 - **Physical Shelf Locator**: Say *"Where is Dune?"* to immediately locate the exact room and shelf rack without browsing menus.
 - **Atmospheric Gradient Overlay**: Rises smoothly as an organic, borderless dark-to-fade veil with dancing equalizer bars, real-time transcript streaming, a *"What Molat Understood"* confirmation card, and interactive suggestion chips.
@@ -45,7 +45,7 @@ Whether cataloguing a multi-hundred volume collection, scanning new arrivals at 
 - **Zero Battery Drain by Default (Normal Sleep)**: Built with battery preservation as a first-class priority. Defaults to Normal Sleep so your phone can lock and sleep normally with **0% extra battery drain**—no active background CPU loops or wake-lock power waste.
 - **Wall-Clock Epoch Arithmetic**: Solves the browser backgrounding drift problem. Calculates elapsed duration via wall-clock timestamps (`Date.now() - startTime - pausedMs`) re-synchronized on `visibilitychange` and window `focus`. Even if your phone is locked or asleep for an hour, the timer remains 100% accurate down to the exact second when unlocked.
 - **Self-Cleaning Ephemeral Storage**: Active sessions are safely mirrored under a single constant key in `localStorage` (`molat_active_focus_session_v1`) to survive accidental browser tab restarts. Automatically self-purges sessions older than 24 hours to prevent stale storage accumulation, and deletes immediately upon logging or discarding.
-- **Physical Bookmark Page Logging (No Guessing)**: Pre-fills your starting page with your latest bookmark + 1 from database logs, asks for your ending bookmark page upon finishing, and deterministically computes pages read, reading velocity ($\text{pgs/min}$), and pace ($\text{min/page}$) before saving directly to Google Sheets with a 4-second Undo buffer.
+- **Physical Bookmark Page Logging (No Guessing)**: Pre-fills your starting page with your latest bookmark + 1 from database logs, asks for your ending bookmark page upon finishing, and deterministically computes pages read, reading velocity ($\text{pgs/min}$), and pace ($\text{min/page}$) before saving directly to the database with a 4-second Undo buffer.
 - **Timer-Synchronized Web Audio Soundscapes (8 Synthesizers)**: 100% offline, on-device ambient synthesizers including *Soft Rain on Glass*, *Cozy Fireplace Crackle*, *Warm Cafe Murmur*, *Rolling Ocean Waves*, *Forest Breeze & Soft Chirps*, *Summer Night Crickets*, and *Deep Brown Noise* (1/f² low-frequency focus waterfall). Pausing or resuming the reading timer cleanly freezes/thaws audio synthesis with 0% CPU overhead. Defaults to pure silence (mute).
 - **Optional Desk Clock Mode (Screen Wake Lock)**: Toggleable Screen Wake Lock (`navigator.wakeLock`) keeps the display awake beside your book as an ambient desk clock when desired.
 
@@ -78,8 +78,8 @@ Whether cataloguing a multi-hundred volume collection, scanning new arrivals at 
 ### 🔥 Duolingo-Style Reading Streak Tracker
 - **Timezone-Aware Calculations**: Daily streak engine running in `Asia/Kolkata` time.
 - **Active Reading Progress Card**: Displays current reading session progress, daily goal completion, and automated reading velocity (pages/day).
-- **Customizable Daily Goal & In-UI Editor**: Easily tweak your daily reading target directly from the Home Dashboard Streak Banner (default reduced to an approachable 15 pages). Includes 1-tap quick presets (`10`, `15`, `20`, `25`, `30`, `50` pages) or custom input with direct cross-device Google Sheets database synchronization (`Settings` worksheet), dynamically recalculating completion percentages, reading velocity, and adaptive freeze thresholds across all your devices.
-- **Cross-Device Reading Settings & Active Book Sync**: Personal settings (`daily_goal_pages`, `active_book_id`, `theme`) are saved directly in your Google Sheets database via the `/api/v1/settings` endpoint. Switching between phone, tablet, and desktop automatically loads your current active book and reading target without missing a beat.
+- **Customizable Daily Goal & In-UI Editor**: Easily tweak your daily reading target directly from the Home Dashboard Streak Banner (default reduced to an approachable 15 pages). Includes 1-tap quick presets (`10`, `15`, `20`, `25`, `30`, `50` pages) or custom input with direct cross-device database synchronization (`user_settings` table), dynamically recalculating completion percentages, reading velocity, and adaptive freeze thresholds across all your devices.
+- **Cross-Device Reading Settings & Active Book Sync**: Personal settings (`daily_goal_pages`, `active_book_id`, `theme`) are saved directly in your PostgreSQL database via the `/api/v1/settings` endpoint. Switching between phone, tablet, and desktop automatically loads your current active book and reading target without missing a beat.
 - **Progressive 3-Shield Freeze Bank**: Bank up to **3 permanent Freeze Shields** to cushion missed days (e.g. weekend trips or illness) without arbitrary expiry or cooldown locks. Recharges progressively:
   - **Shield 1 (Fast Recovery)**: 3 active reading days.
   - **Shield 2 (Weekend Safe)**: +5 active reading days (covers a 2-day weekend).
@@ -155,17 +155,13 @@ flowchart TD
         SettingsSlice["features/settings/\n• models.py\n• repository.py\n• router.py"]
     end
 
-    subgraph Engines["Storage Engines (app/storage/)"]
-        PGEngine["PostgresStorageFactory\n(Supabase / PostgreSQL Pool)"]
-        SheetsEngine["SheetsStorageFactory\n(Apps Script Web App Bridge)"]
-        MemEngine["MemoryStorageFactory\n(0.1s Fast Unit Tests & Offline)"]
+    subgraph Engines["Storage Engine (app/storage/)"]
+        PGEngine["PostgresStorageFactory\n(PostgreSQL / Supabase asyncpg Pool)"]
     end
 
     UI <-->|REST API + JWT Bearer Auth| FeatureSlices
     FeatureSlices -->|Depends(get_storage)| Provider
     SF -.-> PGEngine
-    SF -.-> SheetsEngine
-    SF -.-> MemEngine
 ```
 
 ### Feature-Driven Folder Structure
@@ -174,17 +170,17 @@ backend/app/
 ├── core/
 │   ├── config.py              # Application settings & environment
 │   ├── database.py            # Asyncpg pool lifecycle (init_pool / close_pool)
-│   └── security.py            # JWT auth, user resolution, passkey verification
+│   ├── rbac.py                # Multi-tenant user RBAC middleware
+│   └── security.py            # Password hashing & JWT token verification
 │
-├── storage/                   # Abstract Storage Factory & concrete engines
+├── storage/                   # Abstract Storage Factory & PostgreSQL engine
 │   ├── base.py                # StorageFactory ABC (contract)
 │   ├── postgres.py            # PostgresStorageFactory (wires Postgres repos)
-│   ├── sheets.py              # SheetsStorageFactory (wires Sheets repos)
-│   ├── memory.py              # MemoryStorageFactory (dev & unit tests)
 │   └── provider.py            # get_storage(request) FastAPI dependency
 │
 └── features/                  # Independent domain slices
-    ├── books/                 # models.py, repository.py, postgres_repo.py, sheets_repo.py, memory_repo.py, service.py, router.py
+    ├── auth/                  # Multi-tenant registration, login, token issuance
+    ├── books/                 # models.py, repository.py, postgres_repo.py, service.py, router.py
     ├── reading/               # Reading logs, streak engine, 3-shield freeze bank, 365-day heatmap
     ├── lending/               # Loan contracts, due dates, borrower WhatsApp follow-ups
     ├── wishlist/              # Budget planning, 1-click shelf acquisition
@@ -234,21 +230,15 @@ Individual reading profiles and preferences:
 ### Prerequisites
 - **Python 3.11+** with `uv` or `pip`
 - **Node.js 18+** with `npm`
-- A Google account (for Google Sheets & Apps Script)
+- A PostgreSQL 14+ database instance (e.g. [Supabase](https://supabase.com))
 
 ---
 
-### 1. Google Sheets & Apps Script Setup
+### 1. Database Setup (PostgreSQL / Supabase)
 
-1. Create a new Google Spreadsheet in Google Drive (e.g. named `Molat Library`).
-2. Rename the first sheet tab to `Books`.
-3. Open **Extensions** $\to$ **Apps Script**.
-4. Paste the contents of [`apps-script/Code.gs`](apps-script/Code.gs) into the editor.
-5. *(Optional)* Go to **Project Settings** $\to$ **Script Properties** and add `BRIDGE_TOKEN` with a secret passphrase.
-6. Click **Deploy** $\to$ **New Deployment** $\to$ Select type: **Web App**:
-   - **Execute as**: *Me*
-   - **Who has access**: *Anyone*
-7. Copy the generated Web App URL (`https://script.google.com/macros/s/.../exec`).
+1. Provision a PostgreSQL instance or a free project on [Supabase](https://supabase.com).
+2. Execute the relational schema found in [`backend/schema.sql`](backend/schema.sql) in the Supabase SQL Editor.
+3. Copy your database connection string URI (`postgresql://postgres:[PASSWORD]@db.[PROJECT].supabase.co:5432/postgres`).
 
 ---
 
@@ -270,12 +260,10 @@ cp .env.example .env  # edit with your values
 
 #### `.env` Configuration:
 ```env
-GOOGLE_SHEETS_BRIDGE_URL=https://script.google.com/macros/s/YOUR_BRIDGE_ID/exec
-BRIDGE_TOKEN=your-optional-bridge-token
-LIBRARY_KEY=your-admin-passkey-here
+DATABASE_URL=postgresql://postgres:[PASSWORD]@db.[PROJECT].supabase.co:5432/postgres
+JWT_SECRET=your-random-secret-key-for-signing-tokens
 PORT=7860
-CACHE_TTL_SECONDS=300
-CORS_ORIGINS=["http://localhost:5173","https://molat-akdey.vercel.app"]
+ALLOWED_ORIGINS=http://localhost:5173,https://molat-akdey.vercel.app
 ```
 
 #### Run Backend Server:

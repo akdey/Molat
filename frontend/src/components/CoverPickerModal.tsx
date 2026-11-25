@@ -304,7 +304,7 @@ export const CoverPickerModal: React.FC<CoverPickerModalProps> = ({
               {saving ? (
                 <>
                   <RefreshCw size={13} className="animate-spin text-white" />
-                  <span>Updating Sheet...</span>
+                  <span>Saving Cover...</span>
                 </>
               ) : (
                 <>

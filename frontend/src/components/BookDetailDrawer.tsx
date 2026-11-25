@@ -162,7 +162,7 @@ export const BookDetailDrawer: React.FC = () => {
       setErrorMsg(null);
       setExpandedSynopsis(false);
 
-      // 1. Dynamic fetch synopsis (Approach A - Zero Sheet Bloat)
+      // 1. Dynamic fetch synopsis
       setLoadingSynopsis(true);
       const isbn = selectedBook.isbn_13 || selectedBook.isbn_10;
       fetchDynamicSynopsis(isbn, selectedBook.title, selectedBook.authors)
@@ -291,7 +291,7 @@ export const BookDetailDrawer: React.FC = () => {
                   {saveSuccess && (
                     <div className="p-3 text-xs rounded-xl bg-emerald-100 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900/40 flex items-center gap-2">
                       <Check size={15} />
-                      <span>Book record updated successfully in Google Sheets!</span>
+                      <span>Book record updated successfully!</span>
                     </div>
                   )}
 
@@ -491,7 +491,7 @@ export const BookDetailDrawer: React.FC = () => {
                         );
                       })()}
 
-                      {/* 3. DYNAMIC SYNOPSIS / ABOUT THE BOOK (Approach A - Zero Sheet Bloat) */}
+                      {/* 3. DYNAMIC SYNOPSIS / ABOUT THE BOOK */}
                       {loadingSynopsis ? (
                         <div className="p-4 rounded-xl border border-rule/50 dark:border-rule-dark/50 bg-surface/50 dark:bg-surface-dark/50 space-y-2 animate-pulse">
                           <div className="h-3 w-28 bg-rule/60 rounded" />

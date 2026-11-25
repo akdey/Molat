@@ -20,10 +20,6 @@ class Settings(BaseSettings):
     # Database (PostgreSQL / Supabase)
     DATABASE_URL: Optional[str] = None
 
-    # Google Sheets Bridge (Apps Script Web App - Legacy)
-    GOOGLE_SHEETS_BRIDGE_URL: Optional[str] = None
-    BRIDGE_TOKEN: Optional[str] = None
-
     # Cache & Timezone
     CACHE_TTL_SECONDS: int = 300
     TIMEZONE: str = "Asia/Kolkata"

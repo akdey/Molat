@@ -2,7 +2,7 @@
 import pytest
 from app.config import settings
 from app.main import app
-from app.storage.memory import MemoryStorageFactory
+from tests.fakes import FakeStorageFactory
 from app.core.security import create_access_token
 
 
@@ -10,11 +10,9 @@ from app.core.security import create_access_token
 def mock_storage_env(monkeypatch):
     """Ensure unit tests always run using fresh in-memory storage."""
     monkeypatch.setattr(settings, "DATABASE_URL", None)
-    monkeypatch.setattr(settings, "GOOGLE_SHEETS_BRIDGE_URL", None)
-    monkeypatch.setattr(settings, "BRIDGE_TOKEN", None)
     monkeypatch.setattr(settings, "ADMIN_PASSWORD", None)
-    # Fresh in-memory storage factory for every test
-    app.state.storage = MemoryStorageFactory()
+    # Fresh in-memory test double storage factory for every test
+    app.state.storage = FakeStorageFactory()
 
 
 @pytest.fixture

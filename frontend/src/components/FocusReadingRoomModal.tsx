@@ -467,7 +467,7 @@ export const FocusReadingRoomModal: React.FC = () => {
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
-  // Submit completed session to Google Sheets
+  // Submit completed session to database
   const handleSubmitSession = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedBookId) {
@@ -509,7 +509,7 @@ export const FocusReadingRoomModal: React.FC = () => {
       closeFocusRoom();
       addToast(`Logged ${pagesRead} pages in ${sessionMinutes}m to your ledger!`, 'success');
     } catch (err: any) {
-      setErrorMsg(err.message || 'Failed to record session in Google Sheets');
+      setErrorMsg(err.message || 'Failed to record session');
     } finally {
       setIsSubmitting(false);
     }
@@ -933,14 +933,14 @@ export const FocusReadingRoomModal: React.FC = () => {
                   )}
                 </div>
 
-                {/* Submit to Google Sheets Button */}
+                {/* Submit to Database Button */}
                 <button
                   type="submit"
                   disabled={isSubmitting}
                   className="w-full py-3.5 px-4 rounded-xl bg-accent hover:bg-accent-hover disabled:opacity-50 text-white font-medium text-xs flex items-center justify-center gap-2 shadow-sm transition-all active:scale-98 cursor-pointer"
                 >
                   <Check size={16} />
-                  <span>{isSubmitting ? 'Saving to Google Sheets...' : 'Save to Reading Ledger'}</span>
+                  <span>{isSubmitting ? 'Saving...' : 'Save to Reading Ledger'}</span>
                 </button>
               </form>
             )}

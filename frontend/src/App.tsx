@@ -387,7 +387,7 @@ export default function App() {
               <Camera size={16} />
             </button>
 
-            {/* Sync button with Sheets (accessible with 1 tap, spins when refreshing) */}
+            {/* Sync button (accessible with 1 tap, spins when refreshing) */}
             <button
               onClick={() => loadAllData(true)}
               disabled={loading || refreshing}
@@ -585,7 +585,7 @@ export default function App() {
                         className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-surface dark:hover:bg-surface-dark text-xs font-medium transition-colors text-left text-accent dark:text-accent-dark border-t border-rule/50 dark:border-rule-dark/50 pt-2 mt-1"
                       >
                         <RefreshCw size={13} className={loading || refreshing ? 'animate-spin' : ''} />
-                        <span>Sync with Google Sheets</span>
+                        <span>Sync Library</span>
                       </button>
                     </motion.div>
                   </>
@@ -849,7 +849,7 @@ export default function App() {
                     {(loading || refreshing) && (
                       <span className="inline-flex items-center gap-1 text-accent dark:text-accent-dark animate-pulse font-medium">
                         <RefreshCw size={11} className="animate-spin" />
-                        Syncing with Sheets...
+                        Syncing library...
                       </span>
                     )}
                   </div>
@@ -860,7 +860,7 @@ export default function App() {
                   <div className="space-y-4 py-8">
                     <div className="flex items-center justify-center gap-2 text-xs text-ink-muted animate-pulse">
                       <RefreshCw size={14} className="animate-spin text-accent" />
-                      <span>Loading library catalogue from Google Sheets...</span>
+                      <span>Loading library catalogue...</span>
                     </div>
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
                       {[...Array(6)].map((_, i) => (

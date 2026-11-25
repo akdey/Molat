@@ -5,7 +5,7 @@ A mobile-first, installable Progressive Web App (PWA) for cataloguing, visually 
 
 - **Frontend**: React 18 + Vite + TypeScript + Tailwind CSS + Zustand + `vite-plugin-pwa` + `html5-qrcode` + Web Audio API + Web Speech API, deployed on **Vercel**.
 - **Backend**: Python 3.11 + FastAPI + Pydantic v2 + `httpx` + `cachetools`, deployed on **Hugging Face Spaces (Docker runtime, port 7860)**.
-- **Database**: **Google Sheets ONLY** (Strictly NO MongoDB, NO Supabase, NO paid cloud database).
+- **Database**: **PostgreSQL (Supabase)** with connection pooling and relational data integrity. Multi-tenant row isolation with composite foreign keys.
 - **Zero Cloud Audio / Privacy**: 100% on-device speech recognition, client-side NLP fuzzy parsing, and procedural Web Audio ambient sound synthesis (Rain, Library, Cafe, Fireplace, Binaural Beats).
 
 ## 2. Live Google Sheets Schema (4 Tabs)

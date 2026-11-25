@@ -310,7 +310,7 @@ export const WishlistScreen: React.FC = () => {
             </div>
 
             <p className="text-xs text-ink-secondary">
-              Acquiring <strong className="text-ink dark:text-ink-dark">{acquireModalItem.title}</strong> will generate a new <code className="font-mono">BOOK-XXX</code> record in the Books sheet tab and remove it from your Wishlist.
+              Acquiring <strong className="text-ink dark:text-ink-dark">{acquireModalItem.title}</strong> will generate a new <code className="font-mono">BOOK-XXX</code> record in your Books catalogue and remove it from your Wishlist.
             </p>
 
             <form onSubmit={handleAcquireSubmit} className="space-y-3">

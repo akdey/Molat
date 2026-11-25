@@ -737,7 +737,7 @@ export const BarcodeScannerModal: React.FC = () => {
                 {saving ? (
                   <>
                     <RefreshCw size={13} className="animate-spin text-white" />
-                    <span>Adding to Sheets...</span>
+                    <span>Adding to library...</span>
                   </>
                 ) : (
                   <>
