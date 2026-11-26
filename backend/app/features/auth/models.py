@@ -36,7 +36,16 @@ class UserResponse(BaseModel):
     email: Optional[str] = None
     username: str
     role: str = "reader"
+    email_verified: bool = False
     created_at: Optional[str] = None
+
+
+class VerifyEmailOtpRequest(BaseModel):
+    otp_code: str = Field(..., min_length=6, max_length=6, description="6-digit verification code")
+
+
+class VerifyEmailLinkRequest(BaseModel):
+    token: str = Field(..., min_length=10, description="Email verification link token")
 
 
 class AuthResponse(BaseModel):

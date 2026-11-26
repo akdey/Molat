@@ -30,7 +30,8 @@ class ReadingLogCreate(BaseModel):
 
 class ReadingLog(BaseModel):
     log_id: str
-    book_id: str
+    book_id: Optional[str] = None
+    book_title: Optional[str] = None
     user_id: str = "owner"
     session_date: str
     start_page: int

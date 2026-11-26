@@ -100,6 +100,7 @@ class DatabaseManager:
 
             # Auto-register all slice entity models onto Base.metadata
             import app.features.auth.entity  # noqa
+            import app.features.alcoves.entity  # noqa
             import app.features.books.entity  # noqa
             import app.features.genres.entity  # noqa
             import app.features.reading.entity  # noqa
@@ -109,6 +110,18 @@ class DatabaseManager:
 
             async with self.engine.begin() as conn:
                 await conn.run_sync(Base.metadata.create_all)
+                # Idempotent column migrations for existing PostgreSQL deployments
+                if "postgresql" in clean_url:
+                    from sqlalchemy import text
+                    migration_statements = [
+                        "ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified BOOLEAN NOT NULL DEFAULT TRUE",
+                        "ALTER TABLE books ADD COLUMN IF NOT EXISTS alcove_id VARCHAR(50) REFERENCES alcoves(id) ON DELETE SET NULL",
+                        "ALTER TABLE books ADD COLUMN IF NOT EXISTS held_by_label VARCHAR(100)",
+                        "ALTER TABLE reading_logs ADD COLUMN IF NOT EXISTS book_title VARCHAR(500)",
+                        "ALTER TABLE reading_logs ALTER COLUMN book_id DROP NOT NULL",
+                    ]
+                    for sql in migration_statements:
+                        await conn.execute(text(sql))
 
             logger.info("SQLAlchemy 2.0 AsyncEngine and slice entities initialized successfully.")
             return self.session_factory

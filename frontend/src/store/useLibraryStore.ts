@@ -10,6 +10,7 @@ import type {
   LendingRecordCreate,
   LendingRecordReturn,
   ReadingLog,
+  AlcoveOverview,
 } from '../types/book';
 import {
   fetchBooks,
@@ -17,6 +18,7 @@ import {
   fetchWishlist,
   fetchLendingRecords,
   fetchReadingLogs,
+  fetchAlcoveOverview,
   lendBook as apiLendBook,
   returnBook as apiReturnBook,
   logReadingSession,
@@ -96,6 +98,9 @@ interface LibraryState {
   authUser: string | null;
   authEmail: string | null;
   authRole: string | null;
+  emailVerified: boolean;
+  alcoveOverview: AlcoveOverview | null;
+  shelfScope: 'mine' | 'alcove';
   theme: 'light' | 'dark';
   dailyGoal: number;
   activeBookId: string | null;
@@ -142,6 +147,9 @@ interface LibraryState {
 
   // API Calls
   loadAllData: (forceRefresh?: boolean) => Promise<void>;
+  loadAlcoves: () => Promise<void>;
+  setShelfScope: (scope: 'mine' | 'alcove') => void;
+  setEmailVerified: (verified: boolean) => void;
   loadBooks: (forceRefresh?: boolean) => Promise<void>;
   loadStreak: () => Promise<void>;
   loadWishlist: () => Promise<void>;
@@ -194,9 +202,15 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
   authUser: typeof localStorage !== 'undefined' ? localStorage.getItem('molat_auth_user') : null,
   authEmail: typeof localStorage !== 'undefined' ? localStorage.getItem('molat_auth_email') : null,
   authRole: typeof localStorage !== 'undefined' ? localStorage.getItem('molat_auth_role') : null,
+  emailVerified: true,
+  alcoveOverview: null,
+  shelfScope: 'mine',
   theme: 'light',
   dailyGoal: 15,
   activeBookId: null,
+
+  setShelfScope: (shelfScope) => set({ shelfScope }),
+  setEmailVerified: (emailVerified) => set({ emailVerified }),
 
   setActiveTab: (tab) => set({ activeTab: tab }),
   setViewMode: (mode) => set({ viewMode: mode }),
@@ -311,12 +325,14 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
       authUser: uName,
       authEmail: uEmail,
       authRole: uRole,
+      emailVerified: user.email_verified ?? true,
+      alcoveOverview: null,
       books: [],
       portfolio: null,
       streakSummary: null,
       wishlist: [],
       lendingRecords: [],
-  readingLogs: [],
+      readingLogs: [],
     });
     get().addToast(`Welcome back, @${uName}!`, 'success');
     await get().loadAllData(true);
@@ -338,12 +354,14 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
       authUser: uName,
       authEmail: uEmail,
       authRole: uRole,
+      emailVerified: user.email_verified ?? true,
+      alcoveOverview: null,
       books: [],
       portfolio: null,
       streakSummary: null,
       wishlist: [],
       lendingRecords: [],
-  readingLogs: [],
+      readingLogs: [],
     });
     get().addToast(`Welcome to Molat, ex/${uName}! Your library account is ready.`, 'success');
     await get().loadAllData(true);
@@ -362,6 +380,9 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
       authUser: null,
       authEmail: null,
       authRole: null,
+      emailVerified: true,
+      alcoveOverview: null,
+      shelfScope: 'mine',
       hasActiveFocusTimer: false,
       focusRoomOpen: false,
       focusRoomBook: null,
@@ -392,7 +413,12 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
         if (uEmail) localStorage.setItem('molat_auth_email', uEmail);
         if (uRole) localStorage.setItem('molat_auth_role', uRole);
       }
-      set({ authUser: uName, authEmail: uEmail, authRole: uRole });
+      set({
+        authUser: uName,
+        authEmail: uEmail,
+        authRole: uRole,
+        emailVerified: user.email_verified ?? true,
+      });
     } catch (err) {
       // Retain existing session cached info
     }
@@ -418,7 +444,7 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
       set({ loading: true, error: null });
     }
     try {
-      const [bookRes, streakRes, wishRes, lendRes, settingsRes, userRes, logsRes] = await Promise.allSettled([
+      const [bookRes, streakRes, wishRes, lendRes, settingsRes, userRes, logsRes, alcoveRes] = await Promise.allSettled([
         fetchBooks(forceRefresh),
         fetchStreakSummary(get().dailyGoal),
         fetchWishlist(),
@@ -426,6 +452,7 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
         fetchSettings(),
         fetchCurrentUser(),
         fetchReadingLogs(),
+        fetchAlcoveOverview(),
       ]);
 
       let loadedGoal = get().dailyGoal;
@@ -442,7 +469,12 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
           if (uEmail) localStorage.setItem('molat_auth_email', uEmail);
           if (uRole) localStorage.setItem('molat_auth_role', uRole);
         }
-        set({ authUser: uName, authEmail: uEmail, authRole: uRole });
+        set({
+          authUser: uName,
+          authEmail: uEmail,
+          authRole: uRole,
+          emailVerified: u.email_verified ?? true,
+        });
       }
 
       if (settingsRes.status === 'fulfilled' && settingsRes.value) {
@@ -470,6 +502,7 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
         wishlist: wishRes.status === 'fulfilled' ? wishRes.value : [],
         lendingRecords: lendRes.status === 'fulfilled' ? lendRes.value : [],
         readingLogs: logsRes.status === 'fulfilled' ? logsRes.value : [],
+        alcoveOverview: alcoveRes.status === 'fulfilled' ? alcoveRes.value : state.alcoveOverview,
         dailyGoal: loadedGoal,
         activeBookId: loadedActiveBookId,
         theme: loadedTheme,
@@ -483,6 +516,15 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
     } catch (err: any) {
       set({ error: err.message || 'Error loading library data', loading: false, refreshing: false });
       get().addToast(err.message || 'Failed to sync library', 'error');
+    }
+  },
+
+  loadAlcoves: async () => {
+    try {
+      const overview = await fetchAlcoveOverview();
+      set({ alcoveOverview: overview });
+    } catch (err: any) {
+      console.warn('Could not load Alcove overview:', err);
     }
   },
 

@@ -21,13 +21,14 @@ import {
   RotateCcw,
   Phone,
   Timer,
+  Users,
 } from 'lucide-react';
 import type { Book, ReadingStatus, BookCondition, ReadingLog, LendingRecord } from '../types/book';
 import { useLibraryStore } from '../store/useLibraryStore';
 import { BookCover } from './BookCover';
 import { CoverPickerModal } from './CoverPickerModal';
 import { WhatsAppReminderModal } from './WhatsAppReminderModal';
-import { fetchReadingLogs } from '../api/client';
+import { fetchReadingLogs, toggleBookAlcoveShare } from '../api/client';
 
 // In-memory synopsis cache so previously fetched blurbs load with 0ms delay
 const synopsisCache = new Map<string, string>();
@@ -127,7 +128,13 @@ export const BookDetailDrawer: React.FC = () => {
     lendingRecords,
     openLendModal,
     returnBookRecord,
+    alcoveOverview,
+    loadAlcoves,
+    loadBooks,
+    addToast,
   } = useLibraryStore();
+
+  const [togglingShare, setTogglingShare] = useState(false);
 
   const [returningLend, setReturningLend] = useState(false);
 
@@ -486,6 +493,48 @@ export const BookDetailDrawer: React.FC = () => {
                           </button>
                         );
                       })()}
+
+                      {/* 2.5 FAMILY ALCOVE SELECTIVE SHARING TOGGLE */}
+                      {alcoveOverview && alcoveOverview.alcoves.length > 0 && (
+                        <div className="p-3 rounded-xl border border-rule/60 dark:border-rule-dark/60 bg-surface/60 dark:bg-surface-dark/60 flex items-center justify-between gap-3">
+                          <div className="flex items-center gap-2 text-xs">
+                            <Users size={14} className="text-accent shrink-0" />
+                            <span className="font-medium text-ink dark:text-ink-dark">
+                              {selectedBook.alcove_id
+                                ? `Shared in ${alcoveOverview.alcoves[0].name}`
+                                : `Share in ${alcoveOverview.alcoves[0].name}`}
+                            </span>
+                          </div>
+                          <button
+                            type="button"
+                            disabled={togglingShare}
+                            onClick={async () => {
+                              setTogglingShare(true);
+                              try {
+                                const nextShared = !selectedBook.alcove_id;
+                                const res = await toggleBookAlcoveShare(selectedBook.book_id, nextShared);
+                                setSelectedBook({ ...selectedBook, alcove_id: res.alcove_id });
+                                await Promise.all([loadBooks(), loadAlcoves()]);
+                                addToast(
+                                  nextShared ? 'Shared with Family Alcove' : 'Removed from Family Alcove',
+                                  'success'
+                                );
+                              } catch (err: any) {
+                                addToast(err.message || 'Could not update Alcove sharing', 'error');
+                              } finally {
+                                setTogglingShare(false);
+                              }
+                            }}
+                            className={`px-3 py-1.5 rounded-lg text-3xs font-medium cursor-pointer transition-colors disabled:opacity-50 ${
+                              selectedBook.alcove_id
+                                ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                                : 'border border-rule dark:border-rule-dark bg-canvas dark:bg-canvas-dark hover:border-accent text-ink-secondary'
+                            }`}
+                          >
+                            {togglingShare ? 'Saving...' : selectedBook.alcove_id ? 'Shared' : 'Share'}
+                          </button>
+                        </div>
+                      )}
 
                       {/* 3. DYNAMIC SYNOPSIS / ABOUT THE BOOK */}
                       {loadingSynopsis ? (

@@ -54,6 +54,7 @@ async def setup_test_db(monkeypatch):
             username="seeded_test_runner",
             password_hash="hashed",
             role="reader",
+            email_verified=True,
         )
         await user_repo.create(
             user_id="owner",
@@ -61,6 +62,7 @@ async def setup_test_db(monkeypatch):
             username="owner",
             password_hash="hashed",
             role="admin",
+            email_verified=True,
         )
 
         app.state.storage = TestStorageFacade(session)

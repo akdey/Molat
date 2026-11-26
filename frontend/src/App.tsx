@@ -29,7 +29,11 @@ import {
   Mic,
   Timer,
   User,
+  Users,
+  Mail,
 } from 'lucide-react';
+import { verifyEmailLinkToken, joinAlcove, updateAlcoveBookHolder } from './api/client';
+import { EmailVerificationModal } from './components/EmailVerificationModal';
 
 import { StreakBanner } from './components/StreakBanner';
 import { ActiveReadingCard } from './components/ActiveReadingCard';
@@ -96,6 +100,13 @@ export default function App() {
     loadAllData,
     authToken,
     authUser,
+    emailVerified,
+    setEmailVerified,
+    alcoveOverview,
+    shelfScope,
+    setShelfScope,
+    loadAlcoves,
+    addToast,
     logout,
     theme,
     toggleTheme,
@@ -104,6 +115,7 @@ export default function App() {
   const [centerMenuOpen, setCenterMenuOpen] = useState(false);
   const [headerMenuOpen, setHeaderMenuOpen] = useState(false);
   const [enrichingCovers, setEnrichingCovers] = useState(false);
+  const [verifyModalOpen, setVerifyModalOpen] = useState(false);
 
   const activeLentCount = lendingRecords.filter((r) => r.status === 'ACTIVE').length;
   const overdueLentCount = lendingRecords.filter((r) => r.status === 'ACTIVE' && r.is_overdue).length;
@@ -139,6 +151,48 @@ export default function App() {
       loadAllData();
     }
   }, [authToken, loadAllData]);
+
+  // Handle clickable email verification & Alcove invite deep-links
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const verifyToken = params.get('verify_token');
+    const joinCode = params.get('join_alcove');
+
+    if (verifyToken) {
+      verifyEmailLinkToken(verifyToken)
+        .then(() => {
+          setEmailVerified(true);
+          addToast('Email verified successfully!', 'success');
+          if (authToken) loadAllData(true);
+        })
+        .catch((err: any) => {
+          addToast(err.message || 'Verification link is invalid or expired.', 'error');
+        })
+        .finally(() => {
+          params.delete('verify_token');
+          const nextSearch = params.toString();
+          window.history.replaceState({}, '', `${window.location.pathname}${nextSearch ? `?${nextSearch}` : ''}`);
+        });
+    }
+
+    if (joinCode && authToken) {
+      joinAlcove(joinCode)
+        .then(async (res) => {
+          addToast(`Joined ${res.name}!`, 'success');
+          await loadAlcoves();
+          setShelfScope('alcove');
+          setActiveTab('shelf');
+        })
+        .catch((err: any) => {
+          addToast(err.message || 'Could not join Alcove. Verify email first if needed.', 'error');
+        })
+        .finally(() => {
+          params.delete('join_alcove');
+          const nextSearch = params.toString();
+          window.history.replaceState({}, '', `${window.location.pathname}${nextSearch ? `?${nextSearch}` : ''}`);
+        });
+    }
+  }, [authToken]);
 
   useEffect(() => {
     const handleUnauthorized = () => {
@@ -619,6 +673,22 @@ export default function App() {
           </div>
         )}
 
+        {/* Soft-Gate Email Verification Banner */}
+        {authToken && !emailVerified && (
+          <div className="p-3.5 rounded-2xl border border-amber-300/70 dark:border-amber-800/60 bg-amber-50/80 dark:bg-amber-950/25 flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5 text-xs text-amber-900 dark:text-amber-200">
+              <Mail size={15} className="text-amber-600 shrink-0" />
+              <span>Please verify your email to unlock Family Alcove invites &amp; sharing.</span>
+            </div>
+            <button
+              onClick={() => setVerifyModalOpen(true)}
+              className="px-3.5 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-medium min-h-[36px] cursor-pointer transition-colors"
+            >
+              Verify Email
+            </button>
+          </div>
+        )}
+
         {/* Animated View Transitions across Main Tabs with Tab-Accurate Skeleton & BookLoader Overlays */}
         {(loading || refreshing) && books.length === 0 ? (
           <PageSkeletonLoader activeTab={activeTab} />
@@ -694,6 +764,35 @@ export default function App() {
                     <p className="text-xs text-ink-secondary">
                       Showing volumes requiring attention: missing cover art, damaged physical condition, or missing ISBN identification.
                     </p>
+                  </div>
+                )}
+
+                {/* Family Alcove vs Personal Shelf Switcher */}
+                {activeTab === 'shelf' && alcoveOverview && alcoveOverview.alcoves.length > 0 && (
+                  <div className="flex items-center gap-2">
+                    <div className="inline-flex items-center gap-1 p-1 rounded-xl border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark text-xs font-medium">
+                      <button
+                        onClick={() => setShelfScope('mine')}
+                        className={`px-3 py-1.5 rounded-lg transition-colors cursor-pointer ${
+                          shelfScope === 'mine'
+                            ? 'bg-canvas dark:bg-canvas-dark text-ink dark:text-ink-dark shadow-xs font-semibold'
+                            : 'text-ink-secondary hover:text-ink'
+                        }`}
+                      >
+                        My Shelf ({books.length})
+                      </button>
+                      <button
+                        onClick={() => setShelfScope('alcove')}
+                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-colors cursor-pointer ${
+                          shelfScope === 'alcove'
+                            ? 'bg-canvas dark:bg-canvas-dark text-accent dark:text-accent-dark shadow-xs font-semibold'
+                            : 'text-ink-secondary hover:text-ink'
+                        }`}
+                      >
+                        <Users size={13} />
+                        <span>{alcoveOverview.alcoves[0].name} ({alcoveOverview.shared_books.length})</span>
+                      </button>
+                    </div>
                   </div>
                 )}
 
@@ -885,7 +984,122 @@ export default function App() {
                 </div>
 
                 {/* Collection View Renderers with Tactile Animated Book Loader Overlay */}
-                {loading && books.length === 0 ? (
+                {activeTab === 'shelf' && shelfScope === 'alcove' ? (
+                  (() => {
+                    const q = search.trim().toLowerCase();
+                    const sharedList = (alcoveOverview?.shared_books || []).filter((sb) => {
+                      if (!q) return true;
+                      return (
+                        sb.title.toLowerCase().includes(q) ||
+                        (sb.authors || '').toLowerCase().includes(q) ||
+                        sb.owner_username.toLowerCase().includes(q)
+                      );
+                    });
+                    if (sharedList.length === 0) {
+                      return (
+                        <div className="py-16 flex-1 flex flex-col items-center justify-center text-center text-ink-muted space-y-2">
+                          <Users size={28} className="opacity-40" />
+                          <p className="text-sm">No shared books in this Alcove yet.</p>
+                          <p className="text-xs max-w-sm">
+                            Open any book on your shelf and tap &ldquo;Share in Alcove&rdquo;, or turn on Auto-Share in Profile.
+                          </p>
+                        </div>
+                      );
+                    }
+                    return (
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2.5 sm:gap-3.5 md:gap-4">
+                        {sharedList.map((sb) => {
+                          const isHeldByMe = sb.held_by_label === `ex/${authUser}`;
+                          const bookProjection: import('./types/book').Book = {
+                            book_id: sb.book_id,
+                            title: sb.title,
+                            subtitle: sb.subtitle,
+                            authors: sb.authors,
+                            isbn_10: sb.isbn_10,
+                            isbn_13: sb.isbn_13,
+                            publisher: sb.publisher,
+                            publication_year: sb.publication_year,
+                            language: sb.language,
+                            genre: sb.genres.join(', '),
+                            cover_url: sb.cover_url,
+                            reading_status: sb.my_reading_status,
+                            condition: sb.condition,
+                            location: sb.location,
+                            rating: sb.my_rating ?? undefined,
+                            notes: sb.my_notes ?? undefined,
+                            alcove_id: sb.alcove_id,
+                            held_by_label: sb.held_by_label,
+                            created_at: '',
+                            updated_at: '',
+                          };
+                          return (
+                            <div
+                              key={sb.book_id}
+                              className="group flex flex-col p-2 rounded-2xl border border-rule/60 dark:border-rule-dark/60 bg-surface dark:bg-surface-dark space-y-2 shadow-2xs"
+                            >
+                              <div
+                                onClick={() => openQuickLog(bookProjection)}
+                                className="cursor-pointer"
+                                title="Tap to log reading on this shared copy"
+                              >
+                                <BookCover
+                                  title={sb.title}
+                                  authors={sb.authors}
+                                  coverUrl={sb.cover_url}
+                                  readingStatus={sb.my_reading_status}
+                                />
+                              </div>
+                              <div className="space-y-1 flex-1 flex flex-col justify-between">
+                                <div>
+                                  <h3 className="font-serif text-xs font-medium line-clamp-1 text-ink dark:text-ink-dark">
+                                    {sb.title}
+                                  </h3>
+                                  <p className="text-3xs text-ink-muted line-clamp-1">
+                                    ex/{sb.owner_username} &bull; {sb.location || 'Home Shelf'}
+                                  </p>
+                                  {sb.held_by_label && (
+                                    <p className="text-3xs font-mono text-accent mt-0.5 line-clamp-1">
+                                      With {sb.held_by_label}
+                                    </p>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-1 pt-1">
+                                  <button
+                                    type="button"
+                                    onClick={() => openQuickLog(bookProjection)}
+                                    className="flex-1 py-1.5 px-2 rounded-lg bg-accent hover:bg-accent-hover text-white text-3xs font-medium cursor-pointer transition-colors"
+                                  >
+                                    Log Read
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={async () => {
+                                      try {
+                                        const nextHolder = isHeldByMe ? null : `ex/${authUser || 'reader'}`;
+                                        await updateAlcoveBookHolder(sb.book_id, nextHolder);
+                                        await loadAlcoves();
+                                        addToast(
+                                          nextHolder ? `Marked as with ${nextHolder}` : 'Returned to shared shelf',
+                                          'success'
+                                        );
+                                      } catch (err: any) {
+                                        addToast(err.message || 'Could not update holder', 'error');
+                                      }
+                                    }}
+                                    className="py-1.5 px-2 rounded-lg border border-rule dark:border-rule-dark text-3xs font-medium text-ink-secondary hover:border-accent cursor-pointer transition-colors"
+                                    title={isHeldByMe ? 'Return to shared shelf' : 'Mark that you have this copy'}
+                                  >
+                                    {isHeldByMe ? 'Return' : 'Have It'}
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    );
+                  })()
+                ) : loading && books.length === 0 ? (
                   <PageSkeletonLoader activeTab="shelf" />
                 ) : filteredBooks.length === 0 ? (
                   <div className="py-16 flex-1 flex flex-col items-center justify-center text-center text-ink-muted space-y-2">
@@ -1249,6 +1463,7 @@ export default function App() {
         onOpenDetails={(book) => setSelectedBook(book)}
       />
       <ToastContainer />
+      <EmailVerificationModal isOpen={verifyModalOpen} onClose={() => setVerifyModalOpen(false)} />
     </div>
   );
 }

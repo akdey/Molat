@@ -41,6 +41,8 @@ def _to_book(e: BookEntity) -> Book:
         purchase_date=e.purchase_date,
         rating=e.rating,
         notes=e.notes,
+        alcove_id=e.alcove_id,
+        held_by_label=e.held_by_label,
         created_at=e.created_at,
         updated_at=e.updated_at,
     )
@@ -128,6 +130,8 @@ class BookRepository:
             purchase_date=book.purchase_date,
             rating=book.rating,
             notes=book.notes,
+            alcove_id=book.alcove_id,
+            held_by_label=book.held_by_label,
             created_at=now_str,
             updated_at=now_str,
         )
@@ -167,6 +171,22 @@ class BookRepository:
         return await self.get(book_id, user_id=user_id)
 
     async def delete(self, book_id: str, user_id: str = "owner") -> bool:
+        book_row = (
+            await self.session.execute(
+                select(BookEntity).where(BookEntity.user_id == user_id, BookEntity.book_id == book_id)
+            )
+        ).scalar_one_or_none()
+        if not book_row:
+            return False
+
+        # Preserve all readers' reading logs (especially Alcove co-readers) by snapshotting title & detaching FK
+        from app.features.reading.entity import ReadingLogEntity
+        await self.session.execute(
+            update(ReadingLogEntity)
+            .where(ReadingLogEntity.book_id == book_id)
+            .values(book_id=None, book_title=book_row.title)
+        )
+
         stmt = delete(BookEntity).where(BookEntity.user_id == user_id, BookEntity.book_id == book_id)
         result = await self.session.execute(stmt)
         await self.session.commit()

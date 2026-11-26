@@ -25,16 +25,20 @@ ROUTE_ACCESS_MAP: Dict[str, List[Tuple[str, str]]] = {
         ("GET", "/api/v1/health"),
         ("POST", "/api/v1/auth/signup"),
         ("POST", "/api/v1/auth/login"),
+        ("POST", "/api/v1/auth/verify-email-link"),
         ("GET", "/api/v1/ex/*"),       # Public reader shelf by Ex-Libris handle
     ],
     # Reader routes (any logged-in reader or admin)
     "reader": [
         ("GET", "/api/v1/auth/me"),
+        ("POST", "/api/v1/auth/send-verification"),
+        ("POST", "/api/v1/auth/verify-email"),
         ("*", "/api/v1/books*"),
         ("*", "/api/v1/reading*"),
         ("*", "/api/v1/lending*"),
         ("*", "/api/v1/wishlist*"),
         ("*", "/api/v1/settings*"),
+        ("*", "/api/v1/alcoves*"),
     ],
     # Admin only routes (system maintenance, enrichers)
     "admin": [

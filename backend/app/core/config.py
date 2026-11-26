@@ -9,8 +9,9 @@ class Settings(BaseSettings):
     PORT: int = 7860
     HOST: str = "0.0.0.0"
 
-    # CORS
+    # CORS & Frontend URL
     ALLOWED_ORIGINS: str = "http://localhost:5173,http://localhost:3000,https://molat-akdey.vercel.app"
+    FRONTEND_URL: str = "https://molat-akdey.vercel.app"
 
     # Security & Owner Authentication
     ADMIN_USERNAME: str = "admin"

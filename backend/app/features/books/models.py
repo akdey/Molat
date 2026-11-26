@@ -47,6 +47,8 @@ class BookBase(BaseModel):
     purchase_date: Optional[str] = None
     rating: Optional[int] = Field(None, ge=1, le=5)
     notes: Optional[str] = None
+    alcove_id: Optional[str] = None
+    held_by_label: Optional[str] = None
 
     @field_validator("isbn_10", "isbn_13", mode="before")
     @classmethod
@@ -103,6 +105,8 @@ class BookUpdate(BaseModel):
     purchase_date: Optional[str] = None
     rating: Optional[int] = Field(None, ge=1, le=5)
     notes: Optional[str] = None
+    alcove_id: Optional[str] = None
+    held_by_label: Optional[str] = None
 
 
 class Book(BookBase):

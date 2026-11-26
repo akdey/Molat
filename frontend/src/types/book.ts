@@ -21,6 +21,8 @@ export interface Book {
   purchase_date?: string;  // YYYY-MM-DD
   rating?: number;         // 1 to 5
   notes?: string;
+  alcove_id?: string | null;
+  held_by_label?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -40,7 +42,8 @@ export interface BookListResponse {
 
 export interface ReadingLog {
   log_id: string;
-  book_id: string;
+  book_id?: string | null;
+  book_title?: string | null;
   session_date: string;
   start_page: number;
   end_page: number;
@@ -134,5 +137,68 @@ export interface LendingRecordCreate {
 export interface LendingRecordReturn {
   return_location?: string;
   notes?: string;
+}
+
+// ==================== ALCOVES (SHARED HOUSEHOLD LIBRARY) ====================
+
+export interface AlcoveMember {
+  user_id: string;
+  username: string;
+  role: string;
+  auto_share: boolean;
+  joined_at: string;
+}
+
+export interface AlcoveInvite {
+  id: string;
+  alcove_id: string;
+  alcove_name?: string;
+  invited_by_username?: string;
+  invitee_email: string;
+  invite_code: string;
+  status: string;
+  created_at: string;
+}
+
+export interface AlcoveSummary {
+  id: string;
+  name: string;
+  invite_code: string;
+  created_by: string;
+  my_role: string;
+  my_auto_share: boolean;
+  created_at: string;
+  members: AlcoveMember[];
+  sent_invites: AlcoveInvite[];
+}
+
+export interface AlcoveBookItem {
+  book_id: string;
+  owner_user_id: string;
+  owner_username: string;
+  alcove_id: string;
+  title: string;
+  subtitle?: string;
+  authors?: string;
+  isbn_10?: string;
+  isbn_13?: string;
+  publisher?: string;
+  publication_year?: number;
+  language?: string;
+  genres: string[];
+  cover_url?: string;
+  condition: BookCondition;
+  location?: string;
+  held_by_label?: string | null;
+  my_reading_status: ReadingStatus;
+  my_current_page: number;
+  my_rating?: number | null;
+  my_notes?: string | null;
+}
+
+export interface AlcoveOverview {
+  alcoves: AlcoveSummary[];
+  shared_books: AlcoveBookItem[];
+  pending_invites_for_me: AlcoveInvite[];
 }
 

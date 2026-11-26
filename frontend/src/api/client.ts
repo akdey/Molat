@@ -1,4 +1,4 @@
-import type { Book, BookListResponse, ReadingLog, ReadingLogCreate, StreakSummary, WishlistItem, WishlistAcquirePayload, LendingRecord, LendingRecordCreate, LendingRecordReturn } from '../types/book';
+import type { Book, BookListResponse, ReadingLog, ReadingLogCreate, StreakSummary, WishlistItem, WishlistAcquirePayload, LendingRecord, LendingRecordCreate, LendingRecordReturn, AlcoveOverview, ReadingStatus } from '../types/book';
 
 // If VITE_API_URL is configured (e.g. https://user-molat-api.hf.space on Vercel), use it.
 // Otherwise, fallback to relative path '/api/v1' which is proxied by Vite dev server.
@@ -83,6 +83,7 @@ export interface AuthUser {
   email?: string;
   username: string;
   role: string;
+  email_verified?: boolean;
   created_at?: string;
 }
 
@@ -307,5 +308,104 @@ export async function changePassword(
     method: 'POST',
     body: JSON.stringify({ current_password: currentPassword, new_password: newPassword }),
     token: tokenOrKey,
+  });
+}
+
+// ==================== EMAIL VERIFICATION ====================
+
+export async function sendVerificationEmail(tokenOrKey?: string): Promise<{ status: string; expires_in_minutes?: number }> {
+  return apiFetch<{ status: string; expires_in_minutes?: number }>('/auth/send-verification', {
+    method: 'POST',
+    token: tokenOrKey,
+  });
+}
+
+export async function verifyEmailOtp(otpCode: string, tokenOrKey?: string): Promise<{ status: string; email_verified: boolean }> {
+  return apiFetch<{ status: string; email_verified: boolean }>('/auth/verify-email', {
+    method: 'POST',
+    body: JSON.stringify({ otp_code: otpCode }),
+    token: tokenOrKey,
+  });
+}
+
+export async function verifyEmailLinkToken(token: string): Promise<{ status: string; email_verified: boolean; username?: string }> {
+  return apiFetch<{ status: string; email_verified: boolean; username?: string }>('/auth/verify-email-link', {
+    method: 'POST',
+    body: JSON.stringify({ token }),
+    skipAuth: true,
+  });
+}
+
+// ==================== ALCOVES (SHARED HOUSEHOLD LIBRARY) ====================
+
+export async function fetchAlcoveOverview(tokenOrKey?: string): Promise<AlcoveOverview> {
+  return apiFetch<AlcoveOverview>('/alcoves/me', { token: tokenOrKey });
+}
+
+export async function createAlcove(name: string): Promise<{ id: string; name: string; invite_code: string; created_at: string }> {
+  return apiFetch('/alcoves', {
+    method: 'POST',
+    body: JSON.stringify({ name }),
+  });
+}
+
+export async function joinAlcove(inviteCode: string): Promise<{ status: string; alcove_id: string; name: string }> {
+  return apiFetch('/alcoves/join', {
+    method: 'POST',
+    body: JSON.stringify({ invite_code: inviteCode }),
+  });
+}
+
+export async function inviteMemberToAlcove(
+  alcoveId: string,
+  email: string
+): Promise<{ status: string; invite_id: string; invitee_email: string; invite_code: string; email_sent: boolean }> {
+  return apiFetch(`/alcoves/${alcoveId}/invite`, {
+    method: 'POST',
+    body: JSON.stringify({ email }),
+  });
+}
+
+export async function leaveAlcove(alcoveId: string): Promise<{ status: string; alcove_id: string }> {
+  return apiFetch(`/alcoves/${alcoveId}/leave`, {
+    method: 'POST',
+  });
+}
+
+export async function updateAlcoveAutoShare(
+  alcoveId: string,
+  autoShare: boolean,
+  applyToExisting = true
+): Promise<{ status: string; auto_share: boolean }> {
+  return apiFetch(`/alcoves/${alcoveId}/auto-share`, {
+    method: 'PUT',
+    body: JSON.stringify({ auto_share: autoShare, apply_to_existing: applyToExisting }),
+  });
+}
+
+export async function toggleBookAlcoveShare(bookId: string, shared: boolean): Promise<{ status: string; book_id: string; alcove_id: string | null }> {
+  return apiFetch(`/alcoves/books/${bookId}/share`, {
+    method: 'PUT',
+    body: JSON.stringify({ shared }),
+  });
+}
+
+export async function updateAlcoveBookState(
+  bookId: string,
+  payload: { reading_status?: ReadingStatus; current_page?: number; rating?: number | null; notes?: string | null }
+): Promise<{ book_id: string; reading_status: ReadingStatus; current_page: number; rating?: number | null; notes?: string | null }> {
+  return apiFetch(`/alcoves/books/${bookId}/state`, {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function updateAlcoveBookHolder(
+  bookId: string,
+  heldByLabel: string | null
+): Promise<{ book_id: string; held_by_label: string | null }> {
+  return apiFetch(`/alcoves/books/${bookId}/holder`, {
+    method: 'PUT',
+    body: JSON.stringify({ held_by_label: heldByLabel }),
   });
 }

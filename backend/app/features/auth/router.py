@@ -12,7 +12,13 @@ from app.core.security import (
     verify_password,
     require_authenticated_user,
 )
-from app.features.auth.models import SignupRequest, UserResponse
+from app.features.auth.models import (
+    SignupRequest,
+    UserResponse,
+    VerifyEmailOtpRequest,
+    VerifyEmailLinkRequest,
+)
+from app.features.auth.emails import send_verification_email
 from app.features.auth.repository import UserRepository
 from app.features.auth.dependencies import get_user_repository
 
@@ -54,7 +60,11 @@ async def signup(
         username=clean_username,
         password_hash=hashed,
         role=role,
+        email_verified=False,
     )
+
+    otp_code, link_token = await user_repo.create_verification_token(user.id, user.email)
+    await send_verification_email(user.email, user.username, otp_code, link_token)
 
     token = create_access_token(username=user.username, user_id=user.id, role=user.role, email=user.email)
     response.headers["Authorization"] = f"Bearer {token}"
@@ -65,6 +75,7 @@ async def signup(
         email=user.email,
         username=user.username,
         role=user.role,
+        email_verified=user.email_verified,
         created_at=user.created_at,
     )
 
@@ -108,6 +119,7 @@ async def login(
             email="owner@molat.internal",
             username=settings.ADMIN_USERNAME,
             role="admin",
+            email_verified=True,
         )
 
     # 2. Database user credentials check
@@ -133,6 +145,7 @@ async def login(
         email=user.email,
         username=user.username,
         role=user.role,
+        email_verified=user.email_verified,
         created_at=user.created_at,
     )
 
@@ -150,6 +163,7 @@ async def get_current_user_profile(
             email="owner@molat.internal",
             username=settings.ADMIN_USERNAME,
             role="admin",
+            email_verified=True,
         )
 
     user = await user_repo.get_by_id(user_id)
@@ -163,6 +177,7 @@ async def get_current_user_profile(
         email=user.email,
         username=user.username,
         role=user.role,
+        email_verified=user.email_verified,
         created_at=user.created_at,
     )
 
@@ -207,3 +222,68 @@ async def change_password(
 
     await user_repo.update_password(user_id, hash_password(req.new_password))
     return {"status": "success", "message": "Password updated successfully"}
+
+
+@router.post("/send-verification")
+async def resend_verification_email(
+    user_id: str = Depends(require_authenticated_user),
+    user_repo: UserRepository = Depends(get_user_repository),
+):
+    """Generates a fresh 6-digit OTP & link token and sends a verification email."""
+    if user_id == "owner":
+        return {"status": "already_verified", "message": "Owner account is already verified."}
+
+    user = await user_repo.get_by_id(user_id)
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User account not found")
+    if user.email_verified:
+        return {"status": "already_verified", "message": "Email is already verified."}
+
+    otp_code, link_token = await user_repo.create_verification_token(user.id, user.email)
+    sent = await send_verification_email(user.email, user.username, otp_code, link_token)
+    if not sent:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Email delivery is currently unavailable. Please check Mailbridge configuration.",
+        )
+
+    return {"status": "sent", "expires_in_minutes": 15}
+
+
+@router.post("/verify-email")
+async def verify_email_with_otp(
+    req: VerifyEmailOtpRequest,
+    user_id: str = Depends(require_authenticated_user),
+    user_repo: UserRepository = Depends(get_user_repository),
+):
+    """Verifies the authenticated reader's email using the 6-digit OTP code."""
+    if user_id == "owner":
+        return {"status": "verified", "email_verified": True}
+
+    ok = await user_repo.verify_otp(user_id, req.otp_code)
+    if not ok:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or expired verification code.",
+        )
+    return {"status": "verified", "email_verified": True}
+
+
+@router.post("/verify-email-link")
+async def verify_email_with_link(
+    req: VerifyEmailLinkRequest,
+    user_repo: UserRepository = Depends(get_user_repository),
+):
+    """Verifies a reader's email via the clickable token link."""
+    user = await user_repo.verify_link_token(req.token)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or expired verification link.",
+        )
+    return {
+        "status": "verified",
+        "email_verified": True,
+        "username": user.username,
+        "email": user.email,
+    }

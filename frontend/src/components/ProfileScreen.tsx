@@ -27,6 +27,8 @@ import {
 import { useLibraryStore } from '../store/useLibraryStore';
 import { changePassword } from '../api/client';
 import { PageSkeletonLoader } from './PageSkeletonLoader';
+import { AlcoveSection } from './AlcoveSection';
+import { EmailVerificationModal } from './EmailVerificationModal';
 
 export const ProfileScreen: React.FC = () => {
   const {
@@ -38,6 +40,7 @@ export const ProfileScreen: React.FC = () => {
     authUser,
     authEmail,
     authRole,
+    emailVerified,
     dailyGoal,
     setDailyGoal,
     theme,
@@ -68,6 +71,7 @@ export const ProfileScreen: React.FC = () => {
 
   // Sign out confirmation state
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [showVerifyModal, setShowVerifyModal] = useState(false);
 
   // Background silent sync if email or profile hasn't been cached yet
   useEffect(() => {
@@ -271,9 +275,24 @@ export const ProfileScreen: React.FC = () => {
                 {displayEmail && (
                   <>
                     <span className="text-ink-muted">•</span>
-                    <span className="inline-flex items-center gap-1 text-2xs text-ink-muted">
+                    <span className="inline-flex items-center gap-1.5 text-2xs text-ink-muted">
                       <Mail size={11} className="opacity-70" />
                       {displayEmail}
+                      {emailVerified ? (
+                        <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-3xs font-medium bg-emerald-100 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300">
+                          <CheckCircle2 size={10} />
+                          Verified
+                        </span>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => setShowVerifyModal(true)}
+                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-3xs font-medium bg-amber-100 dark:bg-amber-950/50 text-amber-800 dark:text-amber-300 hover:bg-amber-200 cursor-pointer"
+                        >
+                          <AlertCircle size={10} />
+                          Verify Email
+                        </button>
+                      )}
                     </span>
                   </>
                 )}
@@ -305,6 +324,10 @@ export const ProfileScreen: React.FC = () => {
           </div>
         </div>
       </section>
+
+      {/* 1.5 FAMILY ALCOVE (SHARED HOUSEHOLD LIBRARY) */}
+      <AlcoveSection onOpenVerifyModal={() => setShowVerifyModal(true)} />
+      <EmailVerificationModal isOpen={showVerifyModal} onClose={() => setShowVerifyModal(false)} />
 
       {/* 2. LIFETIME READING JOURNEY & STREAK PROTECTION */}
       <section className="space-y-3">

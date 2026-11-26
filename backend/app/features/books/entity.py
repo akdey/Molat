@@ -28,6 +28,8 @@ class BookEntity(Base):
     purchase_date: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
     rating: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    alcove_id: Mapped[Optional[str]] = mapped_column(String(50), ForeignKey("alcoves.id", ondelete="SET NULL"), nullable=True, index=True)
+    held_by_label: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
     created_at: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
     updated_at: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
 

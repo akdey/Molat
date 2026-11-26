@@ -10,7 +10,8 @@ class ReadingLogEntity(Base):
 
     log_id: Mapped[str] = mapped_column(String(50), primary_key=True)
     user_id: Mapped[str] = mapped_column(String(100), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
-    book_id: Mapped[str] = mapped_column(String(50), ForeignKey("books.book_id", ondelete="CASCADE"), nullable=False, index=True)
+    book_id: Mapped[Optional[str]] = mapped_column(String(50), ForeignKey("books.book_id", ondelete="SET NULL"), nullable=True, index=True)
+    book_title: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
     session_date: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
     start_page: Mapped[Optional[int]] = mapped_column(Integer, nullable=True, default=0)
     end_page: Mapped[Optional[int]] = mapped_column(Integer, nullable=True, default=0)
