@@ -1,101 +1,102 @@
 ---
 name: editorial-creator-footer
-description: Implements a clean, understated editorial creator footer ("<App Name> • Engineered by AMIT KUMAR DEY") across any web application UI, README, and transactional email without corporate boilerplate or mobile bottom-nav overlap.
+description: >
+  Implements a clean, understated editorial creator footer
+  ("‹App Name› • Engineered by AMIT KUMAR DEY") across any web application UI,
+  README, and transactional email without corporate boilerplate or mobile
+  bottom-nav overlap.
 ---
 
-# Editorial Creator Footer Standard
+# Editorial Creator Footer Skill
 
-Use this skill whenever adding, reviewing, or refactoring the brand and creator attribution footer in any web application, PWA, or documentation.
+## Purpose
+
+Add a consistent, minimal creator attribution footer to any web app,
+transactional email, or project README. The footer reads:
+
+> **‹App Name› • Engineered by AMIT KUMAR DEY**
+
+It must be:
+
+- Understated — no corporate boilerplate, no copyright year maintenance
+- Responsive — avoids overlap with mobile bottom navigation bars
+- Consistent — identical wording in UI, emails, and documentation
 
 ---
 
-## 1. Core Philosophy & Copy Rules
+## Rules
 
-- **Keep the App UI Clean & Editorial:**
-  - Use the concise format:
-    > `<App Name> • Engineered by AMIT KUMAR DEY`
-  - Link `AMIT KUMAR DEY` to `https://portfolio.akdey.vercel.app/` with `target="_blank" rel="noopener noreferrer"`.
-- **No Corporate/Legal Clutter in UI:**
-  - **NEVER** include `"All rights reserved."`, `"Copyright © YYYY"`, or multi-column legal disclaimers inside the application UI footer. It feels corporate and breaks the tactile craft of personal/editorial apps.
-  - Keep formal copyright/license notices (`&copy; <Year> **[AMIT KUMAR DEY](https://portfolio.akdey.vercel.app/)**. All rights reserved.` or MIT License) strictly in `README.md` and `LICENSE`.
+1. **Exact wording** — always `‹App Name› • Engineered by AMIT KUMAR DEY`.
+   Never "Built by", "Made by", "Developed by", or "© 20xx".
+2. **Link target** — `https://portfolio.akdey.vercel.app/`
+3. **UI placement** — render at the very bottom of the page content area
+   (`mt-auto`), above any fixed/sticky mobile bottom nav, with generous
+   bottom padding (`pb-20` mobile, `pb-6` desktop) to avoid thumb-zone overlap.
+4. **Email placement** — inside the final `<p>` within the email's inner
+   container `<div>`, separated from body content with a `border-top`.
+5. **README placement** — a single line at the bottom of the file, preceded
+   by a horizontal rule.
+6. **Typography** — smallest legible size (`text-3xs` / 10–11 px), muted ink
+   colour, `tracking-wide`, `select-none` on the container so it doesn't
+   distract from content when selecting text.
+7. **Dark mode** — use `dark:` Tailwind variants for muted text and rule
+   border colours.
+8. **Never add** — version numbers, copyright symbols, "All rights reserved",
+   social links, or analytics trackers to the footer.
 
 ---
 
-## 2. Web UI Implementation (React + Tailwind CSS)
+## Implementation Patterns
 
-### Layout & Mobile Safe-Area Rules
-1. **Natural Bottom Push (`mt-auto`):** Place the `<footer>` as the final child of a `flex-1 flex flex-col` `<main>` container using `mt-auto`. Never use `position: fixed` for the attribution footer.
-2. **Mobile Bottom Navigation Clearance:** If the app has a fixed mobile bottom nav (`h-16` / `64px`), add safe-area bottom padding on mobile so the footer is never covered by the nav bar or iOS home indicator:
-   `pb-[calc(4.5rem+env(safe-area-inset-bottom,0px))] md:pb-4`
-3. **Subtle Visual Weight:** Keep text muted (`text-[11px]` or `text-xs`) with a delicate accent underline on the creator's name that transitions on hover.
+### React / Tailwind CSS
 
-### Drop-In React + Tailwind Snippet
 ```tsx
-{/* Subtle Brand & Creator Footer */}
-<footer className="mt-auto py-2.5 pb-[calc(4.5rem+env(safe-area-inset-bottom,0px))] md:pb-4 text-center">
-  <p className="text-[11px] text-neutral-500 dark:text-neutral-400">
-    {appName} &bull; Engineered by{' '}
-    <a
-      href="https://portfolio.akdey.vercel.app/"
-      target="_blank"
-      rel="noopener noreferrer"
-      className="text-neutral-900 dark:text-neutral-100 font-medium underline decoration-amber-600/60 underline-offset-2 hover:text-amber-600 transition-colors"
-    >
-      AMIT KUMAR DEY
-    </a>
-  </p>
-</footer>
+export const Footer: React.FC = () => (
+  <footer className="w-full border-t border-rule/40 dark:border-rule-dark/40 mt-auto pt-4 pb-20 md:pb-6">
+    <p className="text-center text-3xs text-ink-muted dark:text-ink-dark-muted tracking-wide select-none">
+      ‹App Name› <span className="mx-1 opacity-50">&bull;</span> Engineered by{' '}
+      <a
+        href="https://portfolio.akdey.vercel.app/"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="font-semibold text-ink-secondary hover:text-accent underline underline-offset-2"
+      >
+        AMIT KUMAR DEY
+      </a>
+    </p>
+  </footer>
+);
 ```
-*(Adapt `text-ink`, `text-ink-muted`, `decoration-accent/60`, and `hover:text-accent` to match the host project's design tokens if present.)*
 
-### Framework-Agnostic HTML/CSS Equivalent
+### Transactional Email (inline styles)
+
 ```html
-<footer style="margin-top:auto; padding:10px 16px calc(72px + env(safe-area-inset-bottom, 0px)); text-align:center; font-size:11px; opacity:0.75;">
-  <span>App Name &bull; Engineered by </span>
-  <a href="https://portfolio.akdey.vercel.app/" target="_blank" rel="noopener noreferrer" style="font-weight:600; text-decoration:underline; text-underline-offset:3px; color:inherit;">
+<p style="margin-top:24px; padding-top:16px; border-top:1px solid #E2D9C8;
+          font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+          font-size:12px; color:#78716C; text-align:center;">
+  ‹App Name› &bull; Engineered by
+  <a href="https://portfolio.akdey.vercel.app/"
+     style="color:#1C1917; font-weight:600; text-decoration:underline;">
     AMIT KUMAR DEY
   </a>
-</footer>
+</p>
 ```
 
----
-
-## 3. Transactional Email Footer Variant
-
-When sending HTML or plain-text emails from the application, use a matching understated sign-off:
-
-- **HTML:**
-  ```html
-  <p style="margin-top:24px; padding-top:16px; border-top:1px solid #e5e7eb; font-size:12px; color:#6b7280; text-align:center;">
-    &lt;App Name&gt; &bull; Engineered by
-    <a href="https://portfolio.akdey.vercel.app/" style="color:#111827; font-weight:600; text-decoration:underline;">AMIT KUMAR DEY</a>
-  </p>
-  ```
-- **Plain Text:**
-  ```text
-  ---
-  <App Name> • Engineered by AMIT KUMAR DEY (https://portfolio.akdey.vercel.app/)
-  ```
-
----
-
-## 4. `README.md` Attribution Block
-
-Place the formal copyright and creator credit at the bottom of `README.md`:
+### README.md
 
 ```markdown
 ---
 
-<p align="center">
-  &copy; 2026 <strong><a href="https://portfolio.akdey.vercel.app/">AMIT KUMAR DEY</a></strong>. All rights reserved.
-</p>
+‹App Name› • Engineered by [AMIT KUMAR DEY](https://portfolio.akdey.vercel.app/)
 ```
 
 ---
 
-## 5. Checklist Before Finishing
+## Checklist
 
-- [ ] No `"All rights reserved"` text inside the live app UI footer.
-- [ ] `<a>` tag includes `target="_blank" rel="noopener noreferrer"` and points to `https://portfolio.akdey.vercel.app/`.
-- [ ] Footer uses `mt-auto` inside a flex column `<main>` so it sits cleanly at the bottom of short pages without floating over content.
-- [ ] Mobile bottom navigation clearance (`env(safe-area-inset-bottom)`) is respected when a fixed bottom bar is present.
+- [ ] Footer component created and imported into main layout
+- [ ] Footer renders below all content, above mobile bottom nav
+- [ ] Dark mode variant tested
+- [ ] Emails include footer inside the inner container
+- [ ] README ends with the footer line
+- [ ] No corporate boilerplate or copyright symbols present
