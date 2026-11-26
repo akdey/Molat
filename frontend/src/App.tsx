@@ -31,10 +31,13 @@ import {
   User,
   Users,
   Mail,
+  LayoutGrid as MenuGridIcon,
 } from 'lucide-react';
 import { verifyEmailLinkToken, joinAlcove, updateAlcoveBookHolder } from './api/client';
 import { EmailVerificationModal } from './components/EmailVerificationModal';
 import { AlcoveBookDrawer } from './components/AlcoveBookDrawer';
+import { AlcoveScreen } from './components/AlcoveScreen';
+import { MenuHubScreen } from './components/MenuHubScreen';
 import type { AlcoveBookItem } from './types/book';
 
 import { StreakBanner } from './components/StreakBanner';
@@ -563,6 +566,17 @@ export default function App() {
                       <button
                         onClick={() => {
                           setHeaderMenuOpen(false);
+                          switchTab('alcoves');
+                        }}
+                        className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-surface dark:hover:bg-surface-dark text-xs font-medium transition-colors text-left"
+                      >
+                        <Users size={14} className="text-accent dark:text-accent-dark" />
+                        <span>Family Alcove</span>
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          setHeaderMenuOpen(false);
                           setPickNextModalOpen(true);
                         }}
                         className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-surface dark:hover:bg-surface-dark text-xs font-medium transition-colors text-left"
@@ -737,6 +751,12 @@ export default function App() {
 
             {/* 6. EX LIBRIS READER PROFILE */}
             {activeTab === 'profile' && <ProfileScreen />}
+
+            {/* 6.5 FAMILY ALCOVE */}
+            {activeTab === 'alcoves' && <AlcoveScreen />}
+
+            {/* 6.6 GENERIC MOBILE HUB (MORE) */}
+            {activeTab === 'more' && <MenuHubScreen />}
 
             {/* 7. VISUAL BOOKSHELF OR MAINTENANCE AUDIT */}
             {(activeTab === 'shelf' || activeTab === 'maintenance') && (
@@ -1434,18 +1454,19 @@ export default function App() {
           <span className="text-3xs mt-1">Streak</span>
         </button>
 
-        {/* 5. Profile */}
+        {/* 5. Generic More / Library Hub */}
         <button
-          onClick={() => switchTab('profile')}
-          className={`flex flex-col items-center justify-center min-w-[56px] min-h-[48px] rounded-xl transition-colors ${activeTab === 'profile'
+          onClick={() => switchTab('more')}
+          className={`flex flex-col items-center justify-center min-w-[56px] min-h-[48px] rounded-xl transition-colors ${
+            ['more', 'profile', 'alcoves', 'wishlist', 'lending', 'insights', 'maintenance'].includes(activeTab)
               ? 'text-accent dark:text-accent-dark font-semibold'
               : 'text-ink-secondary hover:text-ink'
             }`}
-          title="Ex Libris Reader Profile"
-          aria-label="Profile"
+          title="Library Menu, Alcove & Profile"
+          aria-label="More"
         >
-          <User size={19} />
-          <span className="text-3xs mt-1">Profile</span>
+          <MenuGridIcon size={19} />
+          <span className="text-3xs mt-1">More</span>
         </button>
       </nav>
 

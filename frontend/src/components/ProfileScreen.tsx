@@ -27,7 +27,6 @@ import {
 import { useLibraryStore } from '../store/useLibraryStore';
 import { changePassword } from '../api/client';
 import { PageSkeletonLoader } from './PageSkeletonLoader';
-import { AlcoveSection } from './AlcoveSection';
 import { EmailVerificationModal } from './EmailVerificationModal';
 
 export const ProfileScreen: React.FC = () => {
@@ -325,8 +324,6 @@ export const ProfileScreen: React.FC = () => {
         </div>
       </section>
 
-      {/* 1.5 FAMILY ALCOVE (SHARED HOUSEHOLD LIBRARY) */}
-      <AlcoveSection onOpenVerifyModal={() => setShowVerifyModal(true)} />
       <EmailVerificationModal isOpen={showVerifyModal} onClose={() => setShowVerifyModal(false)} />
 
       {/* 2. LIFETIME READING JOURNEY & STREAK PROTECTION */}

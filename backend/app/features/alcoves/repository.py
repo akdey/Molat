@@ -297,6 +297,47 @@ class AlcoveRepository:
         await self.session.commit()
         return alcove
 
+    async def search_readers(self, query: str, exclude_user_id: str, limit: int = 6) -> List[UserEntity]:
+        clean = query.strip().lower()
+        if clean.startswith("ex/"):
+            clean = clean[3:]
+        elif clean.startswith("@"):
+            clean = clean[1:]
+        if not clean:
+            return []
+        stmt = (
+            select(UserEntity)
+            .where(
+                UserEntity.id != exclude_user_id,
+                func.lower(UserEntity.username).like(f"%{clean}%"),
+            )
+            .order_by(UserEntity.username.asc())
+            .limit(limit)
+        )
+        return list((await self.session.execute(stmt)).scalars().all())
+
+    async def resolve_invite_target(self, raw_identifier: str) -> tuple[str, Optional[str], str]:
+        """
+        Resolves an invite target from either 'ex/username', 'username', or 'email'.
+        Returns (resolved_email, resolved_username_or_None, target_type: 'member'|'external').
+        """
+        clean = raw_identifier.strip().lower()
+        if "@" in clean:
+            existing = (
+                await self.session.execute(select(UserEntity).where(func.lower(UserEntity.email) == clean))
+            ).scalar_one_or_none()
+            if existing:
+                return existing.email, existing.username, "member"
+            return clean, None, "external"
+
+        handle = clean[3:] if clean.startswith("ex/") else clean.lstrip("@")
+        user = (
+            await self.session.execute(select(UserEntity).where(func.lower(UserEntity.username) == handle))
+        ).scalar_one_or_none()
+        if not user:
+            raise ValueError(f"No Molat reader found with handle ex/{handle}. Enter their email to invite externally.")
+        return user.email, user.username, "member"
+
     async def create_email_invite(
         self, alcove_id: str, inviter_user_id: str, invitee_email: str
     ) -> Optional[tuple[AlcoveEntity, AlcoveInviteEntity]]:

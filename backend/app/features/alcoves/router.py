@@ -1,5 +1,6 @@
 # backend/app/features/alcoves/router.py
-from fastapi import APIRouter, Depends, HTTPException, status
+from typing import List
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from app.core.security import require_authenticated_user
 from app.features.alcoves.dependencies import get_alcove_repository
 from app.features.alcoves.emails import send_alcove_invite_email
@@ -11,6 +12,7 @@ from app.features.alcoves.models import (
     AlcoveOverviewResponse,
     BookHolderUpdate,
     BookShareToggle,
+    ReaderLookupItem,
     UserBookStateUpdate,
 )
 from app.features.alcoves.repository import AlcoveRepository
@@ -83,6 +85,24 @@ async def join_alcove(
     return {"status": "joined", "alcove_id": alcove.id, "name": alcove.name}
 
 
+@router.get("/lookup", response_model=List[ReaderLookupItem])
+async def lookup_readers(
+    q: str = Query(..., min_length=1, max_length=50),
+    user_id: str = Depends(require_authenticated_user),
+    alcove_repo: AlcoveRepository = Depends(get_alcove_repository),
+):
+    """Searches registered Molat readers by ex/ handle for Alcove invitations."""
+    users = await alcove_repo.search_readers(q, exclude_user_id=user_id)
+    return [
+        ReaderLookupItem(
+            user_id=u.id,
+            username=u.username,
+            email_verified=bool(getattr(u, "email_verified", False)),
+        )
+        for u in users
+    ]
+
+
 @router.post("/{alcove_id}/invite")
 async def invite_member_by_email(
     alcove_id: str,
@@ -91,9 +111,21 @@ async def invite_member_by_email(
     alcove_repo: AlcoveRepository = Depends(get_alcove_repository),
     user_repo: UserRepository = Depends(get_user_repository),
 ):
-    """Creates an Alcove invite record and sends an invitation email via Mailbridge."""
+    """Invites an existing ex/ handle or external email to the Alcove via Mailbridge."""
     user = await _require_verified_reader(user_id, user_repo)
-    result = await alcove_repo.create_email_invite(alcove_id, user_id, req.email)
+    raw_target = (req.identifier or req.email or "").strip()
+    if not raw_target:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Please provide an ex/ handle or email address.",
+        )
+
+    try:
+        resolved_email, resolved_username, target_type = await alcove_repo.resolve_invite_target(raw_target)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
+
+    result = await alcove_repo.create_email_invite(alcove_id, user_id, resolved_email)
     if not result:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -109,6 +141,8 @@ async def invite_member_by_email(
     )
     return {
         "status": "invited",
+        "target_type": target_type,
+        "invitee_handle": f"ex/{resolved_username}" if resolved_username else None,
         "invite_id": invite.id,
         "invitee_email": invite.invitee_email,
         "invite_code": invite.invite_code,

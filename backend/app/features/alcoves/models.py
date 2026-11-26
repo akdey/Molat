@@ -14,15 +14,26 @@ class AlcoveJoinRequest(BaseModel):
 
 
 class AlcoveEmailInviteRequest(BaseModel):
-    email: str = Field(..., description="Email address of the family member or friend to invite")
+    identifier: Optional[str] = Field(None, description="Reader handle (ex/username) or external email")
+    email: Optional[str] = Field(None, description="Legacy email field")
 
     @field_validator("email")
     @classmethod
-    def validate_email(cls, v: str) -> str:
+    def validate_email(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return None
         s = v.strip().lower()
+        if not s:
+            return None
         if not re.match(r"^[^@\s]+@[^@\s]+\.[^@\s]+$", s):
             raise ValueError("Invalid email format")
         return s
+
+
+class ReaderLookupItem(BaseModel):
+    user_id: str
+    username: str
+    email_verified: bool = False
 
 
 class AlcoveAutoShareRequest(BaseModel):

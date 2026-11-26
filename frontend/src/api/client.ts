@@ -356,13 +356,31 @@ export async function joinAlcove(inviteCode: string): Promise<{ status: string; 
   });
 }
 
+export interface ReaderLookupItem {
+  user_id: string;
+  username: string;
+  email_verified: boolean;
+}
+
+export async function lookupReaders(query: string): Promise<ReaderLookupItem[]> {
+  return apiFetch<ReaderLookupItem[]>(`/alcoves/lookup?q=${encodeURIComponent(query)}`);
+}
+
 export async function inviteMemberToAlcove(
   alcoveId: string,
-  email: string
-): Promise<{ status: string; invite_id: string; invitee_email: string; invite_code: string; email_sent: boolean }> {
+  identifier: string
+): Promise<{
+  status: string;
+  target_type?: 'member' | 'external';
+  invitee_handle?: string | null;
+  invite_id: string;
+  invitee_email: string;
+  invite_code: string;
+  email_sent: boolean;
+}> {
   return apiFetch(`/alcoves/${alcoveId}/invite`, {
     method: 'POST',
-    body: JSON.stringify({ email }),
+    body: JSON.stringify({ identifier }),
   });
 }
 
