@@ -99,6 +99,7 @@ interface LibraryState {
   authEmail: string | null;
   authRole: string | null;
   emailVerified: boolean;
+  verifyEmailModalOpen: boolean;
   alcoveOverview: AlcoveOverview | null;
   shelfScope: 'mine' | 'alcove';
   theme: 'light' | 'dark';
@@ -150,6 +151,7 @@ interface LibraryState {
   loadAlcoves: () => Promise<void>;
   setShelfScope: (scope: 'mine' | 'alcove') => void;
   setEmailVerified: (verified: boolean) => void;
+  setVerifyEmailModalOpen: (open: boolean) => void;
   loadBooks: (forceRefresh?: boolean) => Promise<void>;
   loadStreak: () => Promise<void>;
   loadWishlist: () => Promise<void>;
@@ -203,6 +205,7 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
   authEmail: typeof localStorage !== 'undefined' ? localStorage.getItem('molat_auth_email') : null,
   authRole: typeof localStorage !== 'undefined' ? localStorage.getItem('molat_auth_role') : null,
   emailVerified: true,
+  verifyEmailModalOpen: false,
   alcoveOverview: null,
   shelfScope: 'mine',
   theme: 'light',
@@ -211,6 +214,7 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
 
   setShelfScope: (shelfScope) => set({ shelfScope }),
   setEmailVerified: (emailVerified) => set({ emailVerified }),
+  setVerifyEmailModalOpen: (verifyEmailModalOpen) => set({ verifyEmailModalOpen }),
 
   setActiveTab: (tab) => set({ activeTab: tab }),
   setViewMode: (mode) => set({ viewMode: mode }),
@@ -320,12 +324,14 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
       if (uRole) localStorage.setItem('molat_auth_role', uRole);
     }
     const token = typeof localStorage !== 'undefined' ? localStorage.getItem('molat_auth_token') : null;
+    const isVerified = user.email_verified ?? false;
     set({
       authToken: token,
       authUser: uName,
       authEmail: uEmail,
       authRole: uRole,
-      emailVerified: user.email_verified ?? true,
+      emailVerified: isVerified,
+      verifyEmailModalOpen: !isVerified,
       alcoveOverview: null,
       books: [],
       portfolio: null,
@@ -349,12 +355,14 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
       localStorage.setItem('molat_auth_role', uRole);
     }
     const token = typeof localStorage !== 'undefined' ? localStorage.getItem('molat_auth_token') : null;
+    const isVerified = user.email_verified ?? false;
     set({
       authToken: token,
       authUser: uName,
       authEmail: uEmail,
       authRole: uRole,
-      emailVerified: user.email_verified ?? true,
+      emailVerified: isVerified,
+      verifyEmailModalOpen: !isVerified,
       alcoveOverview: null,
       books: [],
       portfolio: null,

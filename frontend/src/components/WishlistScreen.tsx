@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ShoppingBag, Plus, Check, Tag, DollarSign, X, AlertCircle, RefreshCw } from 'lucide-react';
+import { ShoppingBag, Plus, Check, Tag, DollarSign, X, AlertCircle, RefreshCw, Users } from 'lucide-react';
 import type { WishlistItem, BookCondition } from '../types/book';
 import { useLibraryStore } from '../store/useLibraryStore';
 import { createWishlistItem } from '../api/client';
@@ -8,6 +8,7 @@ import { PageSkeletonLoader } from './PageSkeletonLoader';
 export const WishlistScreen: React.FC = () => {
   const {
     wishlist,
+    alcoveOverview,
     acquireItem,
     loadWishlist,
     authToken,
@@ -15,6 +16,17 @@ export const WishlistScreen: React.FC = () => {
     loading,
     refreshing,
   } = useLibraryStore();
+
+  const findAlcoveMatch = (title: string, isbn13?: string) => {
+    const shared = alcoveOverview?.shared_books || [];
+    const cleanTitle = title.trim().toLowerCase();
+    const cleanIsbn = (isbn13 || '').replace(/[^0-9X]/gi, '');
+    return shared.find(
+      (b) =>
+        (cleanIsbn && b.isbn_13 && b.isbn_13.replace(/[^0-9X]/gi, '') === cleanIsbn) ||
+        (cleanTitle && b.title.trim().toLowerCase() === cleanTitle)
+    );
+  };
 
   const [acquireModalItem, setAcquireModalItem] = useState<WishlistItem | null>(null);
   const [purchasePrice, setPurchasePrice] = useState<number>(0);
@@ -249,7 +261,9 @@ export const WishlistScreen: React.FC = () => {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-          {wishlist.map((item) => (
+          {wishlist.map((item) => {
+            const alcoveMatch = findAlcoveMatch(item.title, item.isbn_13);
+            return (
             <article
               key={item.wishlist_id}
               className="p-4 rounded-xl border border-rule dark:border-rule-dark bg-surface-raised dark:bg-surface-dark-raised shadow-sm space-y-3 flex flex-col justify-between"
@@ -275,6 +289,12 @@ export const WishlistScreen: React.FC = () => {
                 <p className="text-xs text-ink-secondary dark:text-ink-dark-secondary truncate">
                   {item.authors || 'Unknown author'}
                 </p>
+                {alcoveMatch && (
+                  <p className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/50 text-3xs text-amber-800 dark:text-amber-300 mt-1">
+                    <Users size={11} className="shrink-0" />
+                    <span>Already in Alcove (ex/{alcoveMatch.owner_username})</span>
+                  </p>
+                )}
               </div>
 
               {/* Price details & CTA */}
@@ -293,7 +313,8 @@ export const WishlistScreen: React.FC = () => {
                 </button>
               </div>
             </article>
-          ))}
+            );
+          })}
         </div>
       )}
 

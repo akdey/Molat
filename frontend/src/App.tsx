@@ -34,6 +34,8 @@ import {
 } from 'lucide-react';
 import { verifyEmailLinkToken, joinAlcove, updateAlcoveBookHolder } from './api/client';
 import { EmailVerificationModal } from './components/EmailVerificationModal';
+import { AlcoveBookDrawer } from './components/AlcoveBookDrawer';
+import type { AlcoveBookItem } from './types/book';
 
 import { StreakBanner } from './components/StreakBanner';
 import { ActiveReadingCard } from './components/ActiveReadingCard';
@@ -102,6 +104,8 @@ export default function App() {
     authUser,
     emailVerified,
     setEmailVerified,
+    verifyEmailModalOpen,
+    setVerifyEmailModalOpen,
     alcoveOverview,
     shelfScope,
     setShelfScope,
@@ -115,7 +119,7 @@ export default function App() {
   const [centerMenuOpen, setCenterMenuOpen] = useState(false);
   const [headerMenuOpen, setHeaderMenuOpen] = useState(false);
   const [enrichingCovers, setEnrichingCovers] = useState(false);
-  const [verifyModalOpen, setVerifyModalOpen] = useState(false);
+  const [selectedAlcoveBook, setSelectedAlcoveBook] = useState<AlcoveBookItem | null>(null);
 
   const activeLentCount = lendingRecords.filter((r) => r.status === 'ACTIVE').length;
   const overdueLentCount = lendingRecords.filter((r) => r.status === 'ACTIVE' && r.is_overdue).length;
@@ -681,7 +685,7 @@ export default function App() {
               <span>Please verify your email to unlock Family Alcove invites &amp; sharing.</span>
             </div>
             <button
-              onClick={() => setVerifyModalOpen(true)}
+              onClick={() => setVerifyEmailModalOpen(true)}
               className="px-3.5 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-medium min-h-[36px] cursor-pointer transition-colors"
             >
               Verify Email
@@ -783,14 +787,17 @@ export default function App() {
                       </button>
                       <button
                         onClick={() => setShelfScope('alcove')}
+                        title={alcoveOverview.alcoves[0].name}
                         className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-colors cursor-pointer ${
                           shelfScope === 'alcove'
                             ? 'bg-canvas dark:bg-canvas-dark text-accent dark:text-accent-dark shadow-xs font-semibold'
                             : 'text-ink-secondary hover:text-ink'
                         }`}
                       >
-                        <Users size={13} />
-                        <span>{alcoveOverview.alcoves[0].name} ({alcoveOverview.shared_books.length})</span>
+                        <Users size={13} className="shrink-0" />
+                        <span className="max-w-[120px] sm:max-w-[180px] truncate">
+                          Alcove ({alcoveOverview.shared_books.length})
+                        </span>
                       </button>
                     </div>
                   </div>
@@ -1038,9 +1045,9 @@ export default function App() {
                               className="group flex flex-col p-2 rounded-2xl border border-rule/60 dark:border-rule-dark/60 bg-surface dark:bg-surface-dark space-y-2 shadow-2xs"
                             >
                               <div
-                                onClick={() => openQuickLog(bookProjection)}
+                                onClick={() => setSelectedAlcoveBook(sb)}
                                 className="cursor-pointer"
-                                title="Tap to log reading on this shared copy"
+                                title="Tap to view details, rating & personal notes"
                               >
                                 <BookCover
                                   title={sb.title}
@@ -1463,7 +1470,8 @@ export default function App() {
         onOpenDetails={(book) => setSelectedBook(book)}
       />
       <ToastContainer />
-      <EmailVerificationModal isOpen={verifyModalOpen} onClose={() => setVerifyModalOpen(false)} />
+      <EmailVerificationModal isOpen={verifyEmailModalOpen} onClose={() => setVerifyEmailModalOpen(false)} />
+      <AlcoveBookDrawer book={selectedAlcoveBook} onClose={() => setSelectedAlcoveBook(null)} />
     </div>
   );
 }

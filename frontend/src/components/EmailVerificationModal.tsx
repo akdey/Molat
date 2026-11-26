@@ -110,15 +110,24 @@ export const EmailVerificationModal: React.FC<EmailVerificationModalProps> = ({ 
               </div>
 
               <div className="flex items-center justify-between gap-3 pt-1">
-                <button
-                  type="button"
-                  onClick={handleResend}
-                  disabled={resending}
-                  className="inline-flex items-center gap-1.5 text-xs font-medium text-accent hover:underline cursor-pointer disabled:opacity-50 min-h-[40px]"
-                >
-                  <RefreshCw size={13} className={resending ? 'animate-spin' : ''} />
-                  <span>{resending ? 'Sending...' : 'Resend Code'}</span>
-                </button>
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={handleResend}
+                    disabled={resending}
+                    className="inline-flex items-center gap-1.5 text-xs font-medium text-accent hover:underline cursor-pointer disabled:opacity-50 min-h-[40px]"
+                  >
+                    <RefreshCw size={13} className={resending ? 'animate-spin' : ''} />
+                    <span>{resending ? 'Sending...' : 'Resend Code'}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={onClose}
+                    className="text-xs text-ink-muted hover:text-ink cursor-pointer min-h-[40px]"
+                  >
+                    Verify later
+                  </button>
+                </div>
 
                 <button
                   type="submit"

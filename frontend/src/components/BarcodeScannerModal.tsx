@@ -37,6 +37,7 @@ export const BarcodeScannerModal: React.FC = () => {
     scannerOpen,
     setScannerOpen,
     books,
+    alcoveOverview,
     loadBooks,
     authToken,
     addToast,
@@ -356,9 +357,26 @@ export const BarcodeScannerModal: React.FC = () => {
         (i10 && b.isbn_10 && b.isbn_10.replace(/[^0-9X]/gi, '') === i10) ||
         (i13 && b.isbn_13 && b.isbn_13.replace(/[^0-9X]/gi, '') === i13)
     );
+    const alcoveMatch = !match
+      ? (alcoveOverview?.shared_books || []).find(
+          (b) =>
+            (b.isbn_13 && b.isbn_13.replace(/[^0-9X]/gi, '') === cleanIsbn) ||
+            (b.isbn_10 && b.isbn_10.replace(/[^0-9X]/gi, '') === cleanIsbn) ||
+            (i10 && b.isbn_10 && b.isbn_10.replace(/[^0-9X]/gi, '') === i10) ||
+            (i13 && b.isbn_13 && b.isbn_13.replace(/[^0-9X]/gi, '') === i13)
+        )
+      : null;
+
     if (match) {
       setDuplicateBook(match);
       addToast(`Notice: Volume already in collection (${match.book_id})`, 'info');
+    } else if (alcoveMatch) {
+      setDuplicateBook({
+        book_id: `Alcove (ex/${alcoveMatch.owner_username})`,
+        title: alcoveMatch.title,
+        reading_status: alcoveMatch.my_reading_status,
+      });
+      addToast(`Already in Family Alcove (owned by ex/${alcoveMatch.owner_username})`, 'info');
     } else {
       setDuplicateBook(null);
     }
