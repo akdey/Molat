@@ -120,10 +120,17 @@ Whether cataloguing a multi-hundred volume collection, scanning new arrivals at 
 - **Literary Palette**: Oxford Navy (`#1E3A8A`), warm ivory surfaces (`#FBF9F5`), muted borders, and quiet typography avoiding generic AI aesthetics.
 - **Dark Mode Support**: Seamless toggle between warm paper daylight and low-contrast midnight obsidian themes.
 
-### 🔒 Privacy & Passkey Protection
-- **JWT Authentication & Centralized RBAC**: Robust reader authentication with email, handle, and password. Public visitor shelves via Ex Libris provenance handles (`ex/<handle>`); collection management, reading log submissions, lending, and wishlist mutations require authenticated reader session tokens. System administrative maintenance is protected via role-based route mapper middleware.
+### 🔒 Privacy, Email Verification & Passkey Protection
+- **JWT Authentication & Centralized RBAC**: Robust reader authentication with email, handle, and password. Public visitor shelves via Ex Libris provenance handles (`ex/<handle>`); collection management, reading log submissions, lending, Alcoves, and wishlist mutations require authenticated reader session tokens.
+- **Email Verification (OTP + Link)**: New accounts receive an editorial verification email via the **Mailbridge** HTTP-to-SMTP relay containing both a **6-digit OTP** (15-minute expiry) and a **clickable verification link**, with a non-intrusive soft gate before creating or joining Family Alcoves.
 - **Sanitized Formula Injections**: All cell writes neutralize formula injection attacks (leading `=`, `+`, `-`, `@`).
 - **Zero Telemetry**: No third-party trackers, analytics, or cookies.
+
+### 🏡 Family Alcoves (Shared Household Library)
+- **Shared Shelves, Sovereign Streaks**: Couples, families, or book clubs can share physical books in a unified **Family Alcove** while keeping each member's `reading_status`, current page, `ReadingLog` history, streak, shields, rating, and margin notes 100% personal (`user_book_states`).
+- **Selective or Auto-Share**: Keep personal shelves private by default and share individual books with 1 tap, or toggle **Auto-Share** to merge shelves seamlessly.
+- **Email Invitations & Nightstand Tracking**: Invite family members by email (via Mailbridge) or 6-character code (`ALC-XXXXXX`), and track who currently holds a physical copy (`"With ex/..."`).
+- **Indestructible Reading History**: `reading_logs` stores a `book_title` snapshot with `ON DELETE SET NULL` on `book_id`, guaranteeing your reading logs and streaks remain intact even if the original book owner leaves the Alcove or deletes their copy.
 
 ---
 
@@ -167,14 +174,17 @@ flowchart TD
 ```text
 backend/app/
 ├── core/
-│   ├── config.py              # Application settings & environment
-│   ├── database.py            # SQLAlchemy 2.0 AsyncEngine, Base & get_db dependency
+│   ├── config.py              # Application settings & environment (incl. MAILBRIDGE_*)
+│   ├── database.py            # SQLAlchemy 2.0 AsyncEngine, Base, migrations & get_db
+│   ├── email.py               # Reusable Mailbridge HTTP-to-SMTP adapter with HMAC-SHA256
 │   ├── rbac.py                # Multi-tenant user RBAC middleware
 │   └── security.py            # Password hashing & JWT token verification
 │
-└── features/                  # Self-Contained Domain Slices (Router -> Service -> Repository -> Entity & Model)
-    ├── auth/                  # entity.py, models.py, repository.py, dependencies.py, router.py
-    ├── books/                 # entity.py, models.py, repository.py, dependencies.py, service.py, router.py
+└── features/                  # Self-Contained Domain Slices (Router -> Repository -> Entity & Model)
+    ├── alcoves/               # entity.py, models.py, repository.py, emails.py, dependencies.py, router.py
+    ├── auth/                  # entity.py, models.py, repository.py, emails.py, dependencies.py, router.py
+    ├── books/                 # entity.py, models.py, repository.py, dependencies.py, cover_enrichment.py, router.py
+    ├── genres/                # entity.py (3NF normalized book_genres)
     ├── reading/               # entity.py, models.py, repository.py, dependencies.py, streak_calculator.py, router.py
     ├── lending/               # entity.py, models.py, repository.py, dependencies.py, router.py
     ├── wishlist/              # entity.py, models.py, repository.py, dependencies.py, router.py
@@ -188,35 +198,30 @@ backend/app/
 
 Molat runs on a relational PostgreSQL database schema defined via self-contained slice entities (`features/*/entity.py`) and hosted on Supabase, featuring native multi-tenancy and high-performance connection pooling via SQLAlchemy 2.0 with `asyncpg`:
 
-### 1. `users` Table
-Multi-tenant user registry:
-- `id VARCHAR(50) PRIMARY KEY`
-- `email VARCHAR(255) UNIQUE NOT NULL`
-- `username VARCHAR(100) UNIQUE NOT NULL`
-- `password_hash VARCHAR(255) NOT NULL` (bcrypt)
-- `role VARCHAR(20) DEFAULT 'reader' NOT NULL`
-- `created_at TIMESTAMPTZ`
-- `updated_at TIMESTAMPTZ`
+### 1. `users` & `email_verification_tokens` Tables
+Multi-tenant user registry & OTP/link verification tokens:
+- `users`: `id` · `email` · `username` · `password_hash` · `role` · `email_verified` · `created_at`
+- `email_verification_tokens`: `id` · `user_id` · `email` · `otp_code` · `link_token` · `expires_at` · `used_at` · `created_at`
 
 ### 2. `books` Table
-The catalog of physical volumes partitioned per user (`user_id, book_id` composite key):
-- `user_id` · `book_id` · `title` · `subtitle` · `authors` · `isbn_10` · `isbn_13` · `publisher` · `publication_year` · `language` · `genre` · `cover_url` · `reading_status` · `condition` · `location` · `purchase_price` · `rp` · `purchase_date` · `rating` · `notes` · `created_at` · `updated_at`
+The catalog of physical volumes partitioned per user (`user_id`), with optional Alcove sharing:
+- `user_id` · `book_id` · `title` · `subtitle` · `authors` · `isbn_10` · `isbn_13` · `publisher` · `publication_year` · `language` · `cover_url` · `reading_status` · `condition` · `location` · `purchase_price` · `rp` · `purchase_date` · `rating` · `notes` · `alcove_id` · `held_by_label` · `created_at` · `updated_at`
 
 ### 3. `reading_logs` Table
-Reading sessions driving the streak & velocity engine:
-- `user_id` · `log_id` · `book_id` · `session_date` · `start_page` · `end_page` · `pages_read` · `duration_minutes` · `session_note` · `created_at`
+Reading sessions driving the streak & velocity engine (with `ON DELETE SET NULL` + `book_title` snapshot for indestructible history):
+- `user_id` · `log_id` · `book_id` (`NULL`able) · `book_title` · `session_date` · `start_page` · `end_page` · `pages_read` · `duration_minutes` · `session_note` · `created_at`
 
-### 4. `wishlist` Table
-Acquisitions and budget planning per user:
-- `user_id` · `wishlist_id` · `title` · `authors` · `isbn_13` · `genre` · `expected_rp` · `target_price` · `priority` · `notes` · `created_at`
+### 4. `alcoves`, `alcove_members`, `alcove_invites` & `user_book_states` Tables
+Shared household library circles with per-reader isolated progress:
+- `alcoves`: `id` · `name` · `invite_code` · `created_by` · `created_at`
+- `alcove_members`: `id` · `alcove_id` · `user_id` · `role` · `auto_share` · `joined_at`
+- `alcove_invites`: `id` · `alcove_id` · `invited_by_user_id` · `invitee_email` · `invite_code` · `status` · `created_at`
+- `user_book_states`: `id` · `user_id` · `book_id` · `reading_status` · `current_page` · `rating` · `notes` · `updated_at`
 
-### 5. `lending` Table
-Borrower contracts, due date calculations, and loan history:
-- `user_id` · `lending_id` · `book_id` · `borrower_name` · `borrower_contact` · `lent_date` · `due_date` · `returned_date` · `status` · `notes` · `created_at`
-
-### 6. `user_settings` Table
-Individual reading profiles and preferences:
-- `user_id PRIMARY KEY` · `daily_goal_pages` · `active_book_id` · `theme` · `updated_at`
+### 5. `wishlist`, `lending` & `user_settings` Tables
+- `wishlist`: `user_id` · `wishlist_id` · `title` · `authors` · `isbn_13` · `genre` · `expected_rp` · `target_price` · `priority` · `notes` · `created_at`
+- `lending`: `user_id` · `lending_id` · `book_id` · `borrower_name` · `borrower_contact` · `lent_date` · `due_date` · `returned_date` · `status` · `notes` · `created_at`
+- `user_settings`: `user_id PRIMARY KEY` · `daily_goal_pages` · `active_book_id` · `theme` · `updated_at`
 
 ---
 
@@ -259,6 +264,13 @@ DATABASE_URL=postgresql://postgres:[PASSWORD]@db.[PROJECT].supabase.co:5432/post
 JWT_SECRET=your-random-secret-key-for-signing-tokens
 PORT=7860
 ALLOWED_ORIGINS=http://localhost:5173,https://molat-akdey.vercel.app
+FRONTEND_URL=https://molat-akdey.vercel.app
+
+# Mailbridge Email Relay Service (HTTP-to-SMTP)
+MAILBRIDGE_URL=https://mailbridge-akdey.vercel.app
+MAILBRIDGE_APP_ID=molat
+MAILBRIDGE_API_KEY=your-mailbridge-api-key
+MAILBRIDGE_SIGNING_SECRET=optional-hmac-sha256-signing-secret
 ```
 
 #### Run Backend Server:
@@ -270,7 +282,7 @@ API Documentation will be available at `http://localhost:7860/docs`.
 #### Run Backend Test Suite:
 ```bash
 pytest -v
-# 33 passed in 0.44s
+# 54 passed
 ```
 
 ---
