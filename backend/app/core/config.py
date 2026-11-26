@@ -24,6 +24,13 @@ class Settings(BaseSettings):
     CACHE_TTL_SECONDS: int = 300
     TIMEZONE: str = "Asia/Kolkata"
 
+    # Mailbridge Email Relay Service
+    MAILBRIDGE_URL: Optional[str] = None
+    MAILBRIDGE_APP_ID: Optional[str] = None
+    MAILBRIDGE_API_KEY: Optional[str] = None
+    MAILBRIDGE_SIGNING_SECRET: Optional[str] = None
+    MAILBRIDGE_TIMEOUT_SECONDS: float = 10.0
+
     model_config = SettingsConfigDict(
         env_file=(".env", "backend/.env"),
         env_file_encoding="utf-8",
