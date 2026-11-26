@@ -111,7 +111,7 @@ async def invite_member_by_email(
     alcove_repo: AlcoveRepository = Depends(get_alcove_repository),
     user_repo: UserRepository = Depends(get_user_repository),
 ):
-    """Invites an existing ex/ handle or external email to the Alcove via Mailbridge."""
+    """Invites an existing ex/ handle or external email to the Alcove via Mailbrix."""
     user = await _require_verified_reader(user_id, user_repo)
     raw_target = (req.identifier or req.email or "").strip()
     if not raw_target:

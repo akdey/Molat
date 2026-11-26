@@ -1,7 +1,7 @@
 # backend/app/features/alcoves/emails.py
 import logging
 from app.core.config import settings
-from app.core.email import MailbridgeConfigError, MailbridgeError, mailbridge_client
+from app.core.email import MailbrixConfigError, MailbrixError, mailbrix_client
 
 logger = logging.getLogger("molat.alcoves.email")
 
@@ -13,7 +13,7 @@ async def send_alcove_invite_email(
     invite_code: str,
 ) -> bool:
     """
-    Send an editorial Alcove family library invitation email via Mailbridge.
+    Send an editorial Alcove family library invitation email via Mailbrix.
     Includes both the 1-click join link and the manual invite code.
     """
     frontend_base = (settings.FRONTEND_URL or "https://molat-akdey.vercel.app").strip().rstrip("/")
@@ -72,16 +72,16 @@ async def send_alcove_invite_email(
     )
 
     try:
-        await mailbridge_client.send_email(
+        await mailbrix_client.send_email(
             to_email=to_email,
             subject=subject,
             html_content=html_content,
             text_content=text_content,
         )
         return True
-    except MailbridgeConfigError:
-        logger.warning("Mailbridge not configured; Alcove invite %s created without email send", invite_code)
+    except MailbrixConfigError:
+        logger.warning("Mailbrix not configured; Alcove invite %s created without email send", invite_code)
         return False
-    except MailbridgeError as exc:
+    except MailbrixError as exc:
         logger.error("Failed to send Alcove invite email to %s: %s", to_email, exc)
         return False

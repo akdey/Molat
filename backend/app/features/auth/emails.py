@@ -1,7 +1,7 @@
 # backend/app/features/auth/emails.py
 import logging
 from app.core.config import settings
-from app.core.email import MailbridgeConfigError, MailbridgeError, mailbridge_client
+from app.core.email import MailbrixConfigError, MailbrixError, mailbrix_client
 
 logger = logging.getLogger("molat.auth.email")
 
@@ -14,7 +14,7 @@ async def send_verification_email(
 ) -> bool:
     """
     Send an editorial verification email containing both a 6-digit OTP code
-    and a clickable verification link. Returns True if sent, False if Mailbridge
+    and a clickable verification link. Returns True if sent, False if Mailbrix
     is unconfigured or fails (so signup remains resilient).
     """
     frontend_base = (settings.FRONTEND_URL or "https://molat-akdey.vercel.app").strip().rstrip("/")
@@ -74,16 +74,16 @@ async def send_verification_email(
     )
 
     try:
-        await mailbridge_client.send_email(
+        await mailbrix_client.send_email(
             to_email=to_email,
             subject=subject,
             html_content=html_content,
             text_content=text_content,
         )
         return True
-    except MailbridgeConfigError:
-        logger.warning("Mailbridge not configured; skipping verification email for user ex/%s", username)
+    except MailbrixConfigError:
+        logger.warning("Mailbrix not configured; skipping verification email for user ex/%s", username)
         return False
-    except MailbridgeError as exc:
+    except MailbrixError as exc:
         logger.error("Failed to send verification email for user ex/%s: %s", username, exc)
         return False

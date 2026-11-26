@@ -4,7 +4,7 @@ import pytest
 from httpx import AsyncClient, ASGITransport
 
 from app.main import app
-from app.core.email import MailbridgeSendResult
+from app.core.email import MailbrixSendResult
 
 
 @pytest.mark.asyncio
@@ -13,9 +13,9 @@ async def test_email_verification_otp_and_link_and_soft_gate():
 
     async def fake_send_email(**kwargs):
         captured_emails.append(kwargs)
-        return MailbridgeSendResult(status="sent", request_id="req_1", recipients=[kwargs["to_email"]])
+        return MailbrixSendResult(status="sent", request_id="req_1", recipients=[kwargs["to_email"]])
 
-    with patch("app.core.email.mailbridge_client.send_email", new=AsyncMock(side_effect=fake_send_email)):
+    with patch("app.core.email.mailbrix_client.send_email", new=AsyncMock(side_effect=fake_send_email)):
         async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
             # 1. Signup creates unverified user and sends verification email
             res = await client.post(
@@ -76,9 +76,9 @@ async def test_alcove_sharing_personal_progress_and_indestructible_history():
 
     async def fake_send_email(**kwargs):
         sent_invites.append(kwargs)
-        return MailbridgeSendResult(status="sent", request_id="req_inv", recipients=[kwargs["to_email"]])
+        return MailbrixSendResult(status="sent", request_id="req_inv", recipients=[kwargs["to_email"]])
 
-    with patch("app.core.email.mailbridge_client.send_email", new=AsyncMock(side_effect=fake_send_email)):
+    with patch("app.core.email.mailbrix_client.send_email", new=AsyncMock(side_effect=fake_send_email)):
         async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
             # Sign up & verify both users
             r1 = await client.post(

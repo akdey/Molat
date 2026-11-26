@@ -122,14 +122,14 @@ Whether cataloguing a multi-hundred volume collection, scanning new arrivals at 
 
 ### 🔒 Privacy, Email Verification & Passkey Protection
 - **JWT Authentication & Centralized RBAC**: Robust reader authentication with email, handle, and password. Public visitor shelves via Ex Libris provenance handles (`ex/<handle>`); collection management, reading log submissions, lending, Alcoves, and wishlist mutations require authenticated reader session tokens.
-- **Email Verification (OTP + Link)**: New accounts receive an editorial verification email via the **Mailbridge** HTTP-to-SMTP relay containing both a **6-digit OTP** (15-minute expiry) and a **clickable verification link**, with a non-intrusive soft gate before creating or joining Family Alcoves.
+- **Email Verification (OTP + Link)**: New accounts receive an editorial verification email via the **Mailbrix** HTTP-to-SMTP relay containing both a **6-digit OTP** (15-minute expiry) and a **clickable verification link**, with a non-intrusive soft gate before creating or joining Family Alcoves.
 - **Sanitized Formula Injections**: All cell writes neutralize formula injection attacks (leading `=`, `+`, `-`, `@`).
 - **Zero Telemetry**: No third-party trackers, analytics, or cookies.
 
 ### 🏡 Family Alcoves (Shared Household Library)
 - **Shared Shelves, Sovereign Streaks**: Couples, families, or book clubs can share physical books in a unified **Family Alcove** while keeping each member's `reading_status`, current page, `ReadingLog` history, streak, shields, rating, and margin notes 100% personal (`user_book_states`).
 - **Selective or Auto-Share**: Keep personal shelves private by default and share individual books with 1 tap, or toggle **Auto-Share** to merge shelves seamlessly.
-- **Email Invitations & Nightstand Tracking**: Invite family members by email (via Mailbridge) or 6-character code (`ALC-XXXXXX`), and track who currently holds a physical copy (`"With ex/..."`).
+- **Email Invitations & Nightstand Tracking**: Invite family members by email (via Mailbrix) or 6-character code (`ALC-XXXXXX`), and track who currently holds a physical copy (`"With ex/..."`).
 - **Indestructible Reading History**: `reading_logs` stores a `book_title` snapshot with `ON DELETE SET NULL` on `book_id`, guaranteeing your reading logs and streaks remain intact even if the original book owner leaves the Alcove or deletes their copy.
 
 ---
@@ -174,9 +174,9 @@ flowchart TD
 ```text
 backend/app/
 ├── core/
-│   ├── config.py              # Application settings & environment (incl. MAILBRIDGE_*)
+│   ├── config.py              # Application settings & environment (incl. MAILBRIX_*)
 │   ├── database.py            # SQLAlchemy 2.0 AsyncEngine, Base, migrations & get_db
-│   ├── email.py               # Reusable Mailbridge HTTP-to-SMTP adapter with HMAC-SHA256
+│   ├── email.py               # Reusable Mailbrix HTTP-to-SMTP adapter with HMAC-SHA256
 │   ├── rbac.py                # Multi-tenant user RBAC middleware
 │   └── security.py            # Password hashing & JWT token verification
 │
@@ -266,11 +266,11 @@ PORT=7860
 ALLOWED_ORIGINS=http://localhost:5173,https://molat-akdey.vercel.app
 FRONTEND_URL=https://molat-akdey.vercel.app
 
-# Mailbridge Email Relay Service (HTTP-to-SMTP)
-MAILBRIDGE_URL=https://mailbridge-akdey.vercel.app
-MAILBRIDGE_APP_ID=molat
-MAILBRIDGE_API_KEY=your-mailbridge-api-key
-MAILBRIDGE_SIGNING_SECRET=optional-hmac-sha256-signing-secret
+# Mailbrix Email Relay Service (HTTP-to-SMTP)
+MAILBRIX_URL=https://mailbrix-akdey.vercel.app
+MAILBRIX_APP_ID=molat
+MAILBRIX_API_KEY=your-mailbrix-api-key
+MAILBRIX_SIGNING_SECRET=optional-hmac-sha256-signing-secret
 ```
 
 #### Run Backend Server:

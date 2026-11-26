@@ -244,7 +244,7 @@ async def resend_verification_email(
     if not sent:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Email delivery is currently unavailable. Please check Mailbridge configuration.",
+            detail="Email delivery is currently unavailable. Please check Mailbrix configuration.",
         )
 
     return {"status": "sent", "expires_in_minutes": 15}

@@ -14,19 +14,19 @@ from app.core.config import settings
 from app.core.email import (
     EmailAttachment,
     EmailMessage,
-    MailbridgeClient,
-    MailbridgeConfigError,
-    MailbridgeError,
-    MailbridgeHTTPError,
+    MailbrixClient,
+    MailbrixConfigError,
+    MailbrixError,
+    MailbrixHTTPError,
 )
 
 
 @pytest.mark.asyncio
 async def test_send_email_success_with_hmac_and_full_payload(monkeypatch):
-    monkeypatch.setattr(settings, "MAILBRIDGE_URL", "https://mailbridge-akdey.vercel.app/")
-    monkeypatch.setattr(settings, "MAILBRIDGE_APP_ID", "molat")
-    monkeypatch.setattr(settings, "MAILBRIDGE_API_KEY", "secret-api-key-123")
-    monkeypatch.setattr(settings, "MAILBRIDGE_SIGNING_SECRET", "super-hmac-secret-456")
+    monkeypatch.setattr(settings, "MAILBRIX_URL", "https://mailbrix-akdey.vercel.app/")
+    monkeypatch.setattr(settings, "MAILBRIX_APP_ID", "molat")
+    monkeypatch.setattr(settings, "MAILBRIX_API_KEY", "secret-api-key-123")
+    monkeypatch.setattr(settings, "MAILBRIX_SIGNING_SECRET", "super-hmac-secret-456")
 
     captured = {}
 
@@ -46,7 +46,7 @@ async def test_send_email_success_with_hmac_and_full_payload(monkeypatch):
 
     transport = httpx.MockTransport(handler)
     async with httpx.AsyncClient(transport=transport) as http_client:
-        client = MailbridgeClient(http_client=http_client)
+        client = MailbrixClient(http_client=http_client)
         result = await client.send_email(
             to_email=["reader@example.com"],
             subject="Welcome to the Dey Family Alcove",
@@ -69,7 +69,7 @@ async def test_send_email_success_with_hmac_and_full_payload(monkeypatch):
     assert result.app_id == "molat"
     assert result.recipients == ["reader@example.com"]
 
-    assert captured["url"] == "https://mailbridge-akdey.vercel.app/send"
+    assert captured["url"] == "https://mailbrix-akdey.vercel.app/send"
     headers = {k.lower(): v for k, v in captured["headers"].items()}
     assert headers["content-type"] == "application/json"
     assert headers["x-api-key"] == "secret-api-key-123"
@@ -104,10 +104,10 @@ async def test_send_email_success_with_hmac_and_full_payload(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_send_email_without_optional_app_id_and_signing_secret(monkeypatch):
-    monkeypatch.setattr(settings, "MAILBRIDGE_URL", "https://mailbridge-akdey.vercel.app")
-    monkeypatch.setattr(settings, "MAILBRIDGE_APP_ID", None)
-    monkeypatch.setattr(settings, "MAILBRIDGE_API_KEY", "secret-api-key-123")
-    monkeypatch.setattr(settings, "MAILBRIDGE_SIGNING_SECRET", None)
+    monkeypatch.setattr(settings, "MAILBRIX_URL", "https://mailbrix-akdey.vercel.app")
+    monkeypatch.setattr(settings, "MAILBRIX_APP_ID", None)
+    monkeypatch.setattr(settings, "MAILBRIX_API_KEY", "secret-api-key-123")
+    monkeypatch.setattr(settings, "MAILBRIX_SIGNING_SECRET", None)
 
     captured_headers = {}
 
@@ -117,7 +117,7 @@ async def test_send_email_without_optional_app_id_and_signing_secret(monkeypatch
 
     transport = httpx.MockTransport(handler)
     async with httpx.AsyncClient(transport=transport) as http_client:
-        client = MailbridgeClient(http_client=http_client)
+        client = MailbrixClient(http_client=http_client)
         result = await client.send_email(
             to_email="a@b.com",
             subject="Plain Test",
@@ -134,16 +134,16 @@ async def test_send_email_without_optional_app_id_and_signing_secret(monkeypatch
 
 @pytest.mark.asyncio
 async def test_missing_config_raises_config_error(monkeypatch):
-    monkeypatch.setattr(settings, "MAILBRIDGE_URL", None)
-    monkeypatch.setattr(settings, "MAILBRIDGE_API_KEY", "key")
+    monkeypatch.setattr(settings, "MAILBRIX_URL", None)
+    monkeypatch.setattr(settings, "MAILBRIX_API_KEY", "key")
 
-    client = MailbridgeClient()
-    with pytest.raises(MailbridgeConfigError, match="MAILBRIDGE_URL"):
+    client = MailbrixClient()
+    with pytest.raises(MailbrixConfigError, match="MAILBRIX_URL"):
         await client.send_email(to_email="a@b.com", subject="Hi", text_content="Body")
 
-    monkeypatch.setattr(settings, "MAILBRIDGE_URL", "https://mailbridge-akdey.vercel.app")
-    monkeypatch.setattr(settings, "MAILBRIDGE_API_KEY", "")
-    with pytest.raises(MailbridgeConfigError, match="MAILBRIDGE_API_KEY"):
+    monkeypatch.setattr(settings, "MAILBRIX_URL", "https://mailbrix-akdey.vercel.app")
+    monkeypatch.setattr(settings, "MAILBRIX_API_KEY", "")
+    with pytest.raises(MailbrixConfigError, match="MAILBRIX_API_KEY"):
         await client.send_email(to_email="a@b.com", subject="Hi", text_content="Body")
 
 
@@ -162,10 +162,10 @@ def test_email_message_validation():
 async def test_non_200_response_raises_and_never_logs_secrets(monkeypatch, caplog):
     api_secret = "super-secret-api-key-do-not-log"
     hmac_secret = "super-secret-hmac-do-not-log"
-    monkeypatch.setattr(settings, "MAILBRIDGE_URL", "https://mailbridge-akdey.vercel.app")
-    monkeypatch.setattr(settings, "MAILBRIDGE_APP_ID", "molat")
-    monkeypatch.setattr(settings, "MAILBRIDGE_API_KEY", api_secret)
-    monkeypatch.setattr(settings, "MAILBRIDGE_SIGNING_SECRET", hmac_secret)
+    monkeypatch.setattr(settings, "MAILBRIX_URL", "https://mailbrix-akdey.vercel.app")
+    monkeypatch.setattr(settings, "MAILBRIX_APP_ID", "molat")
+    monkeypatch.setattr(settings, "MAILBRIX_API_KEY", api_secret)
+    monkeypatch.setattr(settings, "MAILBRIX_SIGNING_SECRET", hmac_secret)
 
     def handler(request: httpx.Request) -> httpx.Response:
         return httpx.Response(401, text='{"detail":"Invalid API key"}')
@@ -173,8 +173,8 @@ async def test_non_200_response_raises_and_never_logs_secrets(monkeypatch, caplo
     transport = httpx.MockTransport(handler)
     with caplog.at_level(logging.ERROR):
         async with httpx.AsyncClient(transport=transport) as http_client:
-            client = MailbridgeClient(http_client=http_client)
-            with pytest.raises(MailbridgeHTTPError) as exc_info:
+            client = MailbrixClient(http_client=http_client)
+            with pytest.raises(MailbrixHTTPError) as exc_info:
                 await client.send_email(to_email="a@b.com", subject="Test", text_content="Body")
 
     assert exc_info.value.status_code == 401
@@ -188,16 +188,16 @@ async def test_non_200_response_raises_and_never_logs_secrets(monkeypatch, caplo
 async def test_timeout_and_network_error_handling(monkeypatch, caplog):
     api_secret = "super-secret-api-key-do-not-log"
     hmac_secret = "super-secret-hmac-do-not-log"
-    monkeypatch.setattr(settings, "MAILBRIDGE_URL", "https://mailbridge-akdey.vercel.app")
-    monkeypatch.setattr(settings, "MAILBRIDGE_API_KEY", api_secret)
-    monkeypatch.setattr(settings, "MAILBRIDGE_SIGNING_SECRET", hmac_secret)
+    monkeypatch.setattr(settings, "MAILBRIX_URL", "https://mailbrix-akdey.vercel.app")
+    monkeypatch.setattr(settings, "MAILBRIX_API_KEY", api_secret)
+    monkeypatch.setattr(settings, "MAILBRIX_SIGNING_SECRET", hmac_secret)
 
     mock_http = AsyncMock(spec=httpx.AsyncClient)
     mock_http.post.side_effect = httpx.TimeoutException("Read timed out")
 
-    client = MailbridgeClient(http_client=mock_http, timeout=2.5)
+    client = MailbrixClient(http_client=mock_http, timeout=2.5)
     with caplog.at_level(logging.ERROR):
-        with pytest.raises(MailbridgeError, match="timed out"):
+        with pytest.raises(MailbrixError, match="timed out"):
             await client.send_email(to_email="a@b.com", subject="Test", text_content="Body")
 
     assert api_secret not in caplog.text
@@ -205,7 +205,7 @@ async def test_timeout_and_network_error_handling(monkeypatch, caplog):
 
     mock_http.post.side_effect = httpx.ConnectError("Connection refused")
     with caplog.at_level(logging.ERROR):
-        with pytest.raises(MailbridgeError, match="ConnectError"):
+        with pytest.raises(MailbrixError, match="ConnectError"):
             await client.send_email(to_email="a@b.com", subject="Test", text_content="Body")
 
     assert api_secret not in caplog.text

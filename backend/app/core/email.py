@@ -15,25 +15,25 @@ from app.core.config import settings
 logger = logging.getLogger(__name__)
 
 
-class MailbridgeError(Exception):
-    """Base exception for Mailbridge email delivery failures."""
+class MailbrixError(Exception):
+    """Base exception for Mailbrix email delivery failures."""
 
 
-class MailbridgeConfigError(MailbridgeError):
-    """Raised when required Mailbridge configuration is missing."""
+class MailbrixConfigError(MailbrixError):
+    """Raised when required Mailbrix configuration is missing."""
 
 
-class MailbridgeHTTPError(MailbridgeError):
-    """Raised when Mailbridge returns a non-200 HTTP response."""
+class MailbrixHTTPError(MailbrixError):
+    """Raised when Mailbrix returns a non-200 HTTP response."""
 
     def __init__(self, status_code: int, detail: str):
         self.status_code = status_code
         self.detail = detail
-        super().__init__(f"Mailbridge request failed with status {status_code}: {detail}")
+        super().__init__(f"Mailbrix request failed with status {status_code}: {detail}")
 
 
 class EmailAttachment(BaseModel):
-    """Base64-encoded email attachment payload for Mailbridge."""
+    """Base64-encoded email attachment payload for Mailbrix."""
 
     filename: str = Field(..., min_length=1)
     content: str = Field(..., min_length=1)
@@ -41,7 +41,7 @@ class EmailAttachment(BaseModel):
 
 
 class EmailMessage(BaseModel):
-    """Validated email request payload matching Mailbridge POST /send contract."""
+    """Validated email request payload matching Mailbrix POST /send contract."""
 
     to_email: Union[str, List[str]]
     subject: str = Field(..., min_length=1, max_length=998)
@@ -61,8 +61,8 @@ class EmailMessage(BaseModel):
         return self
 
 
-class MailbridgeSendResult(BaseModel):
-    """Structured 200 OK response from Mailbridge POST /send."""
+class MailbrixSendResult(BaseModel):
+    """Structured 200 OK response from Mailbrix POST /send."""
 
     status: str
     request_id: Optional[str] = None
@@ -70,8 +70,8 @@ class MailbridgeSendResult(BaseModel):
     recipients: List[str] = Field(default_factory=list)
 
 
-class MailbridgeClient:
-    """Reusable async adapter for the Mailbridge HTTP-to-SMTP relay service."""
+class MailbrixClient:
+    """Reusable async adapter for the Mailbrix HTTP-to-SMTP relay service."""
 
     def __init__(
         self,
@@ -90,13 +90,13 @@ class MailbridgeClient:
         self._http_client = http_client
 
     def _resolve_config(self) -> tuple[str, str, Optional[str], Optional[str], float]:
-        base_url = (self._base_url if self._base_url is not None else settings.MAILBRIDGE_URL) or ""
-        api_key = (self._api_key if self._api_key is not None else settings.MAILBRIDGE_API_KEY) or ""
-        app_id = self._app_id if self._app_id is not None else settings.MAILBRIDGE_APP_ID
+        base_url = (self._base_url if self._base_url is not None else settings.MAILBRIX_URL) or ""
+        api_key = (self._api_key if self._api_key is not None else settings.MAILBRIX_API_KEY) or ""
+        app_id = self._app_id if self._app_id is not None else settings.MAILBRIX_APP_ID
         signing_secret = (
-            self._signing_secret if self._signing_secret is not None else settings.MAILBRIDGE_SIGNING_SECRET
+            self._signing_secret if self._signing_secret is not None else settings.MAILBRIX_SIGNING_SECRET
         )
-        timeout = self._timeout if self._timeout is not None else settings.MAILBRIDGE_TIMEOUT_SECONDS
+        timeout = self._timeout if self._timeout is not None else settings.MAILBRIX_TIMEOUT_SECONDS
 
         base_url = base_url.strip().rstrip("/")
         api_key = api_key.strip()
@@ -104,9 +104,9 @@ class MailbridgeClient:
         signing_secret = signing_secret.strip() if signing_secret and signing_secret.strip() else None
 
         if not base_url:
-            raise MailbridgeConfigError("MAILBRIDGE_URL is not configured.")
+            raise MailbrixConfigError("MAILBRIX_URL is not configured.")
         if not api_key:
-            raise MailbridgeConfigError("MAILBRIDGE_API_KEY is not configured.")
+            raise MailbrixConfigError("MAILBRIX_API_KEY is not configured.")
 
         return base_url, api_key, app_id, signing_secret, timeout
 
@@ -140,8 +140,8 @@ class MailbridgeClient:
 
         return headers
 
-    async def send(self, message: EmailMessage) -> MailbridgeSendResult:
-        """Send an email via Mailbridge POST /send using exact raw JSON bytes."""
+    async def send(self, message: EmailMessage) -> MailbrixSendResult:
+        """Send an email via Mailbrix POST /send using exact raw JSON bytes."""
         base_url, api_key, app_id, signing_secret, timeout = self._resolve_config()
         endpoint = f"{base_url}/send"
 
@@ -157,24 +157,24 @@ class MailbridgeClient:
                 async with httpx.AsyncClient(timeout=timeout) as client:
                     response = await client.post(endpoint, content=raw_body, headers=headers)
         except httpx.TimeoutException as exc:
-            logger.error("Mailbridge request timed out after %ss when sending to %s", timeout, endpoint)
-            raise MailbridgeError(f"Mailbridge request timed out after {timeout}s") from exc
+            logger.error("Mailbrix request timed out after %ss when sending to %s", timeout, endpoint)
+            raise MailbrixError(f"Mailbrix request timed out after {timeout}s") from exc
         except httpx.RequestError as exc:
-            logger.error("Mailbridge network error when sending to %s: %s", endpoint, type(exc).__name__)
-            raise MailbridgeError(f"Mailbridge network error: {type(exc).__name__}") from exc
+            logger.error("Mailbrix network error when sending to %s: %s", endpoint, type(exc).__name__)
+            raise MailbrixError(f"Mailbrix network error: {type(exc).__name__}") from exc
 
         if response.status_code != 200:
             # Truncate response body for safe logging without leaking sensitive headers
             body_preview = (response.text or "")[:300]
             logger.error(
-                "Mailbridge returned HTTP %s from %s: %s",
+                "Mailbrix returned HTTP %s from %s: %s",
                 response.status_code,
                 endpoint,
                 body_preview,
             )
-            raise MailbridgeHTTPError(response.status_code, body_preview or response.reason_phrase)
+            raise MailbrixHTTPError(response.status_code, body_preview or response.reason_phrase)
 
-        return MailbridgeSendResult.model_validate(response.json())
+        return MailbrixSendResult.model_validate(response.json())
 
     async def send_email(
         self,
@@ -186,7 +186,7 @@ class MailbridgeClient:
         cc: Optional[List[str]] = None,
         bcc: Optional[List[str]] = None,
         attachments: Optional[List[EmailAttachment]] = None,
-    ) -> MailbridgeSendResult:
+    ) -> MailbrixSendResult:
         """Convenience helper accepting keyword arguments directly."""
         message = EmailMessage(
             to_email=to_email,
@@ -201,4 +201,4 @@ class MailbridgeClient:
         return await self.send(message)
 
 
-mailbridge_client = MailbridgeClient()
+mailbrix_client = MailbrixClient()
