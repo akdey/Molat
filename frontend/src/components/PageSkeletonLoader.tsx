@@ -3,7 +3,17 @@ import { motion } from 'motion/react';
 import { BookLoader } from './BookLoader';
 
 interface PageSkeletonLoaderProps {
-  activeTab: 'home' | 'shelf' | 'tracker' | 'wishlist' | 'maintenance' | 'insights' | 'lending' | 'profile';
+  activeTab:
+  | 'home'
+  | 'shelf'
+  | 'tracker'
+  | 'wishlist'
+  | 'maintenance'
+  | 'insights'
+  | 'lending'
+  | 'alcoves'
+  | 'profile'
+  | 'more';
   caption?: string;
   className?: string;
 }
