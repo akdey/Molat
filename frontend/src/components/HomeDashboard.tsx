@@ -28,7 +28,19 @@ interface HomeDashboardProps {
   streakSummary: StreakSummary | null;
   openQuickLog: (book?: Book) => void;
   setSelectedBook: (book: Book | null) => void;
-  setActiveTab: (tab: 'home' | 'shelf' | 'insights' | 'tracker' | 'wishlist' | 'maintenance' | 'lending') => void;
+  setActiveTab: (
+    tab:
+      | 'home'
+      | 'shelf'
+      | 'insights'
+      | 'tracker'
+      | 'wishlist'
+      | 'maintenance'
+      | 'lending'
+      | 'alcoves'
+      | 'profile'
+      | 'more'
+  ) => void;
 }
 
 export const HomeDashboard: React.FC<HomeDashboardProps> = ({
@@ -147,21 +159,21 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({
 
   const currentBookStats = primaryBook
     ? activeBookStatsMap[primaryBook.book_id] || {
-        currentPage: 0,
-        totalPagesRead: 0,
-        sessionsCount: 0,
-        velocity: 0,
-        lastReadText: '',
-        readingPaceMinPerPage: 0,
-      }
+      currentPage: 0,
+      totalPagesRead: 0,
+      sessionsCount: 0,
+      velocity: 0,
+      lastReadText: '',
+      readingPaceMinPerPage: 0,
+    }
     : {
-        currentPage: 0,
-        totalPagesRead: 0,
-        sessionsCount: 0,
-        velocity: 0,
-        lastReadText: '',
-        readingPaceMinPerPage: 0,
-      };
+      currentPage: 0,
+      totalPagesRead: 0,
+      sessionsCount: 0,
+      velocity: 0,
+      lastReadText: '',
+      readingPaceMinPerPage: 0,
+    };
 
   const handleSwipe = (direction: 'next' | 'prev') => {
     if (activeBooks.length <= 1) return;
@@ -398,8 +410,8 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({
                   >
                     <span
                       className={`h-1.5 rounded-full transition-all block ${isSelected
-                          ? 'w-5 bg-accent shadow-[0_0_6px_rgba(251,191,36,0.6)]'
-                          : 'w-1.5 bg-ink-muted/30 group-hover:bg-ink-muted/60'
+                        ? 'w-5 bg-accent shadow-[0_0_6px_rgba(251,191,36,0.6)]'
+                        : 'w-1.5 bg-ink-muted/30 group-hover:bg-ink-muted/60'
                         }`}
                     />
                   </button>
