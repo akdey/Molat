@@ -3,13 +3,14 @@ import hmac
 import logging
 import uuid
 from typing import Optional
-from fastapi import APIRouter, HTTPException, Depends, status, Response
+from fastapi import APIRouter, HTTPException, Depends, status, Response, Request
 from pydantic import BaseModel
 from app.config import settings
 from app.core.security import (
     create_access_token,
     hash_password,
     verify_password,
+    verify_access_token,
     require_authenticated_user,
 )
 from app.features.auth.models import (
@@ -17,6 +18,7 @@ from app.features.auth.models import (
     UserResponse,
     VerifyEmailOtpRequest,
     VerifyEmailLinkRequest,
+    ResendVerificationRequest,
 )
 from app.features.auth.emails import send_verification_email
 from app.features.auth.repository import UserRepository
@@ -65,10 +67,6 @@ async def signup(
 
     otp_code, link_token = await user_repo.create_verification_token(user.id, user.email)
     await send_verification_email(user.email, user.username, otp_code, link_token)
-
-    token = create_access_token(username=user.username, user_id=user.id, role=user.role, email=user.email)
-    response.headers["Authorization"] = f"Bearer {token}"
-    response.headers["X-Auth-Token"] = token
 
     return UserResponse(
         id=user.id,
@@ -134,6 +132,12 @@ async def login(
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid email/username or password",
+        )
+
+    if not user.email_verified:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Email not verified. Please verify your email before signing in.",
         )
 
     token = create_access_token(username=user.username, user_id=user.id, role=user.role, email=user.email)
@@ -224,16 +228,41 @@ async def change_password(
     return {"status": "success", "message": "Password updated successfully"}
 
 
+def _extract_optional_user_id(request: Request) -> Optional[str]:
+    auth_header = request.headers.get("Authorization", "")
+    if auth_header.startswith("Bearer "):
+        token = auth_header.replace("Bearer ", "", 1).strip()
+        if token:
+            try:
+                payload = verify_access_token(token)
+                return payload.get("uid") or payload.get("sub")
+            except Exception:
+                return None
+    return None
+
+
 @router.post("/send-verification")
 async def resend_verification_email(
-    user_id: str = Depends(require_authenticated_user),
+    request: Request,
+    req: Optional[ResendVerificationRequest] = None,
     user_repo: UserRepository = Depends(get_user_repository),
 ):
     """Generates a fresh 6-digit OTP & link token and sends a verification email."""
+    user_id = _extract_optional_user_id(request)
     if user_id == "owner":
         return {"status": "already_verified", "message": "Owner account is already verified."}
 
-    user = await user_repo.get_by_id(user_id)
+    user = None
+    if user_id:
+        user = await user_repo.get_by_id(user_id)
+    elif req and req.identifier:
+        user = await user_repo.get_by_identifier(req.identifier.strip())
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication or email/username identifier is required.",
+        )
+
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User account not found")
     if user.email_verified:
@@ -253,20 +282,47 @@ async def resend_verification_email(
 @router.post("/verify-email")
 async def verify_email_with_otp(
     req: VerifyEmailOtpRequest,
-    user_id: str = Depends(require_authenticated_user),
+    request: Request,
+    response: Response,
     user_repo: UserRepository = Depends(get_user_repository),
 ):
-    """Verifies the authenticated reader's email using the 6-digit OTP code."""
+    """Verifies a reader's email using the 6-digit OTP code and emits a session token."""
+    user_id = _extract_optional_user_id(request)
     if user_id == "owner":
         return {"status": "verified", "email_verified": True}
 
-    ok = await user_repo.verify_otp(user_id, req.otp_code)
+    user = None
+    if user_id:
+        user = await user_repo.get_by_id(user_id)
+    elif req.identifier:
+        user = await user_repo.get_by_identifier(req.identifier.strip())
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication or email/username identifier is required.",
+        )
+
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User account not found")
+
+    ok = await user_repo.verify_otp(user.id, req.otp_code)
     if not ok:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid or expired verification code.",
         )
-    return {"status": "verified", "email_verified": True}
+
+    token = create_access_token(username=user.username, user_id=user.id, role=user.role, email=user.email)
+    response.headers["Authorization"] = f"Bearer {token}"
+    response.headers["X-Auth-Token"] = token
+
+    return {
+        "status": "verified",
+        "email_verified": True,
+        "username": user.username,
+        "email": user.email,
+        "role": user.role,
+    }
 
 
 @router.post("/verify-email-link")

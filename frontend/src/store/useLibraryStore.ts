@@ -133,6 +133,7 @@ interface LibraryState {
   setActiveBookId: (bookId: string) => Promise<void>;
   loginOwner: (username: string, password: string) => Promise<void>;
   signupReader: (email: string, username: string, password: string) => Promise<void>;
+  completeVerificationLogin: (user: { username?: string; email?: string; role?: string }) => Promise<void>;
   logout: () => void;
   logoutOwner: () => void;
   syncUserProfile: () => Promise<void>;
@@ -345,24 +346,27 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
   },
 
   signupReader: async (email, username, password) => {
-    const user = await signupUser(email, username, password);
-    const uName = user.username || username;
-    const uEmail = user.email || email;
+    await signupUser(email, username, password);
+    get().addToast('Account created! Please verify your email before signing in.', 'info');
+  },
+
+  completeVerificationLogin: async (user) => {
+    const uName = user.username || user.email || 'reader';
+    const uEmail = user.email || '';
     const uRole = user.role || 'reader';
     if (typeof localStorage !== 'undefined') {
       localStorage.setItem('molat_auth_user', uName);
-      localStorage.setItem('molat_auth_email', uEmail);
-      localStorage.setItem('molat_auth_role', uRole);
+      if (uEmail) localStorage.setItem('molat_auth_email', uEmail);
+      if (uRole) localStorage.setItem('molat_auth_role', uRole);
     }
     const token = typeof localStorage !== 'undefined' ? localStorage.getItem('molat_auth_token') : null;
-    const isVerified = user.email_verified ?? false;
     set({
       authToken: token,
       authUser: uName,
       authEmail: uEmail,
       authRole: uRole,
-      emailVerified: isVerified,
-      verifyEmailModalOpen: !isVerified,
+      emailVerified: true,
+      verifyEmailModalOpen: false,
       alcoveOverview: null,
       books: [],
       portfolio: null,
@@ -371,7 +375,7 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
       lendingRecords: [],
       readingLogs: [],
     });
-    get().addToast(`Welcome to Molat, ex/${uName}! Your library account is ready.`, 'success');
+    get().addToast(`Email verified! Welcome to Molat, ex/${uName}.`, 'success');
     await get().loadAllData(true);
   },
 

@@ -17,7 +17,7 @@ async def test_email_verification_otp_and_link_and_soft_gate():
 
     with patch("app.core.email.mailbrix_client.send_email", new=AsyncMock(side_effect=fake_send_email)):
         async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-            # 1. Signup creates unverified user and sends verification email
+            # 1. Signup creates unverified user, sends verification email, and blocks login until verified
             res = await client.post(
                 "/api/v1/auth/signup",
                 json={"email": "husband@example.com", "username": "husband", "password": "password123"},
@@ -25,29 +25,29 @@ async def test_email_verification_otp_and_link_and_soft_gate():
             assert res.status_code == 201
             data = res.json()
             assert data["email_verified"] is False
-            token_h = res.headers["X-Auth-Token"]
-            headers_h = {"Authorization": f"Bearer {token_h}"}
+            assert "X-Auth-Token" not in res.headers
 
             assert len(captured_emails) == 1
             # Extract OTP from subject "Verify your Molat Ex Libris email — Code: 123456"
             otp_code = captured_emails[0]["subject"].split("Code: ")[-1].strip()
             assert len(otp_code) == 6
 
-            # 2. Soft gate: unverified user can read books, but cannot create an Alcove
-            books_res = await client.get("/api/v1/books", headers=headers_h)
-            assert books_res.status_code == 200
+            # 2. Unverified login is blocked with 403
+            login_blocked = await client.post(
+                "/api/v1/auth/login",
+                json={"identifier": "husband", "password": "password123"},
+            )
+            assert login_blocked.status_code == 403
 
-            alc_fail = await client.post("/api/v1/alcoves", json={"name": "Home Library"}, headers=headers_h)
-            assert alc_fail.status_code == 403
-
-            # 3. Verify via 6-digit OTP
+            # 3. Verify via 6-digit OTP (unauthenticated with identifier) -> emits token
             verify_res = await client.post(
                 "/api/v1/auth/verify-email",
-                json={"otp_code": otp_code},
-                headers=headers_h,
+                json={"otp_code": otp_code, "identifier": "husband"},
             )
             assert verify_res.status_code == 200
             assert verify_res.json()["email_verified"] is True
+            token_h = verify_res.headers["X-Auth-Token"]
+            headers_h = {"Authorization": f"Bearer {token_h}"}
 
             # 4. Now Alcove creation succeeds
             alc_ok = await client.post("/api/v1/alcoves", json={"name": "Home Library"}, headers=headers_h)
@@ -81,21 +81,21 @@ async def test_alcove_sharing_personal_progress_and_indestructible_history():
     with patch("app.core.email.mailbrix_client.send_email", new=AsyncMock(side_effect=fake_send_email)):
         async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
             # Sign up & verify both users
-            r1 = await client.post(
+            await client.post(
                 "/api/v1/auth/signup",
                 json={"email": "amit@example.com", "username": "amit", "password": "password123"},
             )
-            h1 = {"Authorization": f"Bearer {r1.headers['X-Auth-Token']}"}
             otp1 = sent_invites[-1]["subject"].split("Code: ")[-1].strip()
-            await client.post("/api/v1/auth/verify-email", json={"otp_code": otp1}, headers=h1)
+            v1 = await client.post("/api/v1/auth/verify-email", json={"otp_code": otp1, "identifier": "amit"})
+            h1 = {"Authorization": f"Bearer {v1.headers['X-Auth-Token']}"}
 
-            r2 = await client.post(
+            await client.post(
                 "/api/v1/auth/signup",
                 json={"email": "partner@example.com", "username": "partner", "password": "password123"},
             )
-            h2 = {"Authorization": f"Bearer {r2.headers['X-Auth-Token']}"}
             otp2 = sent_invites[-1]["subject"].split("Code: ")[-1].strip()
-            await client.post("/api/v1/auth/verify-email", json={"otp_code": otp2}, headers=h2)
+            v2 = await client.post("/api/v1/auth/verify-email", json={"otp_code": otp2, "identifier": "partner"})
+            h2 = {"Authorization": f"Bearer {v2.headers['X-Auth-Token']}"}
 
             # 1. Amit creates an Alcove & invites partner by email
             alc = (await client.post("/api/v1/alcoves", json={"name": "Dey Family Alcove"}, headers=h1)).json()

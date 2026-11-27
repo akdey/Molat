@@ -313,18 +313,28 @@ export async function changePassword(
 
 // ==================== EMAIL VERIFICATION ====================
 
-export async function sendVerificationEmail(tokenOrKey?: string): Promise<{ status: string; expires_in_minutes?: number }> {
+export async function sendVerificationEmail(
+  tokenOrKey?: string,
+  identifier?: string
+): Promise<{ status: string; expires_in_minutes?: number }> {
   return apiFetch<{ status: string; expires_in_minutes?: number }>('/auth/send-verification', {
     method: 'POST',
+    body: identifier ? JSON.stringify({ identifier }) : undefined,
     token: tokenOrKey,
+    skipAuth: !tokenOrKey && !!identifier,
   });
 }
 
-export async function verifyEmailOtp(otpCode: string, tokenOrKey?: string): Promise<{ status: string; email_verified: boolean }> {
-  return apiFetch<{ status: string; email_verified: boolean }>('/auth/verify-email', {
+export async function verifyEmailOtp(
+  otpCode: string,
+  tokenOrKey?: string,
+  identifier?: string
+): Promise<{ status: string; email_verified: boolean; username?: string; email?: string; role?: string }> {
+  return apiFetch<{ status: string; email_verified: boolean; username?: string; email?: string; role?: string }>('/auth/verify-email', {
     method: 'POST',
-    body: JSON.stringify({ otp_code: otpCode }),
+    body: JSON.stringify({ otp_code: otpCode, ...(identifier ? { identifier } : {}) }),
     token: tokenOrKey,
+    skipAuth: !tokenOrKey && !!identifier,
   });
 }
 

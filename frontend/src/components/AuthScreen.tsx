@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
-import { BookOpen, Lock, Mail, AtSign, LogIn, UserPlus, AlertCircle, Sparkles } from 'lucide-react';
+import { BookOpen, Lock, Mail, LogIn, UserPlus, AlertCircle, CheckCircle2, RefreshCw, ArrowLeft } from 'lucide-react';
 import { useLibraryStore } from '../store/useLibraryStore';
+import { sendVerificationEmail, verifyEmailOtp } from '../api/client';
 
 export const AuthScreen: React.FC = () => {
-  const { loginOwner, signupReader } = useLibraryStore();
+  const { loginOwner, signupReader, completeVerificationLogin, addToast } = useLibraryStore();
 
   const [mode, setMode] = useState<'login' | 'signup'>('login');
 
@@ -17,8 +18,14 @@ export const AuthScreen: React.FC = () => {
   const [signupUsername, setSignupUsername] = useState('');
   const [signupPassword, setSignupPassword] = useState('');
 
+  // Verification gate state
+  const [pendingVerification, setPendingVerification] = useState<{ identifier: string; email?: string } | null>(null);
+  const [otp, setOtp] = useState('');
+  const [resending, setResending] = useState(false);
+
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [needsVerificationPrompt, setNeedsVerificationPrompt] = useState(false);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,10 +36,15 @@ export const AuthScreen: React.FC = () => {
 
     setLoading(true);
     setErrorMsg(null);
+    setNeedsVerificationPrompt(false);
     try {
       await loginOwner(loginIdent.trim(), loginPassword.trim());
     } catch (err: any) {
-      setErrorMsg(err.message || 'Invalid email/username or password.');
+      const msg = err.message || 'Invalid email/username or password.';
+      setErrorMsg(msg);
+      if (msg.toLowerCase().includes('not verified')) {
+        setNeedsVerificationPrompt(true);
+      }
     } finally {
       setLoading(false);
     }
@@ -52,16 +64,53 @@ export const AuthScreen: React.FC = () => {
 
     setLoading(true);
     setErrorMsg(null);
+    setNeedsVerificationPrompt(false);
     try {
       await signupReader(
         signupEmail.trim(),
         signupUsername.trim(),
         signupPassword.trim()
       );
+      setPendingVerification({ identifier: signupEmail.trim(), email: signupEmail.trim() });
+      setOtp('');
     } catch (err: any) {
       setErrorMsg(err.message || 'Failed to create account.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleVerifyOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!pendingVerification) return;
+    const clean = otp.replace(/\s+/g, '').trim();
+    if (clean.length !== 6) {
+      setErrorMsg('Please enter the 6-digit verification code from your email.');
+      return;
+    }
+    setLoading(true);
+    setErrorMsg(null);
+    try {
+      const res = await verifyEmailOtp(clean, undefined, pendingVerification.identifier);
+      await completeVerificationLogin(res);
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Invalid or expired verification code.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResendCode = async () => {
+    if (!pendingVerification) return;
+    setResending(true);
+    setErrorMsg(null);
+    try {
+      await sendVerificationEmail(undefined, pendingVerification.identifier);
+      addToast(`Verification code sent to ${pendingVerification.email || pendingVerification.identifier}`, 'success');
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Could not resend verification email.');
+    } finally {
+      setResending(false);
     }
   };
 
@@ -87,41 +136,121 @@ export const AuthScreen: React.FC = () => {
         </div>
 
         {/* Tab Switcher */}
-        <div className="flex bg-[#E8E2D5] dark:bg-[#232732] p-1 rounded-xl mb-6">
-          <button
-            type="button"
-            onClick={() => { setMode('login'); setErrorMsg(null); }}
-            className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-semibold rounded-lg transition-all ${mode === 'login'
-              ? 'bg-white dark:bg-[#1A1D24] text-[#1E293B] dark:text-[#F1F5F9] shadow-xs'
-              : 'text-[#475569] dark:text-[#94A3B8] hover:text-[#1E293B] dark:hover:text-[#F1F5F9]'
-              }`}
-          >
-            <LogIn size={14} />
-            <span>Sign In</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => { setMode('signup'); setErrorMsg(null); }}
-            className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-semibold rounded-lg transition-all ${mode === 'signup'
-              ? 'bg-white dark:bg-[#1A1D24] text-[#1E293B] dark:text-[#F1F5F9] shadow-xs'
-              : 'text-[#475569] dark:text-[#94A3B8] hover:text-[#1E293B] dark:hover:text-[#F1F5F9]'
-              }`}
-          >
-            <UserPlus size={14} />
-            <span>New Reader</span>
-          </button>
-        </div>
-
-        {/* Error Alert */}
-        {errorMsg && (
-          <div className="mb-4 p-3 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/50 flex items-start gap-2.5 text-xs text-red-700 dark:text-red-300">
-            <AlertCircle size={16} className="shrink-0 mt-0.5" />
-            <span>{errorMsg}</span>
+        {!pendingVerification && (
+          <div className="flex bg-[#E8E2D5] dark:bg-[#232732] p-1 rounded-xl mb-6">
+            <button
+              type="button"
+              onClick={() => { setMode('login'); setErrorMsg(null); setNeedsVerificationPrompt(false); }}
+              className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-semibold rounded-lg transition-all ${mode === 'login'
+                ? 'bg-white dark:bg-[#1A1D24] text-[#1E293B] dark:text-[#F1F5F9] shadow-xs'
+                : 'text-[#475569] dark:text-[#94A3B8] hover:text-[#1E293B] dark:hover:text-[#F1F5F9]'
+                }`}
+            >
+              <LogIn size={14} />
+              <span>Sign In</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => { setMode('signup'); setErrorMsg(null); setNeedsVerificationPrompt(false); }}
+              className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-semibold rounded-lg transition-all ${mode === 'signup'
+                ? 'bg-white dark:bg-[#1A1D24] text-[#1E293B] dark:text-[#F1F5F9] shadow-xs'
+                : 'text-[#475569] dark:text-[#94A3B8] hover:text-[#1E293B] dark:hover:text-[#F1F5F9]'
+                }`}
+            >
+              <UserPlus size={14} />
+              <span>New Reader</span>
+            </button>
           </div>
         )}
 
-        {/* Login Form */}
-        {mode === 'login' ? (
+        {/* Error Alert */}
+        {errorMsg && (
+          <div className="mb-4 p-3 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/50 space-y-2 text-xs text-red-700 dark:text-red-300">
+            <div className="flex items-start gap-2.5">
+              <AlertCircle size={16} className="shrink-0 mt-0.5" />
+              <span>{errorMsg}</span>
+            </div>
+            {needsVerificationPrompt && (
+              <button
+                type="button"
+                onClick={() => {
+                  setPendingVerification({ identifier: loginIdent.trim() });
+                  setErrorMsg(null);
+                  setNeedsVerificationPrompt(false);
+                }}
+                className="ml-6 inline-flex items-center gap-1.5 font-semibold text-[#C2410C] dark:text-[#D97706] hover:underline cursor-pointer"
+              >
+                <Mail size={13} />
+                <span>Verify email with 6-digit code</span>
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* Email Verification Gate View */}
+        {pendingVerification ? (
+          <form onSubmit={handleVerifyOtp} className="space-y-4">
+            <div className="p-3.5 rounded-xl bg-white/70 dark:bg-[#121316]/60 border border-[#E2D9C8] dark:border-[#2A2F3A] text-xs space-y-1">
+              <div className="flex items-center gap-2 font-medium text-[#1E293B] dark:text-[#F1F5F9]">
+                <Mail size={15} className="text-[#C2410C] dark:text-[#D97706]" />
+                <span>Verify your email to sign in</span>
+              </div>
+              <p className="text-[#475569] dark:text-[#94A3B8]">
+                Enter the 6-digit code sent to <strong className="text-[#1E293B] dark:text-[#F1F5F9]">{pendingVerification.email || pendingVerification.identifier}</strong> or click the link in your inbox.
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-[#475569] dark:text-[#94A3B8] mb-1.5">
+                6-Digit Verification Code
+              </label>
+              <input
+                type="text"
+                inputMode="numeric"
+                maxLength={6}
+                value={otp}
+                onChange={(e) => setOtp(e.target.value.replace(/[^0-9]/g, ''))}
+                placeholder="000000"
+                autoFocus
+                className="w-full text-center font-mono text-2xl tracking-[0.35em] py-3 rounded-xl bg-white dark:bg-[#121316] border border-[#E2D9C8] dark:border-[#2A2F3A] text-[#1E293B] dark:text-[#F1F5F9] focus:outline-hidden focus:ring-2 focus:ring-[#C2410C]/40"
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading || otp.length !== 6}
+              className="w-full py-2.5 px-4 rounded-xl font-medium text-sm text-white bg-[#C2410C] hover:bg-[#9A3412] disabled:opacity-50 transition-colors shadow-xs flex items-center justify-center gap-2 cursor-pointer"
+            >
+              <CheckCircle2 size={16} />
+              <span>{loading ? 'Verifying...' : 'Verify & Enter Library'}</span>
+            </button>
+
+            <div className="flex items-center justify-between pt-1 text-xs">
+              <button
+                type="button"
+                onClick={() => {
+                  setPendingVerification(null);
+                  setMode('login');
+                  setErrorMsg(null);
+                }}
+                className="inline-flex items-center gap-1 text-[#475569] dark:text-[#94A3B8] hover:text-[#1E293B] dark:hover:text-[#F1F5F9] cursor-pointer"
+              >
+                <ArrowLeft size={13} />
+                <span>Back to Sign In</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleResendCode}
+                disabled={resending}
+                className="inline-flex items-center gap-1.5 font-medium text-[#C2410C] dark:text-[#D97706] hover:underline disabled:opacity-50 cursor-pointer"
+              >
+                <RefreshCw size={12} className={resending ? 'animate-spin' : ''} />
+                <span>{resending ? 'Sending...' : 'Resend Code'}</span>
+              </button>
+            </div>
+          </form>
+        ) : mode === 'login' ? (
           <form onSubmit={handleLogin} className="space-y-4">
             <div>
               <label className="block text-xs font-medium text-[#475569] dark:text-[#94A3B8] mb-1.5">

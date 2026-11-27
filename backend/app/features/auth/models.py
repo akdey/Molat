@@ -42,6 +42,11 @@ class UserResponse(BaseModel):
 
 class VerifyEmailOtpRequest(BaseModel):
     otp_code: str = Field(..., min_length=6, max_length=6, description="6-digit verification code")
+    identifier: Optional[str] = Field(None, description="Email or username when verifying before login")
+
+
+class ResendVerificationRequest(BaseModel):
+    identifier: Optional[str] = Field(None, description="Email or username when requesting resend before login")
 
 
 class VerifyEmailLinkRequest(BaseModel):

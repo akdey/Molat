@@ -1,7 +1,9 @@
+from unittest.mock import AsyncMock, patch
 import pytest
 from fastapi.testclient import TestClient
 from app.main import app
 from app.config import settings
+from app.core.email import MailbrixSendResult
 from app.core.security import create_access_token, verify_access_token, hash_password, verify_password
 
 client = TestClient(app)
@@ -16,73 +18,100 @@ def test_password_hashing():
 
 
 def test_auth_signup_and_dual_login():
-    # 1. Successful Signup
-    signup_payload = {
-        "email": "reader_test@example.com",
-        "username": "reader_hero",
-        "password": "strongPassword99",
-    }
-    signup_res = client.post("/api/v1/auth/signup", json=signup_payload)
-    assert signup_res.status_code == 201
-    signup_data = signup_res.json()
-    assert "access_token" not in signup_data
-    assert signup_data["email"] == "reader_test@example.com"
-    assert signup_data["username"] == "reader_hero"
-    assert signup_data["role"] == "reader"
-    assert "Authorization" in signup_res.headers or "x-auth-token" in signup_res.headers
-    raw_auth = signup_res.headers.get("authorization", "")
-    token = signup_res.headers.get("x-auth-token") or raw_auth.replace("Bearer ", "").strip()
+    captured_emails = []
 
-    # 2. Check /api/v1/auth/me with Bearer token
-    me_res = client.get(
-        "/api/v1/auth/me",
-        headers={"Authorization": f"Bearer {token}"},
-    )
-    assert me_res.status_code == 200
-    me_data = me_res.json()
-    assert me_data["username"] == "reader_hero"
-    assert me_data["email"] == "reader_test@example.com"
-    assert me_data["role"] == "reader"
+    async def fake_send_email(**kwargs):
+        captured_emails.append(kwargs)
+        return MailbrixSendResult(status="sent", request_id="req_1", recipients=[kwargs["to_email"]])
 
-    # 3. Duplicate email signup -> 400 Bad Request
-    dup_email_payload = {
-        "email": "reader_test@example.com",
-        "username": "another_hero",
-        "password": "strongPassword99",
-    }
-    dup_email_res = client.post("/api/v1/auth/signup", json=dup_email_payload)
-    assert dup_email_res.status_code == 400
-    assert "email already exists" in dup_email_res.json()["detail"].lower()
+    with patch("app.core.email.mailbrix_client.send_email", new=AsyncMock(side_effect=fake_send_email)):
+        # 1. Successful Signup (does NOT issue session token until verified)
+        signup_payload = {
+            "email": "reader_test@example.com",
+            "username": "reader_hero",
+            "password": "strongPassword99",
+        }
+        signup_res = client.post("/api/v1/auth/signup", json=signup_payload)
+        assert signup_res.status_code == 201
+        signup_data = signup_res.json()
+        assert "access_token" not in signup_data
+        assert signup_data["email"] == "reader_test@example.com"
+        assert signup_data["username"] == "reader_hero"
+        assert signup_data["role"] == "reader"
+        assert signup_data["email_verified"] is False
+        assert "Authorization" not in signup_res.headers
+        assert "x-auth-token" not in signup_res.headers
 
-    # 4. Duplicate username signup -> 400 Bad Request
-    dup_user_payload = {
-        "email": "another_email@example.com",
-        "username": "reader_hero",
-        "password": "strongPassword99",
-    }
-    dup_user_res = client.post("/api/v1/auth/signup", json=dup_user_payload)
-    assert dup_user_res.status_code == 400
-    assert "username is already taken" in dup_user_res.json()["detail"].lower()
+        # 1b. Unverified user cannot log in -> 403 Forbidden
+        blocked_login = client.post(
+            "/api/v1/auth/login",
+            json={"identifier": "reader_test@example.com", "password": "strongPassword99"},
+        )
+        assert blocked_login.status_code == 403
+        assert "not verified" in blocked_login.json()["detail"].lower()
 
-    # 5. Login via Email
-    login_by_email = client.post(
-        "/api/v1/auth/login",
-        json={"identifier": "reader_test@example.com", "password": "strongPassword99"},
-    )
-    assert login_by_email.status_code == 200
-    assert "Authorization" in login_by_email.headers or "x-auth-token" in login_by_email.headers
-    assert "access_token" not in login_by_email.json()
-    assert login_by_email.json()["username"] == "reader_hero"
+        # 1c. Verify via OTP (unauthenticated with identifier) -> 200 OK & emits token
+        otp_code = captured_emails[0]["subject"].split("Code: ")[-1].strip()
+        verify_res = client.post(
+            "/api/v1/auth/verify-email",
+            json={"otp_code": otp_code, "identifier": "reader_test@example.com"},
+        )
+        assert verify_res.status_code == 200
+        assert verify_res.json()["email_verified"] is True
+        raw_auth = verify_res.headers.get("authorization", "")
+        token = verify_res.headers.get("x-auth-token") or raw_auth.replace("Bearer ", "").strip()
+        assert token
 
-    # 6. Login via Username
-    login_by_username = client.post(
-        "/api/v1/auth/login",
-        json={"identifier": "reader_hero", "password": "strongPassword99"},
-    )
-    assert login_by_username.status_code == 200
-    assert "Authorization" in login_by_username.headers or "x-auth-token" in login_by_username.headers
-    assert "access_token" not in login_by_username.json()
-    assert login_by_username.json()["email"] == "reader_test@example.com"
+        # 2. Check /api/v1/auth/me with Bearer token
+        me_res = client.get(
+            "/api/v1/auth/me",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert me_res.status_code == 200
+        me_data = me_res.json()
+        assert me_data["username"] == "reader_hero"
+        assert me_data["email"] == "reader_test@example.com"
+        assert me_data["role"] == "reader"
+
+        # 3. Duplicate email signup -> 400 Bad Request
+        dup_email_payload = {
+            "email": "reader_test@example.com",
+            "username": "another_hero",
+            "password": "strongPassword99",
+        }
+        dup_email_res = client.post("/api/v1/auth/signup", json=dup_email_payload)
+        assert dup_email_res.status_code == 400
+        assert "email already exists" in dup_email_res.json()["detail"].lower()
+
+        # 4. Duplicate username signup -> 400 Bad Request
+        dup_user_payload = {
+            "email": "another_email@example.com",
+            "username": "reader_hero",
+            "password": "strongPassword99",
+        }
+        dup_user_res = client.post("/api/v1/auth/signup", json=dup_user_payload)
+        assert dup_user_res.status_code == 400
+        assert "username is already taken" in dup_user_res.json()["detail"].lower()
+
+        # 5. Login via Email (now verified)
+        login_by_email = client.post(
+            "/api/v1/auth/login",
+            json={"identifier": "reader_test@example.com", "password": "strongPassword99"},
+        )
+        assert login_by_email.status_code == 200
+        assert "Authorization" in login_by_email.headers or "x-auth-token" in login_by_email.headers
+        assert "access_token" not in login_by_email.json()
+        assert login_by_email.json()["username"] == "reader_hero"
+
+        # 6. Login via Username (now verified)
+        login_by_username = client.post(
+            "/api/v1/auth/login",
+            json={"identifier": "reader_hero", "password": "strongPassword99"},
+        )
+        assert login_by_username.status_code == 200
+        assert "Authorization" in login_by_username.headers or "x-auth-token" in login_by_username.headers
+        assert "access_token" not in login_by_username.json()
+        assert login_by_username.json()["email"] == "reader_test@example.com"
 
 
 def test_auth_legacy_login_and_token_usage(monkeypatch):
@@ -155,36 +184,49 @@ def test_auth_tampered_bearer_token(monkeypatch):
 
 
 def test_auth_change_password():
-    # 1. Create a user
-    signup_res = client.post("/api/v1/auth/signup", json={
-        "email": "pwd_test@example.com",
-        "username": "pwd_user",
-        "password": "initialPassword1",
-    })
-    assert signup_res.status_code == 201
-    token = signup_res.headers.get("x-auth-token") or signup_res.headers.get("authorization", "").replace("Bearer ", "").strip()
-    auth_hdr = {"Authorization": f"Bearer {token}"}
+    captured_emails = []
 
-    # 2. Change password with wrong current password -> 400
-    res_wrong = client.post(
-        "/api/v1/auth/change-password",
-        json={"current_password": "wrongOldPassword", "new_password": "newValidPassword123"},
-        headers=auth_hdr,
-    )
-    assert res_wrong.status_code == 400
+    async def fake_send_email(**kwargs):
+        captured_emails.append(kwargs)
+        return MailbrixSendResult(status="sent", request_id="req_pwd", recipients=[kwargs["to_email"]])
 
-    # 3. Change password with valid credentials -> 200
-    res_ok = client.post(
-        "/api/v1/auth/change-password",
-        json={"current_password": "initialPassword1", "new_password": "newValidPassword123"},
-        headers=auth_hdr,
-    )
-    assert res_ok.status_code == 200
-    assert res_ok.json()["status"] == "success"
+    with patch("app.core.email.mailbrix_client.send_email", new=AsyncMock(side_effect=fake_send_email)):
+        # 1. Create a user & verify email
+        signup_res = client.post("/api/v1/auth/signup", json={
+            "email": "pwd_test@example.com",
+            "username": "pwd_user",
+            "password": "initialPassword1",
+        })
+        assert signup_res.status_code == 201
+        otp_code = captured_emails[0]["subject"].split("Code: ")[-1].strip()
+        verify_res = client.post(
+            "/api/v1/auth/verify-email",
+            json={"otp_code": otp_code, "identifier": "pwd_user"},
+        )
+        assert verify_res.status_code == 200
+        token = verify_res.headers.get("x-auth-token") or verify_res.headers.get("authorization", "").replace("Bearer ", "").strip()
+        auth_hdr = {"Authorization": f"Bearer {token}"}
 
-    # 4. Verify login with new password works
-    login_res = client.post("/api/v1/auth/login", json={
-        "identifier": "pwd_user",
-        "password": "newValidPassword123",
-    })
-    assert login_res.status_code == 200
+        # 2. Change password with wrong current password -> 400
+        res_wrong = client.post(
+            "/api/v1/auth/change-password",
+            json={"current_password": "wrongOldPassword", "new_password": "newValidPassword123"},
+            headers=auth_hdr,
+        )
+        assert res_wrong.status_code == 400
+
+        # 3. Change password with valid credentials -> 200
+        res_ok = client.post(
+            "/api/v1/auth/change-password",
+            json={"current_password": "initialPassword1", "new_password": "newValidPassword123"},
+            headers=auth_hdr,
+        )
+        assert res_ok.status_code == 200
+        assert res_ok.json()["status"] == "success"
+
+        # 4. Verify login with new password works
+        login_res = client.post("/api/v1/auth/login", json={
+            "identifier": "pwd_user",
+            "password": "newValidPassword123",
+        })
+        assert login_res.status_code == 200
