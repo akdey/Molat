@@ -447,7 +447,7 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
 
   loadAllData: async (forceRefresh = false) => {
     if (forceRefresh) {
-      set({ refreshing: true });
+      set({ refreshing: true, error: null });
     } else {
       set({ loading: true, error: null });
     }
@@ -598,9 +598,44 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
 
   submitReadingLog: async (payload) => {
     const token = get().authToken;
-    await logReadingSession(payload, token || undefined);
-    get().addToast(`Recorded reading session (+${payload.pages_read} pages)!`, 'success');
-    await Promise.all([get().loadBooks(true), get().loadStreak(), get().loadReadingLogs()]);
+    const prevStreak = get().streakSummary;
+    const prevLogs = get().readingLogs;
+
+    // Optimistic update for instant UI feedback
+    const optimisticPages = Math.max(0, payload.pages_read || 0);
+    const todayStr = new Date().toISOString().slice(0, 10);
+    const optimisticLog: ReadingLog = {
+      log_id: `optimistic-${Date.now()}`,
+      book_id: payload.book_id,
+      session_date: payload.session_date || todayStr,
+      start_page: payload.start_page,
+      end_page: payload.end_page,
+      pages_read: optimisticPages,
+      duration_minutes: payload.duration_minutes ?? 0,
+      session_note: payload.session_note,
+      created_at: new Date().toISOString(),
+    };
+
+    set((state) => ({
+      readingLogs: [optimisticLog, ...state.readingLogs],
+      streakSummary: state.streakSummary
+        ? {
+            ...state.streakSummary,
+            today_pages: (state.streakSummary.today_pages || 0) + optimisticPages,
+            streak_at_risk: false,
+          }
+        : state.streakSummary,
+    }));
+
+    try {
+      await logReadingSession(payload, token || undefined);
+      get().addToast(`Recorded reading session (+${optimisticPages} pages)!`, 'success');
+      await Promise.all([get().loadBooks(true), get().loadStreak(), get().loadReadingLogs()]);
+    } catch (err) {
+      // Revert optimistic update on failure
+      set({ streakSummary: prevStreak, readingLogs: prevLogs });
+      throw err;
+    }
   },
 
   acquireItem: async (wishlistId, payload) => {

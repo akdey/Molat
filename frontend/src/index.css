@@ -32,5 +32,30 @@
     outline: 2px solid #1E3A8A;
     outline-offset: 2px;
   }
+
+  .dark :focus-visible {
+    outline-color: #3B82F6;
+  }
+}
+
+@keyframes molat-indeterminate {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(400%);
+  }
+}
+
+.animate-molat-slide {
+  animation: molat-indeterminate 1.4s ease-in-out infinite;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 

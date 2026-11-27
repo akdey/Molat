@@ -70,7 +70,7 @@ export const StatusRibbon: React.FC<StatusRibbonProps> = ({
   if (variant === 'bookmark') {
     return (
       <div
-        className={`filter drop-shadow-[0_2px_4px_rgba(0,0,0,0.35)] select-none pointer-events-none ${className}`}
+        className={`filter drop-shadow-[0_2px_4px_rgba(0,0,0,0.35)] will-change-transform select-none pointer-events-none ${className}`}
         title={`Status: ${config.label}`}
       >
         <div
@@ -84,7 +84,7 @@ export const StatusRibbon: React.FC<StatusRibbonProps> = ({
           <div className="flex flex-col items-center gap-1">
             <span className={`w-1.5 h-1.5 rounded-full ${config.dot}`} />
             <span
-              className="font-serif text-[8.5px] font-bold tracking-widest uppercase leading-none"
+              className="font-serif text-[9px] font-bold tracking-widest uppercase leading-none"
               style={{ writingMode: 'vertical-rl', textOrientation: 'mixed' }}
             >
               {config.shortLabel}

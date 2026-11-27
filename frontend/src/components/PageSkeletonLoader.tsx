@@ -74,18 +74,6 @@ export const PageSkeletonLoader: React.FC<PageSkeletonLoaderProps> = ({
               </div>
             </div>
 
-            {/* Vitals Strip */}
-            <div className="p-4 rounded-2xl border border-rule/60 dark:border-rule-dark/60 bg-surface dark:bg-surface-dark">
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                {[...Array(4)].map((_, i) => (
-                  <div key={i} className="text-center space-y-1.5">
-                    <div className="h-2.5 w-16 mx-auto bg-rule/40 dark:bg-rule-dark/40 rounded animate-pulse" />
-                    <div className="h-6 w-12 mx-auto bg-rule/60 dark:bg-rule-dark/60 rounded animate-pulse" />
-                  </div>
-                ))}
-              </div>
-            </div>
-
             {/* Spotlight Shelf */}
             <div className="space-y-3">
               <div className="flex justify-between">
@@ -94,7 +82,7 @@ export const PageSkeletonLoader: React.FC<PageSkeletonLoaderProps> = ({
               </div>
               <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
                 {[...Array(6)].map((_, i) => (
-                  <div key={i} className="space-y-2 p-1.5 rounded-xl border border-rule/40 dark:border-rule-dark/40 bg-surface dark:bg-surface-dark">
+                  <div key={i} className="space-y-2">
                     <div className="aspect-[2/3] rounded-lg bg-rule/50 dark:bg-rule-dark/50 animate-pulse" />
                     <div className="h-2.5 w-full bg-rule/40 dark:bg-rule-dark/40 rounded animate-pulse" />
                     <div className="h-2 w-2/3 bg-rule/30 dark:bg-rule-dark/30 rounded animate-pulse" />

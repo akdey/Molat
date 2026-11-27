@@ -30,18 +30,29 @@ export default {
           'dark-strong': '#3E444F',
         },
         accent: {
-          DEFAULT: '#1E3A8A', // Archival Oxford Blue
+          DEFAULT: '#1E3A8A', // Archival Oxford Blue — primary interactive
           hover: '#172554',   // Deep Midnight Navy
           subtle: '#EFF6FF',  // Pale Oxford tint
           dark: '#3B82F6',    // Bright Royal Blue for dark mode contrast
           'dark-hover': '#60A5FA',
           'dark-subtle': '#1E293B',
         },
+        warm: {
+          DEFAULT: '#C2410C', // Terracotta Bookcloth — decorative/editorial accent
+          hover: '#9A3412',
+          subtle: '#FFF7ED',
+          gold: '#D97706',
+        },
         shelf: {
           wood: '#5C3A21',
           gold: '#D97706',
           green: '#15803D',
         },
+      },
+      borderRadius: {
+        'card': '1rem',      // 16px — cards, drawers
+        'button': '0.75rem', // 12px — buttons, pills
+        'input': '0.625rem', // 10px — inputs, selects
       },
       fontFamily: {
         serif: ['Newsreader', 'Georgia', 'serif'],

@@ -12,19 +12,22 @@ export const ToastContainer: React.FC = () => {
       className="fixed bottom-20 md:bottom-6 right-3 sm:right-6 z-50 flex flex-col gap-2 max-w-sm w-full pointer-events-none"
     >
       <AnimatePresence>
-        {toasts.map((toast) => {
+        {toasts.map((toast, idx) => {
           const isSuccess = toast.type === 'success';
           const isError = toast.type === 'error';
+          const isCollapsed = toasts.length >= 3 && idx < toasts.length - 2;
 
           return (
             <motion.div
               key={toast.id}
               role="status"
-              initial={{ opacity: 0, x: 28, scale: 0.94 }}
+              initial={{ opacity: 0, x: 20, scale: 0.96 }}
               animate={{ opacity: 1, x: 0, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.9, x: 20 }}
-              transition={{ type: 'spring', damping: 24, stiffness: 340 }}
-              className={`pointer-events-auto flex items-center gap-2.5 p-3 rounded-xl border shadow-lg backdrop-blur-md text-xs font-medium transition-all ${
+              exit={{ opacity: 0, scale: 0.94, x: 16 }}
+              transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+              className={`pointer-events-auto flex items-center gap-2.5 rounded-xl border shadow-lg backdrop-blur-md text-xs font-medium transition-all ${
+                isCollapsed ? 'p-2 self-end w-auto' : 'p-3 w-full'
+              } ${
                 isSuccess
                   ? 'bg-emerald-50/95 dark:bg-emerald-950/90 border-emerald-300 dark:border-emerald-800 text-emerald-900 dark:text-emerald-200'
                   : isError
@@ -32,13 +35,13 @@ export const ToastContainer: React.FC = () => {
                   : 'bg-surface-raised/95 dark:bg-surface-dark-raised/95 border-rule dark:border-rule-dark text-ink dark:text-ink-dark'
               }`}
             >
-              <div className="shrink-0">
+              <div className="shrink-0" title={toast.message}>
                 {isSuccess && <CheckCircle2 size={16} className="text-emerald-600 dark:text-emerald-400" />}
                 {isError && <AlertCircle size={16} className="text-red-600 dark:text-red-400" />}
                 {!isSuccess && !isError && <Info size={16} className="text-accent dark:text-accent-dark" />}
               </div>
-              <div className="flex-1 leading-snug">{toast.message}</div>
-              {toast.action && (
+              {!isCollapsed && <div className="flex-1 leading-snug">{toast.message}</div>}
+              {!isCollapsed && toast.action && (
                 <button
                   type="button"
                   onClick={(e) => {

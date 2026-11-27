@@ -1,6 +1,5 @@
 import React from 'react';
 import {
-  User,
   Users,
   ShoppingBag,
   Handshake,
@@ -34,160 +33,213 @@ export const MenuHubScreen: React.FC = () => {
   const monogram = username.slice(0, 2).toUpperCase();
   const primaryAlcove = alcoveOverview?.alcoves[0] || null;
   const activeLentCount = lendingRecords.filter((r) => r.status === 'ACTIVE').length;
+  const overdueLentCount = lendingRecords.filter((r) => r.status === 'ACTIVE' && r.is_overdue).length;
 
   return (
-    <div className="max-w-2xl mx-auto w-full space-y-5 pb-4">
-      {/* 1. Reader Profile Entry Card */}
-      <button
-        onClick={() => setActiveTab('profile')}
-        className="w-full p-4 rounded-3xl border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark flex items-center justify-between gap-4 text-left hover:border-accent/50 transition-colors cursor-pointer shadow-xs"
-      >
-        <div className="flex items-center gap-3.5 min-w-0">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#C2410C] to-[#9A3412] text-white flex flex-col items-center justify-center shrink-0 font-serif font-bold text-base">
-            {monogram}
-          </div>
-          <div className="min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="font-serif text-base font-semibold text-ink dark:text-ink-dark truncate">
-                {username}
-              </span>
-              {emailVerified ? (
-                <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-3xs bg-emerald-100 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300">
-                  <CheckCircle2 size={10} />
-                  Verified
+    <div className="max-w-2xl mx-auto w-full space-y-6 pb-4">
+      {/* 1. Account Section */}
+      <section className="space-y-1.5">
+        <h2 className="text-2xs font-semibold uppercase tracking-wider text-ink-muted px-2">
+          Account
+        </h2>
+        <button
+          type="button"
+          onClick={() => setActiveTab('profile')}
+          className="w-full p-4 rounded-card border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark flex items-center justify-between gap-4 text-left hover:border-accent/50 transition-colors cursor-pointer shadow-2xs"
+        >
+          <div className="flex items-center gap-3.5 min-w-0">
+            <div className="w-11 h-11 rounded-button bg-gradient-to-br from-warm to-warm-hover text-white flex items-center justify-center shrink-0 font-serif font-bold text-sm">
+              {monogram}
+            </div>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="font-serif text-base font-medium text-ink dark:text-ink-dark truncate">
+                  {username}
                 </span>
-              ) : (
-                <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-3xs bg-amber-100 dark:bg-amber-950/50 text-amber-800 dark:text-amber-300">
-                  <AlertCircle size={10} />
-                  Unverified
+                {emailVerified ? (
+                  <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-3xs bg-emerald-100 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300">
+                    <CheckCircle2 size={10} />
+                    Verified
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-3xs bg-amber-100 dark:bg-amber-950/50 text-amber-800 dark:text-amber-300">
+                    <AlertCircle size={10} />
+                    Unverified
+                  </span>
+                )}
+              </div>
+              <p className="text-2xs text-ink-muted font-mono mt-0.5">
+                ex/{username} &bull; Profile &amp; Security
+              </p>
+            </div>
+          </div>
+          <ChevronRight size={17} className="text-ink-muted shrink-0" />
+        </button>
+      </section>
+
+      {/* 2. Library Section */}
+      <section className="space-y-1.5">
+        <h2 className="text-2xs font-semibold uppercase tracking-wider text-ink-muted px-2">
+          Library
+        </h2>
+        <div className="rounded-card border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark divide-y divide-rule/60 dark:divide-rule-dark/60 overflow-hidden shadow-2xs">
+          <button
+            type="button"
+            onClick={() => setActiveTab('alcoves')}
+            className="w-full flex items-center justify-between px-4 py-3.5 hover:bg-canvas/60 dark:hover:bg-canvas-dark/60 transition-colors text-left min-h-[52px] cursor-pointer"
+          >
+            <div className="flex items-center gap-3 min-w-0">
+              <Users size={18} className="text-accent dark:text-accent-dark shrink-0" />
+              <span className="text-sm font-medium text-ink dark:text-ink-dark">Family Alcove</span>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <span className="text-xs text-ink-muted truncate max-w-[130px]">
+                {primaryAlcove ? primaryAlcove.name : 'Setup'}
+              </span>
+              <ChevronRight size={16} className="text-ink-muted" />
+            </div>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('wishlist')}
+            className="w-full flex items-center justify-between px-4 py-3.5 hover:bg-canvas/60 dark:hover:bg-canvas-dark/60 transition-colors text-left min-h-[52px] cursor-pointer"
+          >
+            <div className="flex items-center gap-3">
+              <ShoppingBag size={18} className="text-accent dark:text-accent-dark shrink-0" />
+              <span className="text-sm font-medium text-ink dark:text-ink-dark">Acquisitions Wishlist</span>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              {wishlist.length > 0 && (
+                <span className="text-xs font-mono text-ink-muted tabular-nums">{wishlist.length}</span>
+              )}
+              <ChevronRight size={16} className="text-ink-muted" />
+            </div>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('lending')}
+            className="w-full flex items-center justify-between px-4 py-3.5 hover:bg-canvas/60 dark:hover:bg-canvas-dark/60 transition-colors text-left min-h-[52px] cursor-pointer"
+          >
+            <div className="flex items-center gap-3">
+              <Handshake
+                size={18}
+                className={
+                  overdueLentCount > 0
+                    ? 'text-amber-600 dark:text-amber-400 shrink-0'
+                    : 'text-accent dark:text-accent-dark shrink-0'
+                }
+              />
+              <span className="text-sm font-medium text-ink dark:text-ink-dark">Lending Ledger</span>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              {activeLentCount > 0 && (
+                <span
+                  className={`px-2 py-0.5 rounded-full text-2xs font-mono font-semibold tabular-nums ${
+                    overdueLentCount > 0
+                      ? 'bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300'
+                      : 'bg-canvas dark:bg-canvas-dark text-ink-muted'
+                  }`}
+                >
+                  {activeLentCount}
                 </span>
               )}
+              <ChevronRight size={16} className="text-ink-muted" />
             </div>
-            <p className="text-xs text-ink-muted font-mono">ex/{username} &bull; Profile, Exports &amp; Security</p>
-          </div>
-        </div>
-        <ChevronRight size={18} className="text-ink-muted shrink-0" />
-      </button>
-
-      {/* 2. Library Spaces */}
-      <section className="space-y-2">
-        <h2 className="text-2xs font-semibold uppercase tracking-wider text-ink-muted px-1">
-          Library Spaces
-        </h2>
-        <div className="rounded-3xl border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark divide-y divide-rule/50 dark:divide-rule-dark/50 overflow-hidden shadow-xs">
-          <button
-            onClick={() => setActiveTab('alcoves')}
-            className="w-full flex items-center justify-between p-4 hover:bg-canvas/60 dark:hover:bg-canvas-dark/60 transition-colors text-left min-h-[56px] cursor-pointer"
-          >
-            <div className="flex items-center gap-3">
-              <Users size={18} className="text-accent shrink-0" />
-              <div>
-                <p className="text-sm font-medium text-ink dark:text-ink-dark">Family Alcove</p>
-                <p className="text-3xs text-ink-muted">
-                  {primaryAlcove ? `${primaryAlcove.name} (${alcoveOverview?.shared_books.length || 0} shared)` : 'Create or join a shared household shelf'}
-                </p>
-              </div>
-            </div>
-            <ChevronRight size={16} className="text-ink-muted shrink-0" />
           </button>
 
           <button
-            onClick={() => setActiveTab('wishlist')}
-            className="w-full flex items-center justify-between p-4 hover:bg-canvas/60 dark:hover:bg-canvas-dark/60 transition-colors text-left min-h-[56px] cursor-pointer"
-          >
-            <div className="flex items-center gap-3">
-              <ShoppingBag size={18} className="text-accent shrink-0" />
-              <div>
-                <p className="text-sm font-medium text-ink dark:text-ink-dark">Acquisitions Wishlist</p>
-                <p className="text-3xs text-ink-muted">{wishlist.length} planned books</p>
-              </div>
-            </div>
-            <ChevronRight size={16} className="text-ink-muted shrink-0" />
-          </button>
-
-          <button
-            onClick={() => setActiveTab('lending')}
-            className="w-full flex items-center justify-between p-4 hover:bg-canvas/60 dark:hover:bg-canvas-dark/60 transition-colors text-left min-h-[56px] cursor-pointer"
-          >
-            <div className="flex items-center gap-3">
-              <Handshake size={18} className="text-accent shrink-0" />
-              <div>
-                <p className="text-sm font-medium text-ink dark:text-ink-dark">Lending Ledger</p>
-                <p className="text-3xs text-ink-muted">{activeLentCount} active loans</p>
-              </div>
-            </div>
-            <ChevronRight size={16} className="text-ink-muted shrink-0" />
-          </button>
-
-          <button
+            type="button"
             onClick={() => setActiveTab('insights')}
-            className="w-full flex items-center justify-between p-4 hover:bg-canvas/60 dark:hover:bg-canvas-dark/60 transition-colors text-left min-h-[56px] cursor-pointer"
+            className="w-full flex items-center justify-between px-4 py-3.5 hover:bg-canvas/60 dark:hover:bg-canvas-dark/60 transition-colors text-left min-h-[52px] cursor-pointer"
           >
             <div className="flex items-center gap-3">
-              <PieChart size={18} className="text-accent shrink-0" />
-              <div>
-                <p className="text-sm font-medium text-ink dark:text-ink-dark">Library Insights</p>
-                <p className="text-3xs text-ink-muted">Valuation, genres &amp; publication eras</p>
-              </div>
+              <PieChart size={18} className="text-accent dark:text-accent-dark shrink-0" />
+              <span className="text-sm font-medium text-ink dark:text-ink-dark">Library Insights</span>
             </div>
             <ChevronRight size={16} className="text-ink-muted shrink-0" />
           </button>
 
           <button
+            type="button"
             onClick={() => setActiveTab('maintenance')}
-            className="w-full flex items-center justify-between p-4 hover:bg-canvas/60 dark:hover:bg-canvas-dark/60 transition-colors text-left min-h-[56px] cursor-pointer"
+            className="w-full flex items-center justify-between px-4 py-3.5 hover:bg-canvas/60 dark:hover:bg-canvas-dark/60 transition-colors text-left min-h-[52px] cursor-pointer"
           >
             <div className="flex items-center gap-3">
               <Wrench size={18} className="text-ink-muted shrink-0" />
-              <div>
-                <p className="text-sm font-medium text-ink dark:text-ink-dark">Catalogue Health Audit</p>
-                <p className="text-3xs text-ink-muted">Missing covers &amp; ISBN cleanup</p>
-              </div>
+              <span className="text-sm font-medium text-ink dark:text-ink-dark">Catalogue Health Audit</span>
             </div>
             <ChevronRight size={16} className="text-ink-muted shrink-0" />
           </button>
         </div>
       </section>
 
-      {/* 3. Quick Tools & Appearance */}
-      <section className="space-y-2">
-        <h2 className="text-2xs font-semibold uppercase tracking-wider text-ink-muted px-1">
-          Tools &amp; Preferences
+      {/* 3. Tools Section */}
+      <section className="space-y-1.5">
+        <h2 className="text-2xs font-semibold uppercase tracking-wider text-ink-muted px-2">
+          Tools
         </h2>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="rounded-card border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark divide-y divide-rule/60 dark:divide-rule-dark/60 overflow-hidden shadow-2xs">
           <button
+            type="button"
             onClick={() => setScannerOpen(true)}
-            className="p-4 rounded-2xl border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark hover:border-accent/50 flex flex-col items-start gap-2 text-left min-h-[84px] cursor-pointer shadow-xs"
+            className="w-full flex items-center justify-between px-4 py-3.5 hover:bg-canvas/60 dark:hover:bg-canvas-dark/60 transition-colors text-left min-h-[52px] cursor-pointer"
           >
-            <Camera size={18} className="text-accent" />
-            <span className="text-xs font-medium text-ink dark:text-ink-dark">Scan ISBN</span>
+            <div className="flex items-center gap-3">
+              <Camera size={18} className="text-accent dark:text-accent-dark shrink-0" />
+              <span className="text-sm font-medium text-ink dark:text-ink-dark">Scan ISBN Barcode</span>
+            </div>
+            <ChevronRight size={16} className="text-ink-muted shrink-0" />
           </button>
 
           <button
+            type="button"
             onClick={() => setPickNextModalOpen(true)}
-            className="p-4 rounded-2xl border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark hover:border-accent/50 flex flex-col items-start gap-2 text-left min-h-[84px] cursor-pointer shadow-xs"
+            className="w-full flex items-center justify-between px-4 py-3.5 hover:bg-canvas/60 dark:hover:bg-canvas-dark/60 transition-colors text-left min-h-[52px] cursor-pointer"
           >
-            <Dices size={18} className="text-accent" />
-            <span className="text-xs font-medium text-ink dark:text-ink-dark">Pick Next Read</span>
+            <div className="flex items-center gap-3">
+              <Dices size={18} className="text-accent dark:text-accent-dark shrink-0" />
+              <span className="text-sm font-medium text-ink dark:text-ink-dark">Pick My Next Read</span>
+            </div>
+            <ChevronRight size={16} className="text-ink-muted shrink-0" />
           </button>
+        </div>
+      </section>
 
-          <button
-            onClick={toggleTheme}
-            className="p-4 rounded-2xl border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark hover:border-accent/50 flex flex-col items-start gap-2 text-left min-h-[84px] cursor-pointer shadow-xs"
-          >
-            {theme === 'light' ? <Moon size={18} className="text-accent" /> : <Sun size={18} className="text-amber-400" />}
-            <span className="text-xs font-medium text-ink dark:text-ink-dark">
-              {theme === 'light' ? 'Dark Mode' : 'Daylight Mode'}
-            </span>
-          </button>
+      {/* 4. Appearance Section */}
+      <section className="space-y-1.5">
+        <h2 className="text-2xs font-semibold uppercase tracking-wider text-ink-muted px-2">
+          Appearance
+        </h2>
+        <div className="rounded-card border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark overflow-hidden shadow-2xs">
+          <div className="flex items-center justify-between px-4 py-3.5 min-h-[52px]">
+            <div className="flex items-center gap-3">
+              {theme === 'dark' ? (
+                <Moon size={18} className="text-accent dark:text-accent-dark shrink-0" />
+              ) : (
+                <Sun size={18} className="text-amber-500 shrink-0" />
+              )}
+              <span className="text-sm font-medium text-ink dark:text-ink-dark">Dark Mode</span>
+            </div>
 
-          <button
-            onClick={() => setActiveTab('profile')}
-            className="p-4 rounded-2xl border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark hover:border-accent/50 flex flex-col items-start gap-2 text-left min-h-[84px] cursor-pointer shadow-xs"
-          >
-            <User size={18} className="text-accent" />
-            <span className="text-xs font-medium text-ink dark:text-ink-dark">Account &amp; Backup</span>
-          </button>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={theme === 'dark'}
+              aria-label="Toggle Dark Mode"
+              onClick={toggleTheme}
+              className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out ${
+                theme === 'dark' ? 'bg-accent-dark' : 'bg-rule-strong'
+              }`}
+            >
+              <span
+                className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out ${
+                  theme === 'dark' ? 'translate-x-5' : 'translate-x-0'
+                }`}
+              />
+            </button>
+          </div>
         </div>
       </section>
     </div>

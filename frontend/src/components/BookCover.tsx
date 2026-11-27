@@ -44,26 +44,29 @@ export const BookCover: React.FC<BookCoverProps> = ({
 
   return (
     <div
-      className={`relative aspect-[2/3] w-full rounded-lg overflow-hidden bg-rule dark:bg-rule-dark select-none shadow-sm ${className}`}
+      className={`relative aspect-[2/3] w-full rounded-lg overflow-hidden bg-rule dark:bg-rule-dark select-none shadow-sm ring-1 ring-black/10 dark:ring-white/10 ${className}`}
     >
       {!showFallback ? (
-        <img
-          src={coverUrl}
-          alt={`Cover of ${title}`}
-          loading="lazy"
-          onLoad={(e) => {
-            const img = e.currentTarget;
-            // 1x1 pixel guard: Open Library or other CDNs returning a 1x1 empty GIF/PNG
-            if (img.naturalWidth <= 1 && img.naturalHeight <= 1) {
-              setIs1x1Pixel(true);
-            }
-          }}
-          onError={() => setImageError(true)}
-          className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-102"
-        />
+        <div className="relative w-full h-full">
+          <img
+            src={coverUrl}
+            alt={`Cover of ${title}`}
+            loading="lazy"
+            onLoad={(e) => {
+              const img = e.currentTarget;
+              // 1x1 pixel guard: Open Library or other CDNs returning a 1x1 empty GIF/PNG
+              if (img.naturalWidth <= 1 && img.naturalHeight <= 1) {
+                setIs1x1Pixel(true);
+              }
+            }}
+            onError={() => setImageError(true)}
+            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-102"
+          />
+          <div className="pointer-events-none absolute inset-0 shadow-[inset_0_0_0_1px_rgba(0,0,0,0.06)]" />
+        </div>
       ) : (
         /* Typographic Bookcloth Fallback with bound spine */
-        <div className="w-full h-full flex flex-col justify-between p-3 bg-gradient-to-b from-[#2B2724] to-[#1A1816] text-[#EDE8DF] border-l-4 border-accent border-y border-r border-white/10 text-center shadow-inner">
+        <div className="w-full h-full flex flex-col justify-between p-3 bg-gradient-to-b from-[#2F2A25] to-[#1E1B17] text-[#EDE8DF] border-l-4 border-warm border-y border-r border-white/10 text-center shadow-inner">
           <div className="flex items-center justify-between text-3xs text-[#A89F91] tracking-widest uppercase border-b border-white/15 pb-1">
             <span>Molat</span>
             <span className="font-mono">Vol.</span>

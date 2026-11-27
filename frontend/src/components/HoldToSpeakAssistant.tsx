@@ -555,8 +555,8 @@ export const HoldToSpeakAssistant: React.FC<HoldToSpeakAssistantProps> = ({
 
   return (
     <>
-      {/* 1. THE ELEVATED CENTER BUTTON (TURNS TO MIC ON HOLD/OPEN, REST OF BOTTOM BAR STAYS UNTOUCHED) */}
-      <div className="relative -top-3 z-50">
+      {/* 1. THE CENTER ACTION BUTTON (TURNS TO MIC ON HOLD/OPEN, REST OF BOTTOM BAR STAYS UNTOUCHED) */}
+      <div className="relative -top-1 z-50">
         <button
           type="button"
           onTouchStart={onTouchStart}
@@ -565,10 +565,10 @@ export const HoldToSpeakAssistant: React.FC<HoldToSpeakAssistantProps> = ({
           onMouseDown={onMouseDown}
           onMouseUp={onMouseUp}
           onMouseLeave={onMouseLeave}
-          className={`relative w-12 h-12 rounded-full flex items-center justify-center transition-all select-none cursor-pointer outline-none ${
+          className={`relative w-[52px] h-[52px] rounded-full flex items-center justify-center transition-all select-none cursor-pointer outline-none ${
             overlayOpen || isListening
-              ? 'scale-110 bg-gradient-to-tr from-[#C2410C] via-[#EA580C] to-[#D97706] shadow-[0_0_24px_rgba(194,65,12,0.5)] ring-2 ring-white/40'
-              : 'bg-accent hover:bg-accent-hover text-white shadow-lg shadow-accent/30 active:scale-95'
+              ? 'scale-105 bg-gradient-to-tr from-[#C2410C] via-[#EA580C] to-[#D97706] shadow-[0_0_20px_rgba(194,65,12,0.45)] ring-2 ring-white/40'
+              : 'bg-accent hover:bg-accent-hover text-white shadow-md shadow-accent/25 active:scale-95'
           }`}
           aria-label={overlayOpen ? 'Close Assistant' : 'Tap for menu • Hold for Voice Assistant'}
           title={overlayOpen ? 'Close Voice Assistant' : 'Tap for menu • Hold to speak voice assistant'}
@@ -578,7 +578,7 @@ export const HoldToSpeakAssistant: React.FC<HoldToSpeakAssistantProps> = ({
             <motion.div
               animate={{ rotate: 360 }}
               transition={{ repeat: Infinity, duration: 2.2, ease: 'linear' }}
-              className="absolute -inset-1 rounded-full bg-gradient-to-r from-amber-400 via-orange-500 to-amber-300 opacity-75 blur-xs -z-10"
+              className="absolute -inset-1 rounded-full bg-gradient-to-r from-amber-400 via-orange-500 to-amber-300 opacity-50 blur-[2px] -z-10"
             />
           )}
 
@@ -656,15 +656,15 @@ export const HoldToSpeakAssistant: React.FC<HoldToSpeakAssistantProps> = ({
                 <div
                   className={`absolute inset-x-0 bottom-0 h-64 blur-3xl pointer-events-none transition-all duration-300 ${
                     isDark
-                      ? 'bg-gradient-to-t from-indigo-500/25 via-cyan-500/10 to-transparent'
-                      : 'bg-gradient-to-t from-sky-400/25 via-indigo-300/15 to-transparent'
+                      ? 'bg-gradient-to-t from-indigo-500/20 via-sky-500/10 to-transparent'
+                      : 'bg-gradient-to-t from-sky-400/20 via-amber-200/15 to-transparent'
                   }`}
                 />
                 <div
                   className={`absolute -bottom-10 left-1/2 -translate-x-1/2 w-80 h-36 blur-2xl rounded-full pointer-events-none transition-all duration-300 ${
                     isDark
-                      ? 'bg-gradient-to-tr from-cyan-400/20 via-indigo-500/25 to-fuchsia-500/20'
-                      : 'bg-gradient-to-tr from-sky-400/30 via-indigo-400/20 to-pink-400/15'
+                      ? 'bg-gradient-to-tr from-sky-400/20 via-indigo-500/20 to-rose-500/15'
+                      : 'bg-gradient-to-tr from-sky-400/25 via-indigo-400/15 to-rose-400/15'
                   }`}
                 />
 
@@ -785,10 +785,10 @@ export const HoldToSpeakAssistant: React.FC<HoldToSpeakAssistantProps> = ({
                     <motion.div
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
-                      className={`w-full p-3.5 rounded-2xl border backdrop-blur-2xl shadow-xl space-y-2.5 ${
+                      className={`w-full p-3.5 rounded-2xl backdrop-blur-2xl shadow-xl space-y-2.5 ${
                         isDark
-                          ? 'bg-white/[0.08] border-white/15 text-white'
-                          : 'bg-white/90 border-sky-200/80 text-slate-900 shadow-sky-950/5'
+                          ? 'bg-white/[0.08] ring-1 ring-white/10 text-white'
+                          : 'bg-white/90 ring-1 ring-slate-200 text-slate-900 shadow-sky-950/5'
                       }`}
                     >
                       <div className="flex items-center justify-between">
@@ -926,7 +926,7 @@ export const HoldToSpeakAssistant: React.FC<HoldToSpeakAssistantProps> = ({
                             setLiveTranscript(phrase);
                             handleExecuteCommand(phrase);
                           }}
-                          className={`px-3.5 py-1.5 rounded-full border text-xs font-normal tracking-wide backdrop-blur-xl transition-all text-left active:scale-95 ${
+                          className={`px-4 py-2 rounded-full border text-xs font-normal tracking-wide backdrop-blur-xl transition-all text-left active:scale-95 ${
                             isDark
                               ? 'bg-white/[0.08] hover:bg-white/[0.16] border-white/[0.15] hover:border-white/30 text-white/95 shadow-[0_4px_16px_rgba(0,0,0,0.25)]'
                               : 'bg-white/80 hover:bg-white border-sky-200/80 hover:border-sky-300 text-slate-800 shadow-xs hover:shadow-sm'
