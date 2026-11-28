@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { useLibraryStore } from '../store/useLibraryStore';
 import { TopProgressBar } from '../components/TopProgressBar';
+import { NotificationBell } from '../components/NotificationBell';
 
 type TabId =
   | 'home'
@@ -114,6 +115,9 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ switchTab }) => {
             >
               <Mic size={16} />
             </button>
+
+            {/* In-App Notifications */}
+            <NotificationBell switchTab={switchTab} />
 
             {/* Desktop Sync */}
             <button

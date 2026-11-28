@@ -437,3 +437,18 @@ export async function updateAlcoveBookHolder(
     body: JSON.stringify({ held_by_label: heldByLabel }),
   });
 }
+
+// Notifications API
+export async function fetchNotifications(
+  limit = 30
+): Promise<import('../types/book').NotificationListResponse> {
+  return apiFetch(`/notifications?limit=${limit}`);
+}
+
+export async function markNotificationRead(notificationId: string): Promise<{ status: string; id: string }> {
+  return apiFetch(`/notifications/${notificationId}/read`, { method: 'POST' });
+}
+
+export async function markAllNotificationsRead(): Promise<{ status: string; marked_count: number }> {
+  return apiFetch('/notifications/read-all', { method: 'POST' });
+}

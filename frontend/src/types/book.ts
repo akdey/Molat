@@ -202,3 +202,19 @@ export interface AlcoveOverview {
   pending_invites_for_me: AlcoveInvite[];
 }
 
+export interface AppNotification {
+  id: string;
+  type: 'alcove_invite' | 'alcove_accepted' | 'alcove_removed' | 'adda_reply' | 'adda_reaction' | 'lending_overdue' | string;
+  title: string;
+  body: string;
+  reference_id?: string | null;
+  metadata: Record<string, any>;
+  is_read: boolean;
+  created_at: string;
+}
+
+export interface NotificationListResponse {
+  notifications: AppNotification[];
+  unread_count: number;
+}
+

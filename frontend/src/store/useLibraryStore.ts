@@ -11,6 +11,7 @@ import type {
   LendingRecordReturn,
   ReadingLog,
   AlcoveOverview,
+  AppNotification,
 } from '../types/book';
 import {
   fetchBooks,
@@ -19,6 +20,9 @@ import {
   fetchLendingRecords,
   fetchReadingLogs,
   fetchAlcoveOverview,
+  fetchNotifications,
+  markNotificationRead as apiMarkNotificationRead,
+  markAllNotificationsRead as apiMarkAllNotificationsRead,
   lendBook as apiLendBook,
   returnBook as apiReturnBook,
   logReadingSession,
@@ -101,6 +105,8 @@ interface LibraryState {
   emailVerified: boolean;
   verifyEmailModalOpen: boolean;
   alcoveOverview: AlcoveOverview | null;
+  notifications: AppNotification[];
+  unreadNotificationCount: number;
   shelfScope: 'mine' | 'alcove';
   theme: 'light' | 'dark';
   dailyGoal: number;
@@ -150,6 +156,9 @@ interface LibraryState {
   // API Calls
   loadAllData: (forceRefresh?: boolean) => Promise<void>;
   loadAlcoves: () => Promise<void>;
+  loadNotifications: () => Promise<void>;
+  markNotificationRead: (notificationId: string) => Promise<void>;
+  markAllNotificationsRead: () => Promise<void>;
   setShelfScope: (scope: 'mine' | 'alcove') => void;
   setEmailVerified: (verified: boolean) => void;
   setVerifyEmailModalOpen: (open: boolean) => void;
@@ -208,6 +217,8 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
   emailVerified: true,
   verifyEmailModalOpen: false,
   alcoveOverview: null,
+  notifications: [],
+  unreadNotificationCount: 0,
   shelfScope: 'mine',
   theme: 'light',
   dailyGoal: 15,
@@ -456,7 +467,7 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
       set({ loading: true, error: null });
     }
     try {
-      const [bookRes, streakRes, wishRes, lendRes, settingsRes, userRes, logsRes, alcoveRes] = await Promise.allSettled([
+      const [bookRes, streakRes, wishRes, lendRes, settingsRes, userRes, logsRes, alcoveRes, notifRes] = await Promise.allSettled([
         fetchBooks(forceRefresh),
         fetchStreakSummary(get().dailyGoal),
         fetchWishlist(),
@@ -465,6 +476,7 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
         fetchCurrentUser(),
         fetchReadingLogs(),
         fetchAlcoveOverview(),
+        fetchNotifications(),
       ]);
 
       let loadedGoal = get().dailyGoal;
@@ -515,12 +527,21 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
         lendingRecords: lendRes.status === 'fulfilled' ? lendRes.value : [],
         readingLogs: logsRes.status === 'fulfilled' ? logsRes.value : [],
         alcoveOverview: alcoveRes.status === 'fulfilled' ? alcoveRes.value : state.alcoveOverview,
+        notifications: notifRes.status === 'fulfilled' ? notifRes.value.notifications : state.notifications,
+        unreadNotificationCount: notifRes.status === 'fulfilled' ? notifRes.value.unread_count : state.unreadNotificationCount,
         dailyGoal: loadedGoal,
         activeBookId: loadedActiveBookId,
         theme: loadedTheme,
         loading: false,
         refreshing: false,
       }));
+
+      if (notifRes.status === 'fulfilled' && notifRes.value) {
+        set({
+          notifications: notifRes.value.notifications,
+          unreadNotificationCount: notifRes.value.unread_count,
+        });
+      }
 
       if (forceRefresh) {
         get().addToast('Catalogue refreshed', 'success');
@@ -537,6 +558,44 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
       set({ alcoveOverview: overview });
     } catch (err: any) {
       console.warn('Could not load Alcove overview:', err);
+    }
+  },
+
+  loadNotifications: async () => {
+    try {
+      const res = await fetchNotifications();
+      set({ notifications: res.notifications, unreadNotificationCount: res.unread_count });
+    } catch (err: any) {
+      console.warn('Could not load notifications:', err);
+    }
+  },
+
+  markNotificationRead: async (notificationId: string) => {
+    set((state) => {
+      const next = state.notifications.map((n) =>
+        n.id === notificationId ? { ...n, is_read: true } : n
+      );
+      return {
+        notifications: next,
+        unreadNotificationCount: next.filter((n) => !n.is_read).length,
+      };
+    });
+    try {
+      await apiMarkNotificationRead(notificationId);
+    } catch (err) {
+      console.warn('Failed to mark notification read:', err);
+    }
+  },
+
+  markAllNotificationsRead: async () => {
+    set((state) => ({
+      notifications: state.notifications.map((n) => ({ ...n, is_read: true })),
+      unreadNotificationCount: 0,
+    }));
+    try {
+      await apiMarkAllNotificationsRead();
+    } catch (err) {
+      console.warn('Failed to mark all notifications read:', err);
     }
   },
 
