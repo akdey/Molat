@@ -366,6 +366,28 @@ export async function joinAlcove(inviteCode: string): Promise<{ status: string; 
   });
 }
 
+export async function acceptAlcoveInvite(inviteId: string): Promise<{ status: string; alcove_id: string; name: string }> {
+  return apiFetch(`/alcoves/invites/${inviteId}/accept`, { method: 'POST' });
+}
+
+export async function declineAlcoveInvite(inviteId: string): Promise<{ status: string; invite_id: string }> {
+  return apiFetch(`/alcoves/invites/${inviteId}/decline`, { method: 'POST' });
+}
+
+export async function removeAlcoveMember(
+  alcoveId: string,
+  targetUserId: string
+): Promise<{ status: string; alcove_id: string; user_id: string }> {
+  return apiFetch(`/alcoves/${alcoveId}/members/${targetUserId}`, { method: 'DELETE' });
+}
+
+export async function revokeAlcoveInvite(
+  alcoveId: string,
+  inviteId: string
+): Promise<{ status: string; invite_id: string }> {
+  return apiFetch(`/alcoves/${alcoveId}/invites/${inviteId}`, { method: 'DELETE' });
+}
+
 export interface ReaderLookupItem {
   user_id: string;
   username: string;

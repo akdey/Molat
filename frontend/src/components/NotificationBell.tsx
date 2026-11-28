@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Bell, CheckCheck, Users, MessageSquare, Sparkles, Clock, X } from 'lucide-react';
+import { Bell, CheckCheck, Users, MessageSquare, Sparkles, Clock, X, Check } from 'lucide-react';
 import { useLibraryStore } from '../store/useLibraryStore';
+import { acceptAlcoveInvite, declineAlcoveInvite } from '../api/client';
 import type { AppNotification } from '../types/book';
 
 type TabId =
@@ -51,11 +52,14 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ switchTab })
     notifications,
     unreadNotificationCount,
     loadNotifications,
+    loadAlcoves,
     markNotificationRead,
     markAllNotificationsRead,
+    addToast,
   } = useLibraryStore();
 
   const [open, setOpen] = useState(false);
+  const [busyId, setBusyId] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -88,6 +92,35 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ switchTab })
       switchTab('lending');
     }
     setOpen(false);
+  };
+
+  const handleInviteAction = async (
+    e: React.MouseEvent,
+    notif: AppNotification,
+    action: 'accept' | 'decline'
+  ) => {
+    e.stopPropagation();
+    const inviteId = notif.metadata?.invite_id || notif.reference_id;
+    if (!inviteId) return;
+    setBusyId(notif.id);
+    try {
+      if (action === 'accept') {
+        const res = await acceptAlcoveInvite(String(inviteId));
+        addToast(`Joined ${res.name}!`, 'success');
+        await loadAlcoves();
+        switchTab('alcoves');
+        setOpen(false);
+      } else {
+        await declineAlcoveInvite(String(inviteId));
+        addToast('Invitation declined', 'info');
+      }
+      await markNotificationRead(notif.id);
+      await loadNotifications();
+    } catch (err: any) {
+      addToast(err.message || 'Could not process invitation', 'error');
+    } finally {
+      setBusyId(null);
+    }
   };
 
   return (
@@ -161,39 +194,65 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ switchTab })
                 </p>
               </div>
             ) : (
-              notifications.map((notif) => (
-                <button
-                  key={notif.id}
-                  type="button"
-                  onClick={() => handleNotificationClick(notif)}
-                  className={`w-full text-left px-4 py-3 flex items-start gap-3 transition-colors cursor-pointer hover:bg-surface/80 dark:hover:bg-surface-dark/80 ${
-                    !notif.is_read ? 'bg-accent/5 dark:bg-accent-dark/10' : ''
-                  }`}
-                >
-                  <div className="mt-0.5 w-7 h-7 rounded-button bg-canvas dark:bg-canvas-dark border border-rule/60 dark:border-rule-dark/60 flex items-center justify-center shrink-0">
-                    {getIcon(notif.type)}
-                  </div>
-                  <div className="min-w-0 flex-1 space-y-0.5">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-xs font-medium text-ink dark:text-ink-dark truncate">
-                        {notif.title}
-                      </span>
-                      <span className="text-3xs text-ink-muted shrink-0 tabular-nums">
-                        {formatRelativeTime(notif.created_at)}
-                      </span>
+              notifications.map((notif) => {
+                const isInvite =
+                  notif.type === 'alcove_invite' &&
+                  !notif.is_read &&
+                  (notif.metadata?.invite_id || notif.reference_id);
+                return (
+                  <div
+                    key={notif.id}
+                    onClick={() => handleNotificationClick(notif)}
+                    className={`w-full text-left px-4 py-3 flex items-start gap-3 transition-colors cursor-pointer hover:bg-surface/80 dark:hover:bg-surface-dark/80 ${
+                      !notif.is_read ? 'bg-accent/5 dark:bg-accent-dark/10' : ''
+                    }`}
+                  >
+                    <div className="mt-0.5 w-7 h-7 rounded-button bg-canvas dark:bg-canvas-dark border border-rule/60 dark:border-rule-dark/60 flex items-center justify-center shrink-0">
+                      {getIcon(notif.type)}
                     </div>
-                    <p className="text-2xs text-ink-secondary dark:text-ink-dark-secondary leading-relaxed">
-                      {notif.body}
-                    </p>
+                    <div className="min-w-0 flex-1 space-y-1">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-xs font-medium text-ink dark:text-ink-dark truncate">
+                          {notif.title}
+                        </span>
+                        <span className="text-3xs text-ink-muted shrink-0 tabular-nums">
+                          {formatRelativeTime(notif.created_at)}
+                        </span>
+                      </div>
+                      <p className="text-2xs text-ink-secondary dark:text-ink-dark-secondary leading-relaxed">
+                        {notif.body}
+                      </p>
+                      {isInvite && (
+                        <div className="flex items-center gap-2 pt-1">
+                          <button
+                            type="button"
+                            disabled={busyId === notif.id}
+                            onClick={(e) => handleInviteAction(e, notif, 'accept')}
+                            className="px-2.5 py-1 rounded-button bg-accent hover:bg-accent-hover text-white text-2xs font-medium inline-flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                          >
+                            <Check size={11} />
+                            <span>Accept</span>
+                          </button>
+                          <button
+                            type="button"
+                            disabled={busyId === notif.id}
+                            onClick={(e) => handleInviteAction(e, notif, 'decline')}
+                            className="px-2.5 py-1 rounded-button border border-rule dark:border-rule-dark bg-canvas dark:bg-canvas-dark text-ink-secondary hover:text-ink text-2xs font-medium cursor-pointer disabled:opacity-50"
+                          >
+                            Decline
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                    {!notif.is_read && (
+                      <span
+                        aria-label="Unread"
+                        className="w-2 h-2 rounded-full bg-warm mt-2 shrink-0"
+                      />
+                    )}
                   </div>
-                  {!notif.is_read && (
-                    <span
-                      aria-label="Unread"
-                      className="w-2 h-2 rounded-full bg-warm mt-2 shrink-0"
-                    />
-                  )}
-                </button>
-              ))
+                );
+              })
             )}
           </div>
         </div>

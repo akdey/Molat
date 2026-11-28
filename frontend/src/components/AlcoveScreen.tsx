@@ -1,8 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import {
   Users,
-  Copy,
-  Check,
   Mail,
   Plus,
   LogOut,
@@ -11,13 +9,21 @@ import {
   BookOpen,
   Search,
   UserPlus,
+  UserMinus,
   ArrowUpRight,
+  Check,
+  X,
+  KeyRound,
 } from 'lucide-react';
 import { useLibraryStore } from '../store/useLibraryStore';
 import {
   createAlcove,
   joinAlcove,
   inviteMemberToAlcove,
+  acceptAlcoveInvite,
+  declineAlcoveInvite,
+  removeAlcoveMember,
+  revokeAlcoveInvite,
   leaveAlcove,
   updateAlcoveAutoShare,
   lookupReaders,
@@ -26,10 +32,12 @@ import {
 
 export const AlcoveScreen: React.FC = () => {
   const {
+    authUser,
     alcoveOverview,
     emailVerified,
     setVerifyEmailModalOpen,
     loadAlcoves,
+    loadNotifications,
     addToast,
     setActiveTab,
     setShelfScope,
@@ -37,17 +45,18 @@ export const AlcoveScreen: React.FC = () => {
 
   const [newAlcoveName, setNewAlcoveName] = useState('');
   const [joinCode, setJoinCode] = useState('');
+  const [showCodeFallback, setShowCodeFallback] = useState(false);
   const [inviteQuery, setInviteQuery] = useState('');
   const [lookupResults, setLookupResults] = useState<ReaderLookupItem[]>([]);
   const [searchingReaders, setSearchingReaders] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [copiedCode, setCopiedCode] = useState(false);
 
   const alcoves = alcoveOverview?.alcoves || [];
   const pendingInvitesForMe = alcoveOverview?.pending_invites_for_me || [];
   const primaryAlcove = alcoves[0] || null;
   const sharedCount = alcoveOverview?.shared_books.length || 0;
   const isExternalEmail = inviteQuery.includes('@');
+  const isCurator = primaryAlcove?.my_role === 'curator';
 
   // Debounced reader lookup by ex/ handle
   useEffect(() => {
@@ -86,13 +95,40 @@ export const AlcoveScreen: React.FC = () => {
     }
   };
 
-  const handleJoin = async (codeToJoin: string) => {
+  const handleAcceptInvite = async (inviteId: string) => {
+    setBusy(true);
+    try {
+      const res = await acceptAlcoveInvite(inviteId);
+      await Promise.all([loadAlcoves(), loadNotifications()]);
+      addToast(`Joined ${res.name}!`, 'success');
+    } catch (err: any) {
+      addToast(err.message || 'Could not accept invitation', 'error');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleDeclineInvite = async (inviteId: string) => {
+    setBusy(true);
+    try {
+      await declineAlcoveInvite(inviteId);
+      await Promise.all([loadAlcoves(), loadNotifications()]);
+      addToast('Invitation declined', 'info');
+    } catch (err: any) {
+      addToast(err.message || 'Could not decline invitation', 'error');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleJoinByCode = async (codeToJoin: string) => {
     const clean = codeToJoin.trim().toUpperCase();
     if (!clean) return;
     setBusy(true);
     try {
       const res = await joinAlcove(clean);
       setJoinCode('');
+      setShowCodeFallback(false);
       await loadAlcoves();
       addToast(`Joined ${res.name}!`, 'success');
     } catch (err: any) {
@@ -111,13 +147,37 @@ export const AlcoveScreen: React.FC = () => {
       setLookupResults([]);
       await loadAlcoves();
       const label = res.invitee_handle || res.invitee_email;
-      if (res.email_sent) {
-        addToast(`Invitation sent to ${label}`, 'success');
-      } else {
-        addToast(`Invite created for ${label} (Code: ${res.invite_code})`, 'info');
-      }
+      addToast(`Invitation sent to ${label}`, 'success');
     } catch (err: any) {
       addToast(err.message || 'Failed to send invite', 'error');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleRemoveMember = async (memberUserId: string, memberUsername: string) => {
+    if (!primaryAlcove) return;
+    setBusy(true);
+    try {
+      await removeAlcoveMember(primaryAlcove.id, memberUserId);
+      await loadAlcoves();
+      addToast(`Removed ex/${memberUsername} from ${primaryAlcove.name}`, 'info');
+    } catch (err: any) {
+      addToast(err.message || 'Could not remove member', 'error');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleRevokeInvite = async (inviteId: string) => {
+    if (!primaryAlcove) return;
+    setBusy(true);
+    try {
+      await revokeAlcoveInvite(primaryAlcove.id, inviteId);
+      await loadAlcoves();
+      addToast('Invitation revoked', 'info');
+    } catch (err: any) {
+      addToast(err.message || 'Could not revoke invitation', 'error');
     } finally {
       setBusy(false);
     }
@@ -155,13 +215,6 @@ export const AlcoveScreen: React.FC = () => {
     }
   };
 
-  const copyCode = (code: string) => {
-    navigator.clipboard.writeText(code);
-    setCopiedCode(true);
-    addToast(`Copied ${code}`, 'success');
-    setTimeout(() => setCopiedCode(false), 2000);
-  };
-
   return (
     <div className="max-w-5xl mx-auto w-full space-y-6 pb-6">
       {/* Editorial Header */}
@@ -174,7 +227,7 @@ export const AlcoveScreen: React.FC = () => {
             Family Alcove
           </h1>
           <p className="text-xs text-ink-secondary dark:text-ink-dark-secondary mt-1">
-            Household shelves and physical copy tracking with independent reading streaks.
+            Create a household library, invite readers by ex/handle, and manage shared shelves.
           </p>
         </div>
 
@@ -188,7 +241,9 @@ export const AlcoveScreen: React.FC = () => {
             className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-button bg-accent hover:bg-accent-hover text-white text-xs font-medium min-h-[44px] cursor-pointer transition-colors shadow-2xs shrink-0"
           >
             <BookOpen size={15} />
-            <span>Browse {sharedCount} Shared {sharedCount === 1 ? 'Book' : 'Books'}</span>
+            <span>
+              Browse {sharedCount} Shared {sharedCount === 1 ? 'Book' : 'Books'}
+            </span>
             <ArrowUpRight size={14} />
           </button>
         )}
@@ -231,28 +286,39 @@ export const AlcoveScreen: React.FC = () => {
                     Invited by <span className="font-mono">ex/{inv.invited_by_username}</span>
                   </p>
                 </div>
-                <button
-                  type="button"
-                  disabled={busy || !emailVerified}
-                  onClick={() => handleJoin(inv.invite_code)}
-                  className="px-4 py-2.5 rounded-button bg-accent hover:bg-accent-hover text-white text-xs font-medium min-h-[44px] cursor-pointer disabled:opacity-50 shrink-0"
-                >
-                  Accept &amp; Join
-                </button>
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    type="button"
+                    disabled={busy || !emailVerified}
+                    onClick={() => handleDeclineInvite(inv.id)}
+                    className="px-3.5 py-2 rounded-button border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark hover:border-accent/50 text-xs font-medium min-h-[44px] cursor-pointer disabled:opacity-50"
+                  >
+                    Decline
+                  </button>
+                  <button
+                    type="button"
+                    disabled={busy || !emailVerified}
+                    onClick={() => handleAcceptInvite(inv.id)}
+                    className="px-4 py-2 rounded-button bg-accent hover:bg-accent-hover text-white text-xs font-medium min-h-[44px] cursor-pointer disabled:opacity-50 inline-flex items-center gap-1.5"
+                  >
+                    <Check size={14} />
+                    <span>Accept &amp; Join</span>
+                  </button>
+                </div>
               </div>
             ))}
           </div>
         </section>
       )}
 
-      {/* Active Alcove vs Create/Join */}
+      {/* Active Alcove vs Create Flow */}
       {primaryAlcove ? (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
-          {/* Left Column: Alcove Overview & Sharing Settings */}
+          {/* Left Column: Member Roster & Sharing Settings */}
           <div className="lg:col-span-7 space-y-4">
             {/* Overview + Members */}
             <section className="p-5 rounded-card border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark space-y-4 shadow-2xs">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     <h2 className="font-serif text-xl font-medium text-ink dark:text-ink-dark truncate">
@@ -268,43 +334,51 @@ export const AlcoveScreen: React.FC = () => {
                     shared {sharedCount === 1 ? 'volume' : 'volumes'}
                   </p>
                 </div>
-
-                <button
-                  type="button"
-                  onClick={() => copyCode(primaryAlcove.invite_code)}
-                  className="inline-flex items-center justify-between sm:justify-center gap-2 px-3.5 py-2 rounded-button border border-rule dark:border-rule-dark bg-canvas dark:bg-canvas-dark hover:border-accent/60 text-xs font-mono cursor-pointer min-h-[44px] shrink-0 transition-colors"
-                  title="Copy Alcove invite code"
-                >
-                  <span>{primaryAlcove.invite_code}</span>
-                  {copiedCode ? (
-                    <Check size={14} className="text-emerald-600" />
-                  ) : (
-                    <Copy size={14} className="text-ink-muted" />
-                  )}
-                </button>
               </div>
 
               <div className="pt-3 border-t border-rule/60 dark:border-rule-dark/60 space-y-2.5">
                 <span className="text-2xs font-semibold uppercase tracking-wider text-ink-muted block">
                   Household Members
                 </span>
-                <div className="flex flex-wrap gap-2">
-                  {primaryAlcove.members.map((m) => (
-                    <div
-                      key={m.user_id}
-                      className="inline-flex items-center gap-2 px-2.5 py-1.5 rounded-button bg-canvas dark:bg-canvas-dark border border-rule/70 dark:border-rule-dark/70"
-                    >
-                      <span
-                        aria-hidden="true"
-                        className="w-6 h-6 rounded-full bg-warm text-white flex items-center justify-center text-3xs font-serif font-bold shrink-0"
+                <div className="divide-y divide-rule/50 dark:divide-rule-dark/50 rounded-card border border-rule/70 dark:border-rule-dark/70 bg-canvas dark:bg-canvas-dark overflow-hidden">
+                  {primaryAlcove.members.map((m) => {
+                    const isSelf = authUser && m.username.toLowerCase() === authUser.toLowerCase();
+                    return (
+                      <div
+                        key={m.user_id}
+                        className="flex items-center justify-between gap-3 px-3.5 py-2.5 min-h-[52px]"
                       >
-                        {m.username.slice(0, 2).toUpperCase()}
-                      </span>
-                      <span className="text-xs font-mono text-ink dark:text-ink-dark">
-                        ex/{m.username}
-                      </span>
-                    </div>
-                  ))}
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <span
+                            aria-hidden="true"
+                            className="w-7 h-7 rounded-full bg-warm text-white flex items-center justify-center text-3xs font-serif font-bold shrink-0"
+                          >
+                            {m.username.slice(0, 2).toUpperCase()}
+                          </span>
+                          <div className="min-w-0">
+                            <span className="text-xs font-mono font-medium text-ink dark:text-ink-dark block truncate">
+                              ex/{m.username}
+                              {isSelf ? ' (you)' : ''}
+                            </span>
+                            <span className="text-3xs text-ink-muted capitalize">{m.role}</span>
+                          </div>
+                        </div>
+
+                        {isCurator && !isSelf && (
+                          <button
+                            type="button"
+                            disabled={busy}
+                            onClick={() => handleRemoveMember(m.user_id, m.username)}
+                            className="px-2.5 py-1.5 rounded-button text-2xs font-medium text-red-700 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 inline-flex items-center gap-1 cursor-pointer transition-colors disabled:opacity-50 shrink-0 min-h-[36px]"
+                            title={`Remove ex/${m.username} from Alcove`}
+                          >
+                            <UserMinus size={13} />
+                            <span>Remove</span>
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             </section>
@@ -317,7 +391,8 @@ export const AlcoveScreen: React.FC = () => {
                     Share Entire Shelf Automatically
                   </h3>
                   <p className="text-2xs text-ink-secondary dark:text-ink-dark-secondary">
-                    Off by default (selective per book). Turn on to mirror all your books into {primaryAlcove.name}.
+                    Off by default (selective per book). Turn on to mirror all your books into{' '}
+                    {primaryAlcove.name}.
                   </p>
                 </div>
                 <button
@@ -351,14 +426,14 @@ export const AlcoveScreen: React.FC = () => {
             </section>
           </div>
 
-          {/* Right Column: Invite Family or Friends */}
+          {/* Right Column: Invite Readers */}
           <section className="lg:col-span-5 p-5 rounded-card border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark space-y-4 shadow-2xs">
             <div>
               <h2 className="font-serif text-lg font-medium text-ink dark:text-ink-dark">
-                Invite Readers
+                Add Readers
               </h2>
               <p className="text-2xs text-ink-secondary dark:text-ink-dark-secondary mt-0.5">
-                Search registered readers by <span className="font-mono">ex/handle</span>, or invite via email.
+                Invite registered readers by <span className="font-mono">ex/handle</span> — they&apos;ll get an instant notification to accept.
               </p>
             </div>
 
@@ -400,7 +475,10 @@ export const AlcoveScreen: React.FC = () => {
             {lookupResults.length > 0 && (
               <div className="rounded-card border border-rule dark:border-rule-dark bg-canvas dark:bg-canvas-dark divide-y divide-rule/50 dark:divide-rule-dark/50 overflow-hidden">
                 {lookupResults.map((reader) => (
-                  <div key={reader.user_id} className="flex items-center justify-between gap-2 px-3.5 py-2.5">
+                  <div
+                    key={reader.user_id}
+                    className="flex items-center justify-between gap-2 px-3.5 py-2.5"
+                  >
                     <div className="flex items-center gap-2 min-w-0">
                       <span
                         aria-hidden="true"
@@ -436,14 +514,26 @@ export const AlcoveScreen: React.FC = () => {
                   <ShieldCheck size={13} className="text-accent dark:text-accent-dark shrink-0" />
                   <span>Pending Sent Invites</span>
                 </div>
-                <div className="flex flex-wrap gap-1.5">
+                <div className="space-y-1.5">
                   {primaryAlcove.sent_invites.map((i) => (
-                    <span
+                    <div
                       key={i.id}
-                      className="px-2.5 py-1 rounded-input bg-canvas dark:bg-canvas-dark border border-rule/60 dark:border-rule-dark/60 text-2xs text-ink-secondary dark:text-ink-dark-secondary"
+                      className="flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-input bg-canvas dark:bg-canvas-dark border border-rule/60 dark:border-rule-dark/60 text-2xs text-ink-secondary dark:text-ink-dark-secondary"
                     >
-                      {i.invitee_email}
-                    </span>
+                      <span className="truncate">{i.invitee_email}</span>
+                      {isCurator && (
+                        <button
+                          type="button"
+                          disabled={busy}
+                          onClick={() => handleRevokeInvite(i.id)}
+                          aria-label={`Revoke invite to ${i.invitee_email}`}
+                          className="p-1 rounded-button text-ink-muted hover:text-red-600 cursor-pointer shrink-0"
+                          title="Revoke invitation"
+                        >
+                          <X size={13} />
+                        </button>
+                      )}
+                    </div>
                   ))}
                 </div>
               </div>
@@ -451,21 +541,22 @@ export const AlcoveScreen: React.FC = () => {
           </section>
         </div>
       ) : (
-        /* Create or Join Cards */
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        /* Create Alcove First Flow */
+        <div className="max-w-xl space-y-4">
           <form
             onSubmit={handleCreate}
-            className="p-5 rounded-card border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark space-y-3 shadow-2xs flex flex-col justify-between"
+            className="p-5 sm:p-6 rounded-card border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark space-y-4 shadow-2xs"
           >
             <div className="space-y-1.5">
-              <h2 className="font-serif text-lg font-medium text-ink dark:text-ink-dark">
+              <h2 className="font-serif text-xl font-medium text-ink dark:text-ink-dark">
                 Create a Household Alcove
               </h2>
-              <p className="text-xs text-ink-secondary dark:text-ink-dark-secondary">
-                Start a shared shelf for your home and invite family members.
+              <p className="text-xs text-ink-secondary dark:text-ink-dark-secondary leading-relaxed">
+                Start your shared household library first, then invite family or friends by their{' '}
+                <span className="font-mono">ex/handle</span>. They&apos;ll receive a notification to accept.
               </p>
             </div>
-            <div className="space-y-2.5 pt-1">
+            <div className="space-y-3">
               <input
                 type="text"
                 value={newAlcoveName}
@@ -477,7 +568,7 @@ export const AlcoveScreen: React.FC = () => {
               <button
                 type="submit"
                 disabled={!emailVerified || busy || newAlcoveName.trim().length < 2}
-                className="w-full inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-button bg-accent hover:bg-accent-hover text-white text-xs font-medium min-h-[44px] cursor-pointer disabled:opacity-50 transition-colors"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-5 py-2.5 rounded-button bg-accent hover:bg-accent-hover text-white text-xs font-medium min-h-[44px] cursor-pointer disabled:opacity-50 transition-colors"
               >
                 <Plus size={15} />
                 <span>Create Alcove</span>
@@ -485,40 +576,44 @@ export const AlcoveScreen: React.FC = () => {
             </div>
           </form>
 
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              handleJoin(joinCode);
-            }}
-            className="p-5 rounded-card border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark space-y-3 shadow-2xs flex flex-col justify-between"
-          >
-            <div className="space-y-1.5">
-              <h2 className="font-serif text-lg font-medium text-ink dark:text-ink-dark">
-                Join with Invite Code
-              </h2>
-              <p className="text-xs text-ink-secondary dark:text-ink-dark-secondary">
-                Enter the 6-character code shared by your family curator.
-              </p>
-            </div>
-            <div className="space-y-2.5 pt-1">
-              <input
-                type="text"
-                value={joinCode}
-                onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
-                placeholder="ALC-XXXXXX"
-                disabled={!emailVerified || busy}
-                className="w-full px-3.5 py-2.5 rounded-input border border-rule dark:border-rule-dark bg-canvas dark:bg-canvas-dark text-xs font-mono focus:outline-none focus:border-accent min-h-[44px]"
-              />
-              <button
-                type="submit"
-                disabled={!emailVerified || busy || joinCode.trim().length < 4}
-                className="w-full inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-button border border-rule dark:border-rule-dark bg-canvas dark:bg-canvas-dark hover:border-accent/60 text-xs font-medium min-h-[44px] cursor-pointer disabled:opacity-50 transition-colors"
+          {/* Discreet Invite Code Fallback */}
+          <div>
+            <button
+              type="button"
+              onClick={() => setShowCodeFallback((prev) => !prev)}
+              className="inline-flex items-center gap-1.5 text-2xs text-ink-muted hover:text-ink dark:hover:text-ink-dark cursor-pointer transition-colors"
+            >
+              <KeyRound size={12} />
+              <span>{showCodeFallback ? 'Hide invite code entry' : 'Have an email invite code?'}</span>
+            </button>
+
+            {showCodeFallback && (
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  handleJoinByCode(joinCode);
+                }}
+                className="mt-2.5 p-4 rounded-card border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark flex flex-col sm:flex-row gap-2.5"
               >
-                <Users size={15} />
-                <span>Join Alcove</span>
-              </button>
-            </div>
-          </form>
+                <input
+                  type="text"
+                  value={joinCode}
+                  onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
+                  placeholder="ALC-XXXXXX"
+                  disabled={!emailVerified || busy}
+                  className="flex-1 px-3.5 py-2 rounded-input border border-rule dark:border-rule-dark bg-canvas dark:bg-canvas-dark text-xs font-mono focus:outline-none focus:border-accent min-h-[44px]"
+                />
+                <button
+                  type="submit"
+                  disabled={!emailVerified || busy || joinCode.trim().length < 4}
+                  className="px-4 py-2 rounded-button border border-rule dark:border-rule-dark bg-canvas dark:bg-canvas-dark hover:border-accent/60 text-xs font-medium min-h-[44px] cursor-pointer disabled:opacity-50 inline-flex items-center justify-center gap-1.5 shrink-0"
+                >
+                  <Users size={14} />
+                  <span>Join</span>
+                </button>
+              </form>
+            )}
+          </div>
         </div>
       )}
     </div>
