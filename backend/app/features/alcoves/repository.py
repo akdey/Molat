@@ -495,6 +495,129 @@ class AlcoveRepository:
         await self.session.commit()
         return (res.rowcount or 0) > 0
 
+    async def accept_invite(
+        self, invite_id: str, user_id: str, user_email: Optional[str] = None
+    ) -> Optional[tuple[AlcoveEntity, AlcoveInviteEntity]]:
+        invite = await self.session.get(AlcoveInviteEntity, invite_id)
+        if not invite or invite.status != "PENDING":
+            return None
+
+        if user_email and invite.invitee_email.lower() != user_email.strip().lower():
+            return None
+
+        alcove = await self.session.get(AlcoveEntity, invite.alcove_id)
+        if not alcove:
+            return None
+
+        existing = (
+            await self.session.execute(
+                select(AlcoveMemberEntity).where(
+                    AlcoveMemberEntity.alcove_id == alcove.id,
+                    AlcoveMemberEntity.user_id == user_id,
+                )
+            )
+        ).scalar_one_or_none()
+
+        now_str = datetime.now(IST).strftime("%Y-%m-%d %H:%M:%S")
+        if not existing:
+            self.session.add(
+                AlcoveMemberEntity(
+                    id=f"mem_{uuid.uuid4().hex[:12]}",
+                    alcove_id=alcove.id,
+                    user_id=user_id,
+                    role="member",
+                    auto_share=False,
+                    joined_at=now_str,
+                )
+            )
+
+        invite.status = "ACCEPTED"
+        await self.session.commit()
+        await self.session.refresh(invite)
+        return alcove, invite
+
+    async def decline_invite(
+        self, invite_id: str, user_email: Optional[str] = None
+    ) -> Optional[AlcoveInviteEntity]:
+        invite = await self.session.get(AlcoveInviteEntity, invite_id)
+        if not invite or invite.status != "PENDING":
+            return None
+
+        if user_email and invite.invitee_email.lower() != user_email.strip().lower():
+            return None
+
+        invite.status = "DECLINED"
+        await self.session.commit()
+        await self.session.refresh(invite)
+        return invite
+
+    async def remove_member(
+        self, alcove_id: str, actor_user_id: str, target_user_id: str
+    ) -> Optional[AlcoveEntity]:
+        if actor_user_id == target_user_id:
+            raise ValueError("Use Leave Alcove to remove yourself.")
+
+        actor_membership = (
+            await self.session.execute(
+                select(AlcoveMemberEntity).where(
+                    AlcoveMemberEntity.alcove_id == alcove_id,
+                    AlcoveMemberEntity.user_id == actor_user_id,
+                )
+            )
+        ).scalar_one_or_none()
+        if not actor_membership or actor_membership.role != "curator":
+            raise PermissionError("Only the Alcove curator can remove members.")
+
+        target_membership = (
+            await self.session.execute(
+                select(AlcoveMemberEntity).where(
+                    AlcoveMemberEntity.alcove_id == alcove_id,
+                    AlcoveMemberEntity.user_id == target_user_id,
+                )
+            )
+        ).scalar_one_or_none()
+        if not target_membership:
+            return None
+
+        alcove = await self.session.get(AlcoveEntity, alcove_id)
+        await self.session.execute(
+            update(BookEntity)
+            .where(BookEntity.user_id == target_user_id, BookEntity.alcove_id == alcove_id)
+            .values(alcove_id=None)
+        )
+        await self.session.execute(
+            delete(AlcoveMemberEntity).where(
+                AlcoveMemberEntity.alcove_id == alcove_id,
+                AlcoveMemberEntity.user_id == target_user_id,
+            )
+        )
+        await self.session.commit()
+        return alcove
+
+    async def revoke_invite(
+        self, alcove_id: str, actor_user_id: str, invite_id: str
+    ) -> bool:
+        actor_membership = (
+            await self.session.execute(
+                select(AlcoveMemberEntity).where(
+                    AlcoveMemberEntity.alcove_id == alcove_id,
+                    AlcoveMemberEntity.user_id == actor_user_id,
+                )
+            )
+        ).scalar_one_or_none()
+        if not actor_membership or actor_membership.role != "curator":
+            raise PermissionError("Only the Alcove curator can revoke invitations.")
+
+        res = await self.session.execute(
+            delete(AlcoveInviteEntity).where(
+                AlcoveInviteEntity.id == invite_id,
+                AlcoveInviteEntity.alcove_id == alcove_id,
+                AlcoveInviteEntity.status == "PENDING",
+            )
+        )
+        await self.session.commit()
+        return (res.rowcount or 0) > 0
+
     async def leave_alcove(self, alcove_id: str, user_id: str) -> bool:
         membership = (
             await self.session.execute(
