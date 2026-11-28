@@ -23,6 +23,8 @@ import {
   Handshake,
   Mail,
   Zap,
+  ArrowUpRight,
+  X,
 } from 'lucide-react';
 import { useLibraryStore } from '../store/useLibraryStore';
 import { changePassword } from '../api/client';
@@ -68,25 +70,22 @@ export const ProfileScreen: React.FC = () => {
   const [enriching, setEnriching] = useState(false);
   const [enrichResult, setEnrichResult] = useState<string | null>(null);
 
-  // Sign out confirmation state
+  // Sign out & verification modal state
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [showVerifyModal, setShowVerifyModal] = useState(false);
 
-  // Background silent sync if email or profile hasn't been cached yet
   useEffect(() => {
     if (!authEmail) {
       syncUserProfile();
     }
   }, [authEmail, syncUserProfile]);
 
-  // Derived metrics
   const completedBooks = books.filter((b) => b.reading_status === 'COMPLETED').length;
   const readingBooks = books.filter((b) => b.reading_status === 'READING').length;
   const unreadBooks = books.filter((b) => b.reading_status === 'UNREAD').length;
   const activeLoans = lendingRecords.filter((l) => l.status === 'ACTIVE').length;
 
-  // User Monogram Initials
-  const username = authUser || 'Reader';
+  const username = authUser || 'reader';
   const monogram = username.slice(0, 2).toUpperCase();
   const displayEmail = authEmail || null;
   const isOwner = authRole === 'admin' || authRole === 'owner';
@@ -103,7 +102,7 @@ export const ProfileScreen: React.FC = () => {
     setEnrichResult(null);
     try {
       const res = await triggerCoverEnrichment();
-      setEnrichResult(`Scanned ${res.scanned} volumes: Enriched ${res.enriched} new jackets!`);
+      setEnrichResult(`Scanned ${res.scanned} volumes: Enriched ${res.enriched} new jackets.`);
       addToast(`Enrichment complete: +${res.enriched} covers`, 'success');
     } catch (err: any) {
       setEnrichResult(err.message || 'Failed to enrich covers');
@@ -149,12 +148,11 @@ export const ProfileScreen: React.FC = () => {
     }
   };
 
-  // Export 1: JSON Backup
   const handleExportJSON = () => {
     const backupData = {
       export_version: '2.0.0',
       exported_at: new Date().toISOString(),
-      curator: username,
+      curator: `ex/${username}`,
       library_stats: {
         total_books: books.length,
         completed_books: completedBooks,
@@ -163,8 +161,8 @@ export const ProfileScreen: React.FC = () => {
       },
       portfolio: portfolio || {},
       streak: streakSummary || {},
-      books: books,
-      wishlist: wishlist,
+      books,
+      wishlist,
       lending_records: lendingRecords,
     };
 
@@ -180,7 +178,6 @@ export const ProfileScreen: React.FC = () => {
     addToast('Library JSON backup downloaded', 'success');
   };
 
-  // Export 2: CSV Shelf Catalogue
   const handleExportCSV = () => {
     const headers = [
       'Book ID',
@@ -230,38 +227,69 @@ export const ProfileScreen: React.FC = () => {
   }
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-6 sm:py-8 space-y-6 sm:space-y-8 animate-in fade-in duration-200">
-      {/* 1. EX LIBRIS PROVENANCE READER CARD */}
-      <section
-        aria-label="Reader Profile & Ex Libris Bookplate"
-        className="relative overflow-hidden rounded-3xl border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark p-6 sm:p-8 shadow-xs"
-      >
-        {/* Subtle Watermark Archival Bookplate Stamp */}
-        <div className="absolute top-4 right-5 sm:top-6 sm:right-8 opacity-5 dark:opacity-10 pointer-events-none select-none font-serif text-8xl sm:text-9xl text-accent dark:text-accent-dark tracking-tighter">
-          EX/
+    <div className="max-w-5xl mx-auto w-full space-y-6 pb-6">
+      {/* Editorial Header */}
+      <header className="flex flex-wrap items-end justify-between gap-3 border-b border-rule/80 dark:border-rule-dark/80 pb-4">
+        <div className="min-w-0">
+          <p className="text-3xs font-semibold uppercase tracking-[0.16em] text-warm dark:text-amber-400">
+            ❧ Ex Libris
+          </p>
+          <h1 className="font-serif text-2xl sm:text-3xl font-medium tracking-tight text-ink dark:text-ink-dark mt-0.5">
+            Reader Passport
+          </h1>
         </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setShowPasswordModal(true)}
+            className="px-3.5 py-2 rounded-button border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark hover:bg-surface-raised dark:hover:bg-surface-dark-raised hover:border-accent/50 text-ink dark:text-ink-dark text-xs font-medium inline-flex items-center gap-1.5 transition-colors cursor-pointer min-h-[44px]"
+          >
+            <Lock size={14} className="text-accent dark:text-accent-dark" />
+            <span>Change Password</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowLogoutConfirm(true)}
+            className="px-3.5 py-2 rounded-button border border-red-200 dark:border-red-900/50 bg-red-50/70 dark:bg-red-950/25 text-red-700 dark:text-red-300 hover:bg-red-100 dark:hover:bg-red-950/50 text-xs font-medium inline-flex items-center gap-1.5 transition-colors cursor-pointer min-h-[44px]"
+          >
+            <LogOut size={14} />
+            <span>Sign Out</span>
+          </button>
+        </div>
+      </header>
 
-        <div className="relative flex flex-col sm:flex-row sm:items-center justify-between gap-6">
-          <div className="flex items-start sm:items-center gap-4 sm:gap-5">
-            {/* Monogram Bookplate Seal */}
-            <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-warm text-white flex flex-col items-center justify-center shadow-xs shrink-0 select-none">
-              <span className="text-2xs uppercase tracking-widest font-mono opacity-80">EX</span>
-              <span className="font-serif text-xl sm:text-2xl font-bold tracking-tight">{monogram}</span>
+      {/* 1. Provenance Identity Card */}
+      <section
+        aria-label="Reader Identity"
+        className="rounded-card border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark p-4 sm:p-6 shadow-2xs"
+      >
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-4 min-w-0">
+            <div
+              aria-hidden="true"
+              className="w-16 h-16 rounded-card bg-warm text-white flex flex-col items-center justify-center shrink-0 select-none shadow-2xs"
+            >
+              <span className="text-3xs uppercase tracking-widest font-mono opacity-80">EX</span>
+              <span className="font-serif text-xl font-bold tracking-tight">{monogram}</span>
             </div>
 
-            <div className="space-y-1.5">
-              <div className="flex items-center gap-2.5 flex-wrap">
-                <h1 className="font-serif text-2xl sm:text-3xl font-medium tracking-tight text-ink dark:text-ink-dark">
+            <div className="min-w-0 space-y-1.5">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h2 className="font-serif text-xl sm:text-2xl font-medium text-ink dark:text-ink-dark truncate">
                   ex/{username}
-                </h1>
+                </h2>
                 <button
                   type="button"
                   onClick={handleCopyHandle}
-                  className="font-mono text-2xs px-2 py-0.5 rounded-md bg-stone-100 dark:bg-stone-800 hover:bg-stone-200 dark:hover:bg-stone-700 text-ink dark:text-ink-dark inline-flex items-center gap-1 transition-colors cursor-pointer"
-                  title="Click to copy Ex Libris provenance handle"
+                  className="font-mono text-2xs px-2 py-0.5 rounded-md bg-canvas dark:bg-canvas-dark border border-rule dark:border-rule-dark hover:border-accent/50 text-ink dark:text-ink-dark inline-flex items-center gap-1 transition-colors cursor-pointer min-h-[28px]"
+                  title="Copy Ex Libris provenance handle"
                   aria-label="Copy Ex Libris handle"
                 >
-                  {copiedHandle ? <Check size={11} className="text-emerald-600" /> : <Copy size={11} className="opacity-60" />}
+                  {copiedHandle ? (
+                    <Check size={11} className="text-emerald-600" />
+                  ) : (
+                    <Copy size={11} className="text-ink-muted" />
+                  )}
                   <span>{copiedHandle ? 'Copied' : 'Copy'}</span>
                 </button>
                 <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-2xs font-medium bg-accent-subtle dark:bg-accent-dark-subtle text-accent dark:text-accent-dark border border-accent/20">
@@ -270,16 +298,14 @@ export const ProfileScreen: React.FC = () => {
                 </span>
               </div>
 
-              <div className="flex items-center gap-2.5 flex-wrap text-xs text-ink-secondary dark:text-ink-dark-secondary">
-
+              <div className="flex items-center gap-2 flex-wrap text-xs text-ink-secondary dark:text-ink-dark-secondary">
                 {displayEmail && (
                   <>
-                    <span className="text-ink-muted">•</span>
-                    <span className="inline-flex items-center gap-1.5 text-2xs text-ink-muted">
-                      <Mail size={11} className="opacity-70" />
-                      {displayEmail}
+                    <span className="inline-flex items-center gap-1.5 text-2xs min-w-0">
+                      <Mail size={12} className="text-ink-muted shrink-0" />
+                      <span className="truncate">{displayEmail}</span>
                       {emailVerified ? (
-                        <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-3xs font-medium bg-emerald-100 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300">
+                        <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-3xs font-medium bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300">
                           <CheckCircle2 size={10} />
                           Verified
                         </span>
@@ -287,329 +313,330 @@ export const ProfileScreen: React.FC = () => {
                         <button
                           type="button"
                           onClick={() => setShowVerifyModal(true)}
-                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-3xs font-medium bg-amber-100 dark:bg-amber-950/50 text-amber-800 dark:text-amber-300 hover:bg-amber-200 cursor-pointer"
+                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-3xs font-medium bg-amber-100 dark:bg-amber-950/60 text-amber-900 dark:text-amber-200 hover:bg-amber-200 transition-colors cursor-pointer"
                         >
                           <AlertCircle size={10} />
                           Verify Email
                         </button>
                       )}
                     </span>
+                    <span className="text-ink-muted">&bull;</span>
                   </>
                 )}
-
-                <span className="text-ink-muted">•</span>
                 <span className="text-2xs text-ink-muted">Asia/Kolkata (IST)</span>
               </div>
             </div>
-          </div>
-
-          {/* Quick Security & Account Actions */}
-          <div className="flex items-center gap-2 shrink-0">
-            <button
-              type="button"
-              onClick={() => setShowPasswordModal(true)}
-              className="px-3.5 py-2 rounded-xl border border-rule dark:border-rule-dark bg-canvas dark:bg-canvas-dark text-ink dark:text-ink-dark hover:border-accent/40 text-xs font-medium inline-flex items-center gap-1.5 transition-colors cursor-pointer"
-            >
-              <Lock size={13} className="text-accent" />
-              <span>Change Password</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setShowLogoutConfirm(true)}
-              className="px-3.5 py-2 rounded-xl border border-red-200 dark:border-red-900/40 bg-red-50/50 dark:bg-red-950/20 text-red-700 dark:text-red-400 hover:bg-red-100/60 text-xs font-medium inline-flex items-center gap-1.5 transition-colors cursor-pointer"
-            >
-              <LogOut size={13} />
-              <span>Sign Out</span>
-            </button>
           </div>
         </div>
       </section>
 
       <EmailVerificationModal isOpen={showVerifyModal} onClose={() => setShowVerifyModal(false)} />
 
-      {/* 2. LIFETIME READING JOURNEY & STREAK PROTECTION */}
+      {/* 2. Reading Journey & Milestone Ledger */}
       <section className="space-y-3">
-        <div className="flex items-center justify-between">
-          <h2 className="font-serif text-lg font-medium text-ink dark:text-ink-dark flex items-center gap-2">
-            <BookOpen size={18} className="text-accent" />
-            <span>Reading Journey & Milestone Ledger</span>
+        <div className="flex items-baseline justify-between gap-2 px-0.5">
+          <h2 className="text-2xs font-semibold uppercase tracking-wider text-ink-secondary dark:text-ink-dark-secondary flex items-center gap-1.5">
+            <BookOpen size={13} className="text-accent dark:text-accent-dark" />
+            <span>Reading Journey</span>
           </h2>
           <button
             type="button"
             onClick={() => setActiveTab('tracker')}
-            className="text-xs text-accent hover:underline inline-flex items-center gap-1 cursor-pointer font-medium"
+            className="text-xs text-accent dark:text-accent-dark hover:underline inline-flex items-center gap-1 cursor-pointer font-medium"
           >
-            <span>View 365-Day Reading Matrix →</span>
+            <span>365-Day Matrix</span>
+            <ArrowUpRight size={13} />
           </button>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
-          {/* 1. Finished Volumes */}
-          <div className="p-4 rounded-2xl border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark space-y-1">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          <div className="p-4 rounded-card border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark space-y-1">
             <div className="flex items-center justify-between text-ink-muted">
-              <span className="text-3xs uppercase tracking-wider font-medium">Finished Volumes</span>
-              <Award size={15} className="text-emerald-600 dark:text-emerald-400" />
+              <span className="text-3xs uppercase tracking-wider font-medium">Finished</span>
+              <Award size={15} className="text-shelf-green dark:text-emerald-400" />
             </div>
-            <p className="font-serif text-2xl font-bold text-ink dark:text-ink-dark tabular-nums">
+            <p className="font-serif text-2xl font-semibold text-ink dark:text-ink-dark tabular-nums">
               {completedBooks}
             </p>
-            <span className="text-3xs text-ink-muted block">Books fully read</span>
-          </div>
-
-          {/* 2. Current Streak */}
-          <div className="p-4 rounded-2xl border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark space-y-1">
-            <div className="flex items-center justify-between text-ink-muted">
-              <span className="text-3xs uppercase tracking-wider font-medium">Reading Streak</span>
-              <Flame size={15} className="text-accent animate-pulse" />
-            </div>
-            <p className="font-serif text-2xl font-bold text-ink dark:text-ink-dark tabular-nums">
-              {streakSummary?.current_streak_days || 0} <span className="text-xs font-normal text-ink-muted">Days</span>
-            </p>
-            <span className="text-3xs text-ink-muted block">
-              Personal Record: {streakSummary?.longest_streak_days || 0}d
+            <span className="text-2xs text-ink-secondary dark:text-ink-dark-secondary block">
+              Volumes completed
             </span>
           </div>
 
-          {/* 3. Shield Bank (Streak Freeze) */}
-          <div className="p-4 rounded-2xl border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark space-y-1">
+          <div className="p-4 rounded-card border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark space-y-1">
             <div className="flex items-center justify-between text-ink-muted">
-              <span className="text-3xs uppercase tracking-wider font-medium">Streak Shield Bank</span>
+              <span className="text-3xs uppercase tracking-wider font-medium">Streak</span>
+              <Flame size={15} className="text-warm" />
+            </div>
+            <p className="font-serif text-2xl font-semibold text-ink dark:text-ink-dark tabular-nums">
+              {streakSummary?.current_streak_days || 0}{' '}
+              <span className="text-xs font-sans font-normal text-ink-muted">days</span>
+            </p>
+            <span className="text-2xs text-ink-secondary dark:text-ink-dark-secondary block tabular-nums">
+              Best: {streakSummary?.longest_streak_days || 0}d
+            </span>
+          </div>
+
+          <div className="p-4 rounded-card border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark space-y-1">
+            <div className="flex items-center justify-between text-ink-muted">
+              <span className="text-3xs uppercase tracking-wider font-medium">Shield Bank</span>
               <Shield size={15} className="text-cyan-600 dark:text-cyan-400" />
             </div>
             <div className="flex items-baseline gap-1.5">
-              <p className="font-serif text-2xl font-bold text-cyan-700 dark:text-cyan-400 tabular-nums">
+              <p className="font-serif text-2xl font-semibold text-cyan-700 dark:text-cyan-400 tabular-nums">
                 {streakSummary?.freeze_bank_count ?? 0}
               </p>
               <span className="text-xs font-medium text-ink-muted">/ 3 banked</span>
             </div>
-            <span className="text-3xs text-ink-muted block">
+            <span className="text-2xs text-ink-secondary dark:text-ink-dark-secondary block">
               {streakSummary?.freeze_recovery_active ? (
                 <span className="text-amber-600 dark:text-amber-400 font-medium inline-flex items-center gap-0.5">
-                  <Zap size={10} /> Fast Recovery (3d/5d/7d)
+                  <Zap size={10} /> Fast Recovery
                 </span>
               ) : (streakSummary?.freeze_bank_count ?? 0) >= 3 ? (
-                'Full Protection Armed'
+                'Full protection armed'
               ) : (
-                'Earn shield every 7 days'
+                'Earn every 7 days'
               )}
             </span>
           </div>
 
-          {/* 4. Reading Velocity */}
-          <div className="p-4 rounded-2xl border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark space-y-1">
+          <div className="p-4 rounded-card border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark space-y-1">
             <div className="flex items-center justify-between text-ink-muted">
-              <span className="text-3xs uppercase tracking-wider font-medium">Reading Velocity</span>
-              <TrendingUp size={15} className="text-indigo-600 dark:text-indigo-400" />
+              <span className="text-3xs uppercase tracking-wider font-medium">Velocity</span>
+              <TrendingUp size={15} className="text-accent dark:text-accent-dark" />
             </div>
-            <p className="font-serif text-2xl font-bold text-ink dark:text-ink-dark tabular-nums">
+            <p className="font-serif text-2xl font-semibold text-ink dark:text-ink-dark tabular-nums">
               {streakSummary?.reading_velocity_pages_per_day || 0.0}
             </p>
-            <span className="text-3xs text-ink-muted block">Rolling 14-day pages/day</span>
+            <span className="text-2xs text-ink-secondary dark:text-ink-dark-secondary block">
+              14-day pages/day
+            </span>
           </div>
         </div>
       </section>
 
-      {/* 3. PHYSICAL COLLECTION & PORTFOLIO VALUATION */}
-      <section className="space-y-3">
-        <div className="flex items-center justify-between">
-          <h2 className="font-serif text-lg font-medium text-ink dark:text-ink-dark flex items-center gap-2">
-            <Award size={18} className="text-[#C2410C]" />
-            <span>Library Valuation & Shelves</span>
-          </h2>
-          <button
-            type="button"
-            onClick={() => setActiveTab('insights')}
-            className="text-xs text-accent hover:underline inline-flex items-center gap-1 cursor-pointer font-medium"
-          >
-            <span>Portfolio Breakdown →</span>
-          </button>
-        </div>
-
-        <div className="p-5 rounded-2xl border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark space-y-4">
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pb-4 border-b border-rule/50 dark:border-rule-dark/50">
-            <div>
-              <span className="text-3xs uppercase tracking-wider font-medium text-ink-muted block">Catalogued Volumes</span>
-              <p className="font-serif text-xl sm:text-2xl font-bold text-ink dark:text-ink-dark tabular-nums mt-0.5">
-                {books.length} <span className="text-xs font-normal text-ink-muted">Books</span>
-              </p>
-            </div>
-
-            <div>
-              <span className="text-3xs uppercase tracking-wider font-medium text-ink-muted block">Acquisition Spend</span>
-              <p className="font-serif text-xl sm:text-2xl font-bold text-ink dark:text-ink-dark tabular-nums mt-0.5">
-                ₹{(portfolio?.total_cp || 0).toLocaleString('en-IN')}
-              </p>
-            </div>
-
-            <div>
-              <span className="text-3xs uppercase tracking-wider font-medium text-ink-muted block">Replacement Value</span>
-              <p className="font-serif text-xl sm:text-2xl font-bold text-emerald-700 dark:text-emerald-400 tabular-nums mt-0.5">
-                ₹{(portfolio?.total_rp || 0).toLocaleString('en-IN')}
-              </p>
-            </div>
-
-            <div>
-              <span className="text-3xs uppercase tracking-wider font-medium text-ink-muted block">Active Lending</span>
-              <p className="font-serif text-xl sm:text-2xl font-bold text-accent dark:text-accent-dark tabular-nums mt-0.5">
-                {activeLoans} <span className="text-xs font-normal text-ink-muted">Volumes</span>
-              </p>
-            </div>
-          </div>
-
-          <div className="flex flex-wrap items-center justify-between gap-3 text-2xs text-ink-secondary dark:text-ink-dark-secondary">
-            <div className="flex items-center gap-3 sm:gap-4 flex-wrap">
-              <span>Currently Reading: <strong className="font-medium text-ink dark:text-ink-dark">{readingBooks}</strong></span>
-              <span className="text-ink-muted">•</span>
-              <span>To Be Read (TBR): <strong className="font-medium text-ink dark:text-ink-dark">{unreadBooks}</strong></span>
-              <span className="text-ink-muted">•</span>
-              <span>Wishlist Queue: <strong className="font-medium text-ink dark:text-ink-dark">{wishlist.length}</strong></span>
-            </div>
+      {/* 3. Library Valuation & Reading Pace (2-column balanced grid on desktop) */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        {/* Library Valuation & Shelves */}
+        <section className="space-y-3 flex flex-col">
+          <div className="flex items-baseline justify-between gap-2 px-0.5">
+            <h2 className="text-2xs font-semibold uppercase tracking-wider text-ink-secondary dark:text-ink-dark-secondary">
+              Library Valuation
+            </h2>
             <button
               type="button"
-              onClick={() => setActiveTab('lending')}
-              className="text-accent hover:underline inline-flex items-center gap-1 font-medium cursor-pointer"
+              onClick={() => setActiveTab('insights')}
+              className="text-xs text-accent dark:text-accent-dark hover:underline inline-flex items-center gap-1 cursor-pointer font-medium"
             >
-              <Handshake size={13} />
-              <span>Open Lending Ledger</span>
+              <span>Insights</span>
+              <ArrowUpRight size={13} />
             </button>
           </div>
-        </div>
-      </section>
 
-      {/* 4. READING HABITS & AESTHETIC CONTROLS */}
-      <section className="space-y-3">
-        <h2 className="font-serif text-lg font-medium text-ink dark:text-ink-dark flex items-center gap-2">
-          <Target size={18} className="text-accent" />
-          <span>Reading Pace & Interface Craft</span>
-        </h2>
-
-        <div className="p-5 rounded-2xl border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark space-y-4">
-          {/* Daily Goal Stepper */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
+          <div className="p-5 rounded-card border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark flex-1 flex flex-col justify-between gap-4 shadow-2xs">
+            <div className="grid grid-cols-2 gap-4 pb-4 border-b border-rule/50 dark:border-rule-dark/50">
               <div>
-                <p className="text-xs font-medium text-ink dark:text-ink-dark">Daily Target Reading Pace</p>
-                <p className="text-3xs text-ink-muted">Page goal required daily to maintain active reading streak without fatigue.</p>
+                <span className="text-3xs uppercase tracking-wider font-medium text-ink-muted block">
+                  Catalogued
+                </span>
+                <p className="font-serif text-xl font-semibold text-ink dark:text-ink-dark tabular-nums mt-0.5">
+                  {books.length} <span className="text-xs font-sans font-normal text-ink-muted">vols</span>
+                </p>
               </div>
-              <span className="font-mono text-xs font-bold text-accent dark:text-accent-dark px-2.5 py-1 rounded-lg bg-accent/10 border border-accent/20">
-                {dailyGoal || 15} pages/day
-              </span>
+
+              <div>
+                <span className="text-3xs uppercase tracking-wider font-medium text-ink-muted block">
+                  Active Lending
+                </span>
+                <p className="font-serif text-xl font-semibold text-accent dark:text-accent-dark tabular-nums mt-0.5">
+                  {activeLoans} <span className="text-xs font-sans font-normal text-ink-muted">lent out</span>
+                </p>
+              </div>
+
+              <div>
+                <span className="text-3xs uppercase tracking-wider font-medium text-ink-muted block">
+                  Acquisition Spend
+                </span>
+                <p className="font-serif text-xl font-semibold text-ink dark:text-ink-dark tabular-nums mt-0.5">
+                  ₹{Math.round(portfolio?.total_cp || 0).toLocaleString('en-IN')}
+                </p>
+              </div>
+
+              <div>
+                <span className="text-3xs uppercase tracking-wider font-medium text-ink-muted block">
+                  Replacement Value
+                </span>
+                <p className="font-serif text-xl font-semibold text-shelf-green dark:text-emerald-400 tabular-nums mt-0.5">
+                  ₹{Math.round(portfolio?.total_rp || 0).toLocaleString('en-IN')}
+                </p>
+              </div>
             </div>
 
-            <div className="flex items-center gap-2 flex-wrap pt-1">
-              <span className="text-3xs text-ink-muted mr-1 font-medium">Presets:</span>
-              {[10, 15, 20, 25, 30, 50].map((preset) => (
-                <button
-                  key={preset}
-                  type="button"
-                  onClick={() => setDailyGoal(preset)}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all cursor-pointer ${
-                    (dailyGoal || 15) === preset
-                      ? 'bg-accent text-white shadow-xs'
-                      : 'bg-canvas dark:bg-canvas-dark border border-rule dark:border-rule-dark text-ink dark:text-ink-dark hover:border-accent/40'
-                  }`}
-                >
-                  {preset} pages
-                </button>
-              ))}
+            <div className="flex flex-wrap items-center justify-between gap-2 text-2xs text-ink-secondary dark:text-ink-dark-secondary">
+              <div className="flex items-center gap-2.5 flex-wrap tabular-nums">
+                <span>
+                  Reading: <strong className="text-ink dark:text-ink-dark">{readingBooks}</strong>
+                </span>
+                <span className="text-ink-muted">&bull;</span>
+                <span>
+                  TBR: <strong className="text-ink dark:text-ink-dark">{unreadBooks}</strong>
+                </span>
+                <span className="text-ink-muted">&bull;</span>
+                <span>
+                  Wishlist: <strong className="text-ink dark:text-ink-dark">{wishlist.length}</strong>
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setActiveTab('lending')}
+                className="text-accent dark:text-accent-dark hover:underline inline-flex items-center gap-1 font-medium cursor-pointer"
+              >
+                <Handshake size={13} />
+                <span>Lending Ledger</span>
+              </button>
             </div>
           </div>
+        </section>
 
-          {/* Theme & Display Mode */}
-          <div className="pt-3 border-t border-rule/50 dark:border-rule-dark/50 flex items-center justify-between">
-            <div>
-              <p className="text-xs font-medium text-ink dark:text-ink-dark">Reading Interface Palette</p>
-              <p className="text-3xs text-ink-muted">
-                {theme === 'dark' ? 'Deep Charcoal Ink for relaxed nighttime reading' : 'Warm Ivory Paper for tactile archival bookish warmth'}
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={toggleTheme}
-              className="px-3.5 py-1.5 rounded-xl border border-rule dark:border-rule-dark bg-canvas dark:bg-canvas-dark text-ink dark:text-ink-dark hover:border-accent/40 text-xs font-medium inline-flex items-center gap-2 transition-colors cursor-pointer"
-            >
-              {theme === 'dark' ? <Sun size={14} className="text-amber-500" /> : <Moon size={14} className="text-indigo-600" />}
-              <span>{theme === 'dark' ? 'Switch to Ivory Paper' : 'Switch to Charcoal Ink'}</span>
-            </button>
+        {/* Reading Pace & Theme */}
+        <section className="space-y-3 flex flex-col">
+          <div className="flex items-baseline justify-between gap-2 px-0.5">
+            <h2 className="text-2xs font-semibold uppercase tracking-wider text-ink-secondary dark:text-ink-dark-secondary flex items-center gap-1.5">
+              <Target size={13} className="text-accent dark:text-accent-dark" />
+              <span>Reading Pace &amp; Theme</span>
+            </h2>
           </div>
-        </div>
-      </section>
 
-      {/* 5. DATA OWNERSHIP & ARCHIVAL EXPORTS */}
+          <div className="p-5 rounded-card border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark flex-1 flex flex-col justify-between gap-4 shadow-2xs">
+            <div className="space-y-2.5">
+              <div className="flex items-center justify-between gap-2">
+                <div>
+                  <p className="text-sm font-medium text-ink dark:text-ink-dark">Daily Page Goal</p>
+                  <p className="text-2xs text-ink-secondary dark:text-ink-dark-secondary">
+                    Target required each day to keep your streak alive.
+                  </p>
+                </div>
+                <span className="font-mono text-xs font-semibold tabular-nums text-accent dark:text-accent-dark px-2.5 py-1 rounded-input bg-accent/10 shrink-0">
+                  {dailyGoal || 15} pgs/day
+                </span>
+              </div>
+
+              <div className="flex items-center gap-2 flex-wrap pt-1">
+                {[10, 15, 20, 25, 30, 50].map((preset) => (
+                  <button
+                    key={preset}
+                    type="button"
+                    onClick={() => setDailyGoal(preset)}
+                    className={`px-3 py-1.5 rounded-button text-xs font-medium transition-colors cursor-pointer min-h-[38px] tabular-nums ${
+                      (dailyGoal || 15) === preset
+                        ? 'bg-accent text-white'
+                        : 'bg-canvas dark:bg-canvas-dark border border-rule dark:border-rule-dark text-ink dark:text-ink-dark hover:border-accent/50'
+                    }`}
+                  >
+                    {preset}p
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="pt-3 border-t border-rule/50 dark:border-rule-dark/50 flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-sm font-medium text-ink dark:text-ink-dark">
+                  {theme === 'dark' ? 'Deep Charcoal Ink' : 'Warm Ivory Paper'}
+                </p>
+                <p className="text-2xs text-ink-secondary dark:text-ink-dark-secondary truncate">
+                  {theme === 'dark' ? 'Nighttime reading palette' : 'Archival daylight palette'}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={toggleTheme}
+                className="px-3.5 py-2 rounded-button border border-rule dark:border-rule-dark bg-canvas dark:bg-canvas-dark text-ink dark:text-ink-dark hover:border-accent/50 text-xs font-medium inline-flex items-center gap-2 transition-colors cursor-pointer min-h-[44px] shrink-0"
+              >
+                {theme === 'dark' ? (
+                  <Sun size={14} className="text-amber-500" />
+                ) : (
+                  <Moon size={14} className="text-accent" />
+                )}
+                <span>{theme === 'dark' ? 'Ivory Paper' : 'Charcoal Ink'}</span>
+              </button>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      {/* 4. Data Ownership & Shelf Maintenance */}
       <section className="space-y-3">
-        <h2 className="font-serif text-lg font-medium text-ink dark:text-ink-dark flex items-center gap-2">
-          <Download size={18} className="text-accent" />
-          <span>Data Ownership & Shelf Maintenance</span>
+        <h2 className="text-2xs font-semibold uppercase tracking-wider text-ink-secondary dark:text-ink-dark-secondary px-0.5">
+          Data Ownership &amp; Maintenance
         </h2>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
-          {/* JSON Export */}
-          <div className="p-4 rounded-2xl border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark space-y-2.5 flex flex-col justify-between">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="p-4 rounded-card border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark space-y-3 flex flex-col justify-between">
             <div>
-              <div className="flex items-center gap-2 text-xs font-medium text-ink dark:text-ink-dark">
-                <FileJson size={16} className="text-amber-600" />
-                <span>Full Library Backup (JSON)</span>
+              <div className="flex items-center gap-2 text-sm font-medium text-ink dark:text-ink-dark">
+                <FileJson size={16} className="text-warm shrink-0" />
+                <span>Full Backup (JSON)</span>
               </div>
-              <p className="text-3xs text-ink-muted mt-1 leading-relaxed">
-                Complete relational snapshot containing books, logs, wishlist items, and lending records.
+              <p className="text-2xs text-ink-secondary dark:text-ink-dark-secondary mt-1 leading-relaxed">
+                Complete snapshot of books, reading logs, wishlist, and lending records.
               </p>
             </div>
             <button
               type="button"
               onClick={handleExportJSON}
-              className="w-full py-2 px-3 rounded-xl border border-rule dark:border-rule-dark bg-canvas dark:bg-canvas-dark hover:bg-rule/40 text-xs font-medium text-ink dark:text-ink-dark inline-flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+              className="w-full py-2 px-3 rounded-button border border-rule dark:border-rule-dark bg-canvas dark:bg-canvas-dark hover:border-accent/50 text-xs font-medium text-ink dark:text-ink-dark inline-flex items-center justify-center gap-1.5 transition-colors cursor-pointer min-h-[44px]"
             >
-              <Download size={13} />
-              <span>Download JSON Backup</span>
+              <Download size={14} />
+              <span>Download JSON</span>
             </button>
           </div>
 
-          {/* CSV Export */}
-          <div className="p-4 rounded-2xl border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark space-y-2.5 flex flex-col justify-between">
+          <div className="p-4 rounded-card border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark space-y-3 flex flex-col justify-between">
             <div>
-              <div className="flex items-center gap-2 text-xs font-medium text-ink dark:text-ink-dark">
-                <FileSpreadsheet size={16} className="text-emerald-600" />
+              <div className="flex items-center gap-2 text-sm font-medium text-ink dark:text-ink-dark">
+                <FileSpreadsheet size={16} className="text-shelf-green dark:text-emerald-400 shrink-0" />
                 <span>Catalogue Sheet (CSV)</span>
               </div>
-              <p className="text-3xs text-ink-muted mt-1 leading-relaxed">
-                Spreadsheet-ready table of volumes with purchase prices, replacement values, location, and ISBN.
+              <p className="text-2xs text-ink-secondary dark:text-ink-dark-secondary mt-1 leading-relaxed">
+                Spreadsheet export with prices, locations, conditions, and ISBN-13.
               </p>
             </div>
             <button
               type="button"
               onClick={handleExportCSV}
-              className="w-full py-2 px-3 rounded-xl border border-rule dark:border-rule-dark bg-canvas dark:bg-canvas-dark hover:bg-rule/40 text-xs font-medium text-ink dark:text-ink-dark inline-flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+              className="w-full py-2 px-3 rounded-button border border-rule dark:border-rule-dark bg-canvas dark:bg-canvas-dark hover:border-accent/50 text-xs font-medium text-ink dark:text-ink-dark inline-flex items-center justify-center gap-1.5 transition-colors cursor-pointer min-h-[44px]"
             >
-              <Download size={13} />
-              <span>Export CSV Catalogue</span>
+              <Download size={14} />
+              <span>Export CSV</span>
             </button>
           </div>
 
-          {/* Auto-Fetch Book Jackets */}
-          <div className="p-4 rounded-2xl border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark space-y-2.5 flex flex-col justify-between">
+          <div className="p-4 rounded-card border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark space-y-3 flex flex-col justify-between">
             <div>
-              <div className="flex items-center gap-2 text-xs font-medium text-ink dark:text-ink-dark">
-                <Sparkles size={16} className="text-accent" />
-                <span>Auto-Fetch Book Jackets</span>
+              <div className="flex items-center gap-2 text-sm font-medium text-ink dark:text-ink-dark">
+                <Sparkles size={16} className="text-accent dark:text-accent-dark shrink-0" />
+                <span>Enrich Book Jackets</span>
               </div>
-              <p className="text-3xs text-ink-muted mt-1 leading-relaxed">
-                Scans volumes missing covers and auto-populates jackets via Google Books, Apple Books India & Open Library.
+              <p className="text-2xs text-ink-secondary dark:text-ink-dark-secondary mt-1 leading-relaxed">
+                Auto-fetch missing covers via Google Books, Apple Books &amp; Open Library.
               </p>
             </div>
             <button
               type="button"
               onClick={handleEnrich}
               disabled={enriching}
-              className="w-full py-2 px-3 rounded-xl bg-accent hover:bg-accent-hover text-white text-xs font-medium inline-flex items-center justify-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50"
+              className="w-full py-2 px-3 rounded-button bg-accent hover:bg-accent-hover text-white text-xs font-medium inline-flex items-center justify-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50 min-h-[44px]"
             >
-              <Sparkles size={13} className={enriching ? 'animate-spin' : ''} />
-              <span>{enriching ? 'Enriching Jackets...' : 'Enrich Missing Jackets'}</span>
+              <Sparkles size={14} className={enriching ? 'animate-spin' : ''} />
+              <span>{enriching ? 'Enriching...' : 'Enrich Missing Covers'}</span>
             </button>
           </div>
         </div>
 
         {enrichResult && (
-          <div className="p-3.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/50 text-xs text-emerald-800 dark:text-emerald-300 flex items-center gap-2">
+          <div className="p-3.5 rounded-card bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/50 text-xs text-emerald-800 dark:text-emerald-300 flex items-center gap-2">
             <CheckCircle2 size={16} className="shrink-0" />
             <span>{enrichResult}</span>
           </div>
@@ -619,16 +646,16 @@ export const ProfileScreen: React.FC = () => {
       {/* CHANGE PASSWORD MODAL */}
       <AnimatePresence>
         {showPasswordModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
             <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
+              initial={{ opacity: 0, scale: 0.96 }}
               animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="w-full max-w-md p-6 rounded-3xl bg-surface dark:bg-surface-dark border border-rule dark:border-rule-dark shadow-2xl space-y-4"
+              exit={{ opacity: 0, scale: 0.96 }}
+              className="w-full max-w-md p-6 rounded-card bg-surface dark:bg-surface-dark border border-rule dark:border-rule-dark shadow-2xl space-y-4"
             >
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="p-2 rounded-xl bg-accent/10 text-accent">
+                <div className="flex items-center gap-2.5">
+                  <div className="p-2 rounded-button bg-accent/10 text-accent dark:text-accent-dark">
                     <Lock size={18} />
                   </div>
                   <h3 className="font-serif text-lg font-medium text-ink dark:text-ink-dark">
@@ -638,21 +665,22 @@ export const ProfileScreen: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setShowPasswordModal(false)}
-                  className="p-1 rounded-lg text-ink-muted hover:text-ink transition-colors cursor-pointer"
+                  aria-label="Close modal"
+                  className="p-2 rounded-button text-ink-muted hover:text-ink dark:hover:text-ink-dark transition-colors cursor-pointer"
                 >
-                  ✕
+                  <X size={16} />
                 </button>
               </div>
 
               {passwordError && (
-                <div className="p-3 rounded-xl bg-red-100 dark:bg-red-950/40 text-red-800 dark:text-red-400 text-xs border border-red-200 flex items-center gap-2">
+                <div className="p-3 rounded-input bg-red-100 dark:bg-red-950/40 text-red-800 dark:text-red-300 text-xs border border-red-200 dark:border-red-900/40 flex items-center gap-2">
                   <AlertCircle size={14} className="shrink-0" />
                   <span>{passwordError}</span>
                 </div>
               )}
 
               {passwordSuccess && (
-                <div className="p-3 rounded-xl bg-emerald-100 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-400 text-xs border border-emerald-200 flex items-center gap-2">
+                <div className="p-3 rounded-input bg-emerald-100 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 text-xs border border-emerald-200 dark:border-emerald-900/40 flex items-center gap-2">
                   <CheckCircle2 size={14} className="shrink-0" />
                   <span>{passwordSuccess}</span>
                 </div>
@@ -669,7 +697,7 @@ export const ProfileScreen: React.FC = () => {
                     value={currentPassword}
                     onChange={(e) => setCurrentPassword(e.target.value)}
                     placeholder="••••••••••••"
-                    className="w-full px-3 py-2 rounded-xl border border-rule dark:border-rule-dark bg-canvas dark:bg-canvas-dark text-xs font-mono focus:outline-none focus:border-accent"
+                    className="w-full px-3 py-2.5 rounded-input border border-rule dark:border-rule-dark bg-canvas dark:bg-canvas-dark text-xs font-mono focus:outline-none focus:border-accent"
                   />
                 </div>
 
@@ -684,7 +712,7 @@ export const ProfileScreen: React.FC = () => {
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
                     placeholder="••••••••••••"
-                    className="w-full px-3 py-2 rounded-xl border border-rule dark:border-rule-dark bg-canvas dark:bg-canvas-dark text-xs font-mono focus:outline-none focus:border-accent"
+                    className="w-full px-3 py-2.5 rounded-input border border-rule dark:border-rule-dark bg-canvas dark:bg-canvas-dark text-xs font-mono focus:outline-none focus:border-accent"
                   />
                 </div>
 
@@ -699,7 +727,7 @@ export const ProfileScreen: React.FC = () => {
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     placeholder="••••••••••••"
-                    className="w-full px-3 py-2 rounded-xl border border-rule dark:border-rule-dark bg-canvas dark:bg-canvas-dark text-xs font-mono focus:outline-none focus:border-accent"
+                    className="w-full px-3 py-2.5 rounded-input border border-rule dark:border-rule-dark bg-canvas dark:bg-canvas-dark text-xs font-mono focus:outline-none focus:border-accent"
                   />
                 </div>
 
@@ -707,16 +735,16 @@ export const ProfileScreen: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => setShowPasswordModal(false)}
-                    className="px-3.5 py-2 rounded-xl border border-rule dark:border-rule-dark text-xs font-medium text-ink-secondary hover:bg-rule/40 transition-colors cursor-pointer"
+                    className="px-4 py-2 rounded-button border border-rule dark:border-rule-dark text-xs font-medium text-ink-secondary hover:bg-canvas dark:hover:bg-canvas-dark transition-colors cursor-pointer min-h-[40px]"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
                     disabled={passwordLoading}
-                    className="px-4 py-2 rounded-xl bg-accent hover:bg-accent-hover text-white text-xs font-medium shadow-xs transition-colors cursor-pointer disabled:opacity-50"
+                    className="px-4 py-2 rounded-button bg-accent hover:bg-accent-hover text-white text-xs font-medium transition-colors cursor-pointer disabled:opacity-50 min-h-[40px]"
                   >
-                    {passwordLoading ? 'Updating Password...' : 'Save Password'}
+                    {passwordLoading ? 'Updating...' : 'Save Password'}
                   </button>
                 </div>
               </form>
@@ -728,14 +756,14 @@ export const ProfileScreen: React.FC = () => {
       {/* SIGN OUT CONFIRMATION MODAL */}
       <AnimatePresence>
         {showLogoutConfirm && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
             <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
+              initial={{ opacity: 0, scale: 0.96 }}
               animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="w-full max-w-sm p-6 rounded-3xl bg-surface dark:bg-surface-dark border border-rule dark:border-rule-dark shadow-2xl space-y-4 text-center"
+              exit={{ opacity: 0, scale: 0.96 }}
+              className="w-full max-w-sm p-6 rounded-card bg-surface dark:bg-surface-dark border border-rule dark:border-rule-dark shadow-2xl space-y-4 text-center"
             >
-              <div className="w-12 h-12 rounded-2xl bg-red-100 dark:bg-red-950/40 text-red-700 dark:text-red-400 mx-auto flex items-center justify-center">
+              <div className="w-12 h-12 rounded-card bg-red-100 dark:bg-red-950/40 text-red-700 dark:text-red-400 mx-auto flex items-center justify-center">
                 <LogOut size={22} />
               </div>
 
@@ -743,7 +771,7 @@ export const ProfileScreen: React.FC = () => {
                 <h3 className="font-serif text-lg font-medium text-ink dark:text-ink-dark">
                   Sign Out of Molat?
                 </h3>
-                <p className="text-xs text-ink-muted">
+                <p className="text-xs text-ink-secondary dark:text-ink-dark-secondary">
                   Your reading streak and catalogue remain safe in the cloud database. You can sign back in anytime.
                 </p>
               </div>
@@ -752,7 +780,7 @@ export const ProfileScreen: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setShowLogoutConfirm(false)}
-                  className="flex-1 py-2 rounded-xl border border-rule dark:border-rule-dark text-xs font-medium text-ink-secondary hover:bg-rule/40 transition-colors cursor-pointer"
+                  className="flex-1 py-2 rounded-button border border-rule dark:border-rule-dark text-xs font-medium text-ink-secondary hover:bg-canvas dark:hover:bg-canvas-dark transition-colors cursor-pointer min-h-[44px]"
                 >
                   Stay Signed In
                 </button>
@@ -762,7 +790,7 @@ export const ProfileScreen: React.FC = () => {
                     setShowLogoutConfirm(false);
                     logoutOwner();
                   }}
-                  className="flex-1 py-2 rounded-xl bg-red-700 hover:bg-red-800 text-white text-xs font-medium transition-colors cursor-pointer"
+                  className="flex-1 py-2 rounded-button bg-red-700 hover:bg-red-800 text-white text-xs font-medium transition-colors cursor-pointer min-h-[44px]"
                 >
                   Sign Out
                 </button>
