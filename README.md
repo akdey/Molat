@@ -62,7 +62,7 @@ Whether cataloguing a multi-hundred volume collection, scanning new arrivals at 
 
 ### 📱 Progressive Web App (PWA) with Offline Capabilities
 - **Installable Native App Experience**: Install Molat directly to your iOS or Android home screen or desktop with a single tap.
-- **Offline Caching**: Built with Workbox service workers to precache core assets and jacket images (`CacheFirst` for book jackets, `StaleWhileRevalidate` for library APIs).
+- **Offline Caching**: Built with Workbox service workers (`skipWaiting`, `clientsClaim`, `cleanupOutdatedCaches`) to precache core assets, cache book jackets (`CacheFirst`), and serve fresh library/streak data (`NetworkFirst` with offline fallback).
 - **Mobile Ergonomics**: Thumb-zone bottom navigation bar, haptic vibration feedback, pull-to-refresh, and smooth gesture transitions.
 
 ### 📷 Instant Camera ISBN Barcode Scanner
@@ -129,8 +129,16 @@ Whether cataloguing a multi-hundred volume collection, scanning new arrivals at 
 ### 🏡 Family Alcoves (Shared Household Library)
 - **Shared Shelves, Sovereign Streaks**: Couples, families, or book clubs can share physical books in a unified **Family Alcove** while keeping each member's `reading_status`, current page, `ReadingLog` history, streak, shields, rating, and margin notes 100% personal (`user_book_states`).
 - **Selective or Auto-Share**: Keep personal shelves private by default and share individual books with 1 tap, or toggle **Auto-Share** to merge shelves seamlessly.
-- **Email Invitations & Nightstand Tracking**: Invite family members by email (via Mailbrix) or 6-character code (`ALC-XXXXXX`), and track who currently holds a physical copy (`"With ex/..."`).
+- **Notification-Driven Invitations & Member Management**: Create a household Alcove, invite readers by `ex/<handle>` (or external email via Mailbrix), let recipients **Accept / Decline** directly from their in-app notification bell or Alcove screen, and allow curators to remove members or revoke pending invites while members can leave anytime.
 - **Indestructible Reading History**: `reading_logs` stores a `book_title` snapshot with `ON DELETE SET NULL` on `book_id`, guaranteeing your reading logs and streaks remain intact even if the original book owner leaves the Alcove or deletes their copy.
+
+### 💬 Adda (Literary Salon & Commonplace Book)
+- **Book-Linked Posts**: Share favorite **Quotes** (with page numbers), **Marginalia** notes, **Reviews**, and **Discussions** tied to your `ex/<handle>` provenance and physical book covers.
+- **Three Scopes**: Browse the **Public Salon**, private **Family Alcove** threads, or **My Commonplace** (your personal searchable archive of quotes and reflections).
+- **Spoiler Blur & Literary Reactions**: Optional plot-spoiler blur toggle, expandable reply threads, and quiet literary reactions (`Resonated`, `Reading Too`, and 1-tap `+ Wishlist` to add any discussed book straight to your Acquisitions Wishlist).
+
+### 🔔 In-App Notification System
+- **Header Notification Bell**: Real-time unread count badge, relative timestamps, mark-read / mark-all-read controls, and inline **Accept / Decline** buttons for Family Alcove invitations alongside Adda reply/reaction alerts.
 
 ---
 
@@ -181,12 +189,14 @@ backend/app/
 │   └── security.py            # Password hashing & JWT token verification
 │
 └── features/                  # Self-Contained Domain Slices (Router -> Repository -> Entity & Model)
+    ├── adda/                  # entity.py, models.py, repository.py, router.py
     ├── alcoves/               # entity.py, models.py, repository.py, emails.py, dependencies.py, router.py
     ├── auth/                  # entity.py, models.py, repository.py, emails.py, dependencies.py, router.py
     ├── books/                 # entity.py, models.py, repository.py, dependencies.py, cover_enrichment.py, router.py
     ├── genres/                # entity.py (3NF normalized book_genres)
     ├── reading/               # entity.py, models.py, repository.py, dependencies.py, streak_calculator.py, router.py
     ├── lending/               # entity.py, models.py, repository.py, dependencies.py, router.py
+    ├── notifications/         # entity.py, models.py, repository.py, router.py
     ├── wishlist/              # entity.py, models.py, repository.py, dependencies.py, router.py
     ├── settings/              # entity.py, models.py, repository.py, dependencies.py, router.py
     └── health/                # router.py
@@ -222,6 +232,12 @@ Shared household library circles with per-reader isolated progress:
 - `wishlist`: `user_id` · `wishlist_id` · `title` · `authors` · `isbn_13` · `genre` · `expected_rp` · `target_price` · `priority` · `notes` · `created_at`
 - `lending`: `user_id` · `lending_id` · `book_id` · `borrower_name` · `borrower_contact` · `lent_date` · `due_date` · `returned_date` · `status` · `notes` · `created_at`
 - `user_settings`: `user_id PRIMARY KEY` · `daily_goal_pages` · `active_book_id` · `theme` · `updated_at`
+
+### 6. `notifications`, `adda_posts`, `adda_comments` & `adda_reactions` Tables
+- `notifications`: `id` · `user_id` · `type` · `title` · `body` · `reference_id` · `metadata_json` · `is_read` · `created_at`
+- `adda_posts`: `id` · `user_id` · `username` · `post_type` · `visibility` · `alcove_id` · `book_id` · `book_title` · `book_authors` · `book_cover_url` · `page_number` · `content` · `has_spoiler` · `created_at`
+- `adda_comments`: `id` · `post_id` · `user_id` · `username` · `content` · `created_at`
+- `adda_reactions`: `id` · `post_id` · `user_id` · `reaction_type` · `created_at`
 
 ---
 
@@ -282,7 +298,12 @@ API Documentation will be available at `http://localhost:7860/docs`.
 #### Run Backend Test Suite:
 ```bash
 pytest -v
-# 54 passed
+# 57 passed
+```
+
+#### Optional Seed Test Readers (for Alcoves & Adda testing):
+```bash
+python -m scripts.seed_test_users
 ```
 
 ---
