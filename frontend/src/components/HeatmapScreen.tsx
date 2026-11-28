@@ -383,24 +383,31 @@ export const HeatmapScreen: React.FC = () => {
         </div>
 
         <div className="p-4 rounded-xl border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark space-y-1">
-          <div className="flex items-center gap-1.5 text-2xs uppercase tracking-wider text-ink-muted font-medium">
-            <Snowflake size={13} className="text-cyan-500" />
-            <span>Grace Freeze</span>
+          <div className="flex items-center justify-between gap-2 text-2xs uppercase tracking-wider text-ink-muted font-medium">
+            <span className="flex items-center gap-1.5">
+              <Snowflake size={13} className="text-cyan-500" />
+              <span>Grace Freeze</span>
+            </span>
+            {grace_freeze_used && (
+              <span className="px-1.5 py-0.5 rounded-full text-3xs normal-case tracking-normal bg-sky-100 dark:bg-sky-950/60 text-sky-700 dark:text-sky-300 font-semibold">
+                Consumed
+              </span>
+            )}
           </div>
           <p className="font-serif text-2xl font-medium text-ink dark:text-ink-dark">
             {grace_freeze_used
-              ? 'Active'
+              ? 'Shield Used'
               : grace_freeze_available
-              ? 'Ready'
+              ? 'Armed'
               : freeze_cooldown_days_left && freeze_cooldown_days_left > 0
               ? 'Cooldown'
-              : 'In Progress'}
+              : 'Earning'}
           </p>
           <span className="text-3xs text-ink-muted">
             {grace_freeze_used
-              ? 'Streak bridged automatically'
+              ? 'Missed day bridged • streak safe'
               : grace_freeze_available
-              ? 'Armed • 1 miss cushioned'
+              ? 'Ready • cushions 1 missed day'
               : freeze_cooldown_days_left && freeze_cooldown_days_left > 0
               ? `${freeze_cooldown_days_left}d left in 14d window`
               : `${freeze_prior_pages || 0} / ${freeze_required_pages || 100} pgs in 7 days`}
