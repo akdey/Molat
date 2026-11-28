@@ -728,18 +728,20 @@ export const LibraryInsights: React.FC<LibraryInsightsProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* Top Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div>
-          <h2 className="font-serif text-2xl font-medium tracking-tight text-ink dark:text-ink-dark flex items-center gap-2">
-            <PieChartIcon size={24} className="text-accent" />
-            <span>Library Insights & Analytics</span>
-          </h2>
-          <p className="text-xs text-ink-secondary dark:text-ink-dark-secondary">
-            Visual statistics, category distribution, reading velocity, and habits across your personal collection.
+      {/* Editorial Header */}
+      <header className="flex flex-wrap items-end justify-between gap-3 border-b border-rule/80 dark:border-rule-dark/80 pb-4">
+        <div className="min-w-0">
+          <p className="text-3xs font-semibold uppercase tracking-[0.16em] text-warm dark:text-amber-400">
+            ❧ Collection Telemetry
+          </p>
+          <h1 className="font-serif text-2xl sm:text-3xl font-medium tracking-tight text-ink dark:text-ink-dark mt-0.5">
+            Library Insights &amp; Analytics
+          </h1>
+          <p className="text-xs text-ink-secondary dark:text-ink-dark-secondary mt-1">
+            Visual statistics, category distribution, reading velocity, and habits across your collection.
           </p>
         </div>
-      </div>
+      </header>
 
       {/* 4 Hero Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">

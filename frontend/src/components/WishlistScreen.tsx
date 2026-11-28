@@ -113,25 +113,40 @@ export const WishlistScreen: React.FC = () => {
 
   return (
     <div className="space-y-6 flex-1 flex flex-col">
-      {/* Top Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h2 className="font-serif text-2xl font-medium tracking-tight text-ink dark:text-ink-dark">
+      {/* Editorial Header */}
+      <header className="flex flex-wrap items-end justify-between gap-3 border-b border-rule/80 dark:border-rule-dark/80 pb-4">
+        <div className="min-w-0">
+          <p className="text-3xs font-semibold uppercase tracking-[0.16em] text-warm dark:text-amber-400">
+            ❧ Planned Additions
+          </p>
+          <h1 className="font-serif text-2xl sm:text-3xl font-medium tracking-tight text-ink dark:text-ink-dark mt-0.5">
             Acquisitions Wishlist ({wishlist.length})
-          </h2>
-          <p className="text-xs text-ink-secondary dark:text-ink-dark-secondary">
-            Planned book purchases with target prices and 1-click shelf acquisition.
+          </h1>
+          <p className="text-xs text-ink-secondary dark:text-ink-dark-secondary mt-1">
+            Planned book purchases with target prices and one-tap shelf acquisition.
           </p>
         </div>
 
-        <button
-          onClick={() => setAddFormOpen(!addFormOpen)}
-          className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-accent hover:bg-accent-hover text-white text-xs font-medium self-start sm:self-auto transition-all"
-        >
-          <Plus size={15} />
-          <span>Add Wishlist Item</span>
-        </button>
-      </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <button
+            type="button"
+            onClick={() => loadWishlist()}
+            className="p-2.5 rounded-button border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark text-ink-secondary hover:text-ink dark:hover:text-ink-dark hover:border-accent/50 transition-colors cursor-pointer min-h-[44px] min-w-[44px] flex items-center justify-center"
+            title="Refresh wishlist"
+            aria-label="Refresh wishlist"
+          >
+            <RefreshCw size={15} className={refreshing ? 'animate-spin' : ''} />
+          </button>
+          <button
+            type="button"
+            onClick={() => setAddFormOpen(!addFormOpen)}
+            className="flex items-center gap-1.5 px-4 py-2.5 rounded-button bg-accent hover:bg-accent-hover text-white text-xs font-medium shadow-2xs transition-colors cursor-pointer min-h-[44px]"
+          >
+            <Plus size={15} />
+            <span>Add Wishlist Item</span>
+          </button>
+        </div>
+      </header>
 
       {errorMsg && (
         <div className="p-3 text-xs rounded-xl bg-red-100 dark:bg-red-950/40 text-red-800 dark:text-red-400 border border-red-200 dark:border-red-900/40 flex items-center gap-2">

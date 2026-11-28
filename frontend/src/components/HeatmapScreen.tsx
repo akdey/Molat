@@ -324,24 +324,28 @@ export const HeatmapScreen: React.FC = () => {
 
   return (
     <div className="space-y-6 flex-1 flex flex-col">
-      {/* Top Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h2 className="font-serif text-2xl font-medium tracking-tight text-ink dark:text-ink-dark">
-            Reading Streak & Activity Ledger
-          </h2>
-          <p className="text-xs text-ink-secondary dark:text-ink-dark-secondary">
+      {/* Editorial Header */}
+      <header className="flex flex-wrap items-end justify-between gap-3 border-b border-rule/80 dark:border-rule-dark/80 pb-4">
+        <div className="min-w-0">
+          <p className="text-3xs font-semibold uppercase tracking-[0.16em] text-warm dark:text-amber-400">
+            ❧ Reading Cadence
+          </p>
+          <h1 className="font-serif text-2xl sm:text-3xl font-medium tracking-tight text-ink dark:text-ink-dark mt-0.5">
+            Reading Streak &amp; Activity Ledger
+          </h1>
+          <p className="text-xs text-ink-secondary dark:text-ink-dark-secondary mt-1">
             Continuous daily reading tracking synchronized with Asia/Kolkata (IST) midnight boundaries.
           </p>
         </div>
 
         <button
+          type="button"
           onClick={() => openQuickLog()}
-          className="px-4 py-2 rounded-xl bg-accent hover:bg-accent-hover text-white text-xs font-medium self-start sm:self-auto transition-all cursor-pointer shadow-xs active:scale-98"
+          className="px-4 py-2.5 rounded-button bg-accent hover:bg-accent-hover text-white text-xs font-medium transition-colors cursor-pointer shadow-2xs min-h-[44px] shrink-0"
         >
-          + Record Today's Pages
+          + Record Today&apos;s Pages
         </button>
-      </div>
+      </header>
 
       {/* Analytics KPI strip */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">

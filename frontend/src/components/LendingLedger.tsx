@@ -67,39 +67,41 @@ export const LendingLedger: React.FC = () => {
   };
 
   return (
-    <div className="space-y-5">
-      {/* Overview Banner */}
-      <div className="p-4 sm:p-5 rounded-2xl border border-rule dark:border-rule-dark bg-surface-raised dark:bg-surface-dark-raised flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <Handshake className="text-accent dark:text-accent-dark h-5 w-5" />
-            <h2 className="font-serif text-lg sm:text-xl font-medium text-ink dark:text-ink-dark">
-              Lending Ledger & Borrower Follow-ups
-            </h2>
-          </div>
-          <p className="text-xs text-ink-secondary dark:text-ink-dark-secondary">
+    <div className="space-y-6">
+      {/* Editorial Header */}
+      <header className="flex flex-wrap items-end justify-between gap-3 border-b border-rule/80 dark:border-rule-dark/80 pb-4">
+        <div className="min-w-0">
+          <p className="text-3xs font-semibold uppercase tracking-[0.16em] text-warm dark:text-amber-400">
+            ❧ Circulation
+          </p>
+          <h1 className="font-serif text-2xl sm:text-3xl font-medium tracking-tight text-ink dark:text-ink-dark mt-0.5">
+            Lending Ledger
+          </h1>
+          <p className="text-xs text-ink-secondary dark:text-ink-dark-secondary mt-1">
             Keep track of physical books shared with friends, family, and colleagues.
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0">
           <button
+            type="button"
             onClick={() => loadLendingRecords(true)}
-            className="p-2 rounded-xl border border-rule dark:border-rule-dark text-ink-secondary hover:text-ink hover:bg-surface dark:hover:bg-surface-dark transition-colors"
+            className="p-2.5 rounded-button border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark text-ink-secondary hover:text-ink dark:hover:text-ink-dark hover:border-accent/50 transition-colors cursor-pointer min-h-[44px] min-w-[44px] flex items-center justify-center"
             title="Refresh lending records"
             aria-label="Refresh lending records"
           >
-            <RefreshCw size={15} />
+            <RefreshCw size={15} className={refreshing ? 'animate-spin' : ''} />
           </button>
           <button
+            type="button"
             onClick={() => openLendModal()}
-            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-accent hover:bg-accent-hover text-white text-xs font-medium shadow-sm transition-all"
+            className="flex items-center gap-1.5 px-4 py-2.5 rounded-button bg-accent hover:bg-accent-hover text-white text-xs font-medium shadow-2xs transition-colors cursor-pointer min-h-[44px]"
           >
             <Plus size={15} />
             <span>Lend a Volume</span>
           </button>
         </div>
-      </div>
+      </header>
 
       {/* Sub-Tabs: Active vs Returned */}
       <div className="flex items-center justify-between gap-2 border-b border-rule/60 dark:border-rule-dark/60 pb-1">
