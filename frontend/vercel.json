@@ -1,5 +1,19 @@
 {
   "framework": "vite",
+  "headers": [
+    {
+      "source": "/index.html",
+      "headers": [
+        { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" }
+      ]
+    },
+    {
+      "source": "/(sw\\.js|registerSW\\.js)",
+      "headers": [
+        { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" }
+      ]
+    }
+  ],
   "rewrites": [
     {
       "source": "/(.*)",
@@ -7,4 +21,3 @@
     }
   ]
 }
-

@@ -39,15 +39,20 @@ export default defineConfig({
         ],
       },
       workbox: {
+        skipWaiting: true,
+        clientsClaim: true,
+        cleanupOutdatedCaches: true,
+        navigateFallbackDenylist: [/^\/api/],
         runtimeCaching: [
           {
-            // Instant offline shelf & streak browsing via StaleWhileRevalidate
+            // Fresh shelf & streak data when online, cached fallback when offline
             urlPattern: ({ url }) =>
               url.pathname.startsWith('/api/v1/books') ||
               url.pathname.startsWith('/api/v1/reading/streak-summary'),
-            handler: 'StaleWhileRevalidate',
+            handler: 'NetworkFirst',
             options: {
               cacheName: 'api-cache',
+              networkTimeoutSeconds: 4,
               cacheableResponse: {
                 statuses: [0, 200],
               },
