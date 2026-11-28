@@ -255,6 +255,13 @@ export const QuickLogModal: React.FC = () => {
         rating: finishedBook ? rating : undefined,
       });
       closeQuickLog();
+      if (finishedBook) {
+        const { addToast, setActiveTab } = useLibraryStore.getState();
+        addToast('Volume completed! Share a closing thought in Adda?', 'success', {
+          label: 'Open Adda',
+          onClick: () => setActiveTab('adda'),
+        });
+      }
     } catch (err: any) {
       if (err.message && err.message.includes('401')) {
         setErrorMsg('Please sign in to log reading sessions.');

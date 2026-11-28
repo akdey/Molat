@@ -8,6 +8,7 @@ import {
   Plus,
   Shuffle,
   Timer,
+  MessageSquare,
 } from 'lucide-react';
 import type { Book, StreakSummary } from '../types/book';
 import { BookCover } from './BookCover';
@@ -478,6 +479,30 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({
           </div>
         </section>
       )}
+
+      {/* Adda Literary Salon Strip */}
+      <section aria-label="Adda Literary Salon">
+        <button
+          type="button"
+          onClick={() => setActiveTab('adda')}
+          className="w-full p-4 rounded-card border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark hover:bg-surface-raised dark:hover:bg-surface-dark-raised hover:border-accent/50 transition-colors flex items-center justify-between gap-3 text-left cursor-pointer"
+        >
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-9 h-9 rounded-button bg-warm/10 dark:bg-warm/20 text-warm flex items-center justify-center shrink-0">
+              <MessageSquare size={17} />
+            </div>
+            <div className="min-w-0">
+              <span className="font-serif text-sm sm:text-base font-medium text-ink dark:text-ink-dark block truncate">
+                Adda &bull; Literary Salon
+              </span>
+              <span className="text-2xs text-ink-secondary dark:text-ink-dark-secondary block truncate">
+                Share favorite quotes, book notes, and reading reflections
+              </span>
+            </div>
+          </div>
+          <ArrowRight size={15} className="text-accent dark:text-accent-dark shrink-0" />
+        </button>
+      </section>
     </div>
   );
 };
