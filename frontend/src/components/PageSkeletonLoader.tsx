@@ -12,6 +12,7 @@ interface PageSkeletonLoaderProps {
   | 'insights'
   | 'lending'
   | 'alcoves'
+  | 'adda'
   | 'profile'
   | 'more';
   caption?: string;

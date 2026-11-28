@@ -218,3 +218,49 @@ export interface NotificationListResponse {
   unread_count: number;
 }
 
+export type AddaPostType = 'note' | 'quote' | 'review' | 'discussion';
+export type AddaVisibility = 'public' | 'alcove';
+export type AddaReactionType = 'resonated' | 'reading_too' | 'wishlisted';
+
+export interface AddaComment {
+  id: string;
+  post_id: string;
+  user_id: string;
+  username: string;
+  content: string;
+  created_at: string;
+}
+
+export interface AddaPost {
+  id: string;
+  user_id: string;
+  username: string;
+  post_type: AddaPostType;
+  visibility: AddaVisibility;
+  alcove_id?: string | null;
+  book_id?: string | null;
+  book_title?: string | null;
+  book_authors?: string | null;
+  book_cover_url?: string | null;
+  page_number?: number | null;
+  content: string;
+  has_spoiler: boolean;
+  created_at: string;
+  reaction_counts: Record<string, number>;
+  my_reactions: string[];
+  comments: AddaComment[];
+}
+
+export interface AddaPostCreate {
+  post_type: AddaPostType;
+  visibility: AddaVisibility;
+  alcove_id?: string;
+  book_id?: string;
+  book_title?: string;
+  book_authors?: string;
+  book_cover_url?: string;
+  page_number?: number;
+  content: string;
+  has_spoiler?: boolean;
+}
+

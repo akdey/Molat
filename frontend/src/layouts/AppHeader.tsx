@@ -22,6 +22,7 @@ type TabId =
   | 'maintenance'
   | 'lending'
   | 'alcoves'
+  | 'adda'
   | 'profile'
   | 'more';
 
@@ -33,6 +34,7 @@ const DESKTOP_TABS: { id: TabId; label: string; matchTabs?: TabId[] }[] = [
   { id: 'home', label: 'Home' },
   { id: 'shelf', label: 'Shelf' },
   { id: 'tracker', label: 'Streak' },
+  { id: 'adda', label: 'Adda' },
   { id: 'insights', label: 'Insights' },
   {
     id: 'more',

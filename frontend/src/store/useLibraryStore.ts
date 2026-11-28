@@ -70,7 +70,7 @@ interface LibraryState {
   toasts: Toast[];
 
   // Navigation & View Mode
-  activeTab: 'home' | 'shelf' | 'tracker' | 'wishlist' | 'maintenance' | 'insights' | 'lending' | 'alcoves' | 'profile' | 'more';
+  activeTab: 'home' | 'shelf' | 'tracker' | 'wishlist' | 'maintenance' | 'insights' | 'lending' | 'alcoves' | 'adda' | 'profile' | 'more';
   viewMode: 'grid' | 'spine' | 'table';
   sortBy: ShelfSortOption;
 
@@ -113,7 +113,7 @@ interface LibraryState {
   activeBookId: string | null;
 
   // Setters & Actions
-  setActiveTab: (tab: 'home' | 'shelf' | 'tracker' | 'wishlist' | 'maintenance' | 'insights' | 'lending' | 'alcoves' | 'profile' | 'more') => void;
+  setActiveTab: (tab: 'home' | 'shelf' | 'tracker' | 'wishlist' | 'maintenance' | 'insights' | 'lending' | 'alcoves' | 'adda' | 'profile' | 'more') => void;
   setViewMode: (mode: 'grid' | 'spine' | 'table') => void;
   setSortBy: (sortBy: ShelfSortOption) => void;
   setSearch: (search: string) => void;

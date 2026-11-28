@@ -17,6 +17,7 @@ from app.features.settings.router import router as settings_router
 from app.features.genres.router import router as genres_router
 from app.features.alcoves.router import router as alcoves_router
 from app.features.notifications.router import router as notifications_router
+from app.features.adda.router import router as adda_router
 
 logging.basicConfig(
     level=logging.INFO if not settings.DEBUG else logging.DEBUG,
@@ -64,6 +65,7 @@ app.include_router(settings_router, prefix="/api/v1")
 app.include_router(genres_router, prefix="/api/v1")
 app.include_router(alcoves_router, prefix="/api/v1")
 app.include_router(notifications_router, prefix="/api/v1")
+app.include_router(adda_router, prefix="/api/v1")
 
 
 @app.get("/")

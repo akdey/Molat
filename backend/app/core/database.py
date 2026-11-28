@@ -108,6 +108,7 @@ class DatabaseManager:
             import app.features.wishlist.entity  # noqa
             import app.features.settings.entity  # noqa
             import app.features.notifications.entity  # noqa
+            import app.features.adda.entity  # noqa
 
             async with self.engine.begin() as conn:
                 await conn.run_sync(Base.metadata.create_all)

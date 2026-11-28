@@ -10,6 +10,7 @@ import { WishlistScreen } from '../components/WishlistScreen';
 import { LendingLedger } from '../components/LendingLedger';
 import { ProfileScreen } from '../components/ProfileScreen';
 import { AlcoveScreen } from '../components/AlcoveScreen';
+import { AddaScreen } from '../components/AddaScreen';
 import { MenuHubScreen } from '../components/MenuHubScreen';
 import { ShelfScreen } from '../screens/ShelfScreen';
 
@@ -22,6 +23,7 @@ type TabId =
   | 'maintenance'
   | 'lending'
   | 'alcoves'
+  | 'adda'
   | 'profile'
   | 'more';
 
@@ -79,6 +81,7 @@ export const TabRouter: React.FC<TabRouterProps> = ({ switchTab, onSelectAlcoveB
         {activeTab === 'lending' && <LendingLedger />}
         {activeTab === 'profile' && <ProfileScreen />}
         {activeTab === 'alcoves' && <AlcoveScreen />}
+        {activeTab === 'adda' && <AddaScreen />}
         {activeTab === 'more' && <MenuHubScreen />}
 
         {(activeTab === 'shelf' || activeTab === 'maintenance') && (

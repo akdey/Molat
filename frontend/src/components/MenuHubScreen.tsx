@@ -19,6 +19,7 @@ import {
   AlertCircle,
   BookOpen,
   Flame,
+  MessageSquare,
 } from 'lucide-react';
 import { useLibraryStore } from '../store/useLibraryStore';
 
@@ -195,6 +196,34 @@ export const MenuHubScreen: React.FC = () => {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-3.5">
+          {/* Adda Literary Salon */}
+          <button
+            type="button"
+            onClick={() => setActiveTab('adda')}
+            className="group min-w-0 text-left p-4 rounded-card border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark hover:bg-surface-raised dark:hover:bg-surface-dark-raised hover:border-accent/50 dark:hover:border-accent-dark/50 transition-colors cursor-pointer grid grid-rows-[auto_1fr_auto] gap-2.5 min-h-[132px] shadow-2xs"
+          >
+            <div className="flex items-center justify-between gap-2">
+              <div className="w-9 h-9 rounded-button bg-accent/10 dark:bg-accent-dark/15 text-accent dark:text-accent-dark flex items-center justify-center shrink-0">
+                <MessageSquare size={18} />
+              </div>
+              <span className="text-2xs font-medium text-warm dark:text-amber-400">
+                Literary Salon
+              </span>
+            </div>
+            <div>
+              <h3 className="font-serif text-base font-medium text-ink dark:text-ink-dark group-hover:text-accent dark:group-hover:text-accent-dark transition-colors">
+                Adda
+              </h3>
+              <p className="text-xs text-ink-secondary dark:text-ink-dark-secondary mt-0.5 leading-relaxed">
+                Quotes, marginalia, book reviews, and quiet reader conversations.
+              </p>
+            </div>
+            <div className="flex items-center justify-between pt-2 border-t border-rule/50 dark:border-rule-dark/50 text-2xs font-medium text-accent dark:text-accent-dark">
+              <span>Enter Adda</span>
+              <ArrowUpRight size={14} className="transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+            </div>
+          </button>
+
           {/* Family Alcove */}
           <button
             type="button"

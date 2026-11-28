@@ -474,3 +474,50 @@ export async function markNotificationRead(notificationId: string): Promise<{ st
 export async function markAllNotificationsRead(): Promise<{ status: string; marked_count: number }> {
   return apiFetch('/notifications/read-all', { method: 'POST' });
 }
+
+// Adda Community API
+export async function fetchAddaPosts(
+  scope: 'all' | 'alcove' | 'mine' = 'all',
+  postType = 'all',
+  limit = 40
+): Promise<{ posts: import('../types/book').AddaPost[] }> {
+  const params = new URLSearchParams({ scope, post_type: postType, limit: String(limit) });
+  return apiFetch(`/adda/posts?${params.toString()}`);
+}
+
+export async function createAddaPost(
+  payload: import('../types/book').AddaPostCreate
+): Promise<import('../types/book').AddaPost> {
+  return apiFetch('/adda/posts', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function deleteAddaPost(postId: string): Promise<{ status: string; id: string }> {
+  return apiFetch(`/adda/posts/${postId}`, { method: 'DELETE' });
+}
+
+export async function addAddaComment(
+  postId: string,
+  content: string
+): Promise<import('../types/book').AddaComment> {
+  return apiFetch(`/adda/posts/${postId}/comments`, {
+    method: 'POST',
+    body: JSON.stringify({ content }),
+  });
+}
+
+export async function deleteAddaComment(commentId: string): Promise<{ status: string; id: string }> {
+  return apiFetch(`/adda/comments/${commentId}`, { method: 'DELETE' });
+}
+
+export async function toggleAddaReaction(
+  postId: string,
+  reactionType: import('../types/book').AddaReactionType
+): Promise<{ status: string; reaction_type: string }> {
+  return apiFetch(`/adda/posts/${postId}/react`, {
+    method: 'POST',
+    body: JSON.stringify({ reaction_type: reactionType }),
+  });
+}

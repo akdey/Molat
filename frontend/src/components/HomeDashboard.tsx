@@ -28,6 +28,7 @@ interface HomeDashboardProps {
       | 'maintenance'
       | 'lending'
       | 'alcoves'
+      | 'adda'
       | 'profile'
       | 'more'
   ) => void;

@@ -13,6 +13,7 @@ type TabId =
   | 'maintenance'
   | 'lending'
   | 'alcoves'
+  | 'adda'
   | 'profile'
   | 'more';
 
@@ -88,6 +89,8 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ switchTab })
     }
     if (notif.type.startsWith('alcove_')) {
       switchTab('alcoves');
+    } else if (notif.type.startsWith('adda_')) {
+      switchTab('adda');
     } else if (notif.type === 'lending_overdue') {
       switchTab('lending');
     }

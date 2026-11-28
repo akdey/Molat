@@ -15,6 +15,7 @@ type TabId =
   | 'maintenance'
   | 'lending'
   | 'alcoves'
+  | 'adda'
   | 'profile'
   | 'more';
 

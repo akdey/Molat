@@ -11,6 +11,7 @@ type TabId =
   | 'maintenance'
   | 'lending'
   | 'alcoves'
+  | 'adda'
   | 'profile'
   | 'more';
 
@@ -42,7 +43,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
     switchTab(tab);
   };
 
-  const isMoreActive = ['more', 'profile', 'alcoves', 'wishlist', 'lending', 'insights', 'maintenance'].includes(
+  const isMoreActive = ['more', 'profile', 'alcoves', 'adda', 'wishlist', 'lending', 'insights', 'maintenance'].includes(
     activeTab
   );
 
