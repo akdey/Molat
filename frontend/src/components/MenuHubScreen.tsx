@@ -112,14 +112,14 @@ export const MenuHubScreen: React.FC = () => {
             <div className="flex items-center gap-3.5 min-w-0">
               <div
                 aria-hidden="true"
-                className="w-12 h-12 rounded-button bg-warm text-white border border-warm-hover/30 flex items-center justify-center shrink-0 font-serif font-bold text-base tracking-wide shadow-2xs"
+                className="w-12 h-12 rounded-button bg-warm text-white flex items-center justify-center shrink-0 font-serif font-bold text-base tracking-wide shadow-2xs"
               >
                 {monogram}
               </div>
               <div className="min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="font-serif text-lg font-medium text-ink dark:text-ink-dark truncate">
-                    {username}
+                    ex/{username}
                   </span>
                   {emailVerified ? (
                     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-3xs font-medium bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-200/70 dark:border-emerald-800/50">
@@ -137,8 +137,8 @@ export const MenuHubScreen: React.FC = () => {
                     </button>
                   )}
                 </div>
-                <p className="text-xs text-ink-secondary dark:text-ink-dark-secondary font-mono mt-0.5 truncate">
-                  ex/{username} &bull; Reader Passport
+                <p className="text-xs text-ink-secondary dark:text-ink-dark-secondary mt-0.5 truncate">
+                  Reader Passport
                 </p>
               </div>
             </div>

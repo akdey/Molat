@@ -145,15 +145,15 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ switchTab }) => {
             <button
               type="button"
               onClick={() => switchTab(activeTab === 'profile' ? 'home' : 'profile')}
-              className={`flex items-center gap-2 pl-1.5 pr-2.5 py-1 rounded-full border text-xs font-medium transition-all shrink-0 cursor-pointer min-h-[36px] ${
+              className={`flex items-center gap-2 pl-1 pr-2.5 py-1 rounded-full text-xs font-medium transition-colors shrink-0 cursor-pointer min-h-[36px] ${
                 activeTab === 'profile'
-                  ? 'border-accent bg-accent/10 text-accent dark:text-accent-dark font-semibold'
-                  : 'border-rule dark:border-rule-dark hover:bg-surface dark:hover:bg-surface-dark text-ink-secondary hover:text-ink dark:hover:text-ink-dark'
+                  ? 'bg-accent/10 text-accent dark:text-accent-dark font-semibold'
+                  : 'hover:bg-surface dark:hover:bg-surface-dark text-ink-secondary hover:text-ink dark:hover:text-ink-dark'
               }`}
               title={`Ex Libris Profile • ex/${authUser || 'reader'}`}
               aria-label="Reader Profile"
             >
-              <div className="w-6 h-6 rounded-full bg-gradient-to-br from-warm to-warm-hover text-white flex items-center justify-center text-3xs font-serif font-bold">
+              <div className="w-7 h-7 rounded-full bg-warm text-white flex items-center justify-center text-3xs font-serif font-bold">
                 {(authUser || 'R').slice(0, 2).toUpperCase()}
               </div>
               <span className="hidden lg:inline text-2xs">ex/{authUser || 'reader'}</span>

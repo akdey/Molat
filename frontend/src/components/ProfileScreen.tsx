@@ -244,7 +244,7 @@ export const ProfileScreen: React.FC = () => {
         <div className="relative flex flex-col sm:flex-row sm:items-center justify-between gap-6">
           <div className="flex items-start sm:items-center gap-4 sm:gap-5">
             {/* Monogram Bookplate Seal */}
-            <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-gradient-to-br from-[#C2410C] to-[#9A3412] text-white flex flex-col items-center justify-center shadow-sm shrink-0 border-2 border-[#E2D9C8]/40 dark:border-white/10 select-none">
+            <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-warm text-white flex flex-col items-center justify-center shadow-xs shrink-0 select-none">
               <span className="text-2xs uppercase tracking-widest font-mono opacity-80">EX</span>
               <span className="font-serif text-xl sm:text-2xl font-bold tracking-tight">{monogram}</span>
             </div>
@@ -252,8 +252,18 @@ export const ProfileScreen: React.FC = () => {
             <div className="space-y-1.5">
               <div className="flex items-center gap-2.5 flex-wrap">
                 <h1 className="font-serif text-2xl sm:text-3xl font-medium tracking-tight text-ink dark:text-ink-dark">
-                  {username}
+                  ex/{username}
                 </h1>
+                <button
+                  type="button"
+                  onClick={handleCopyHandle}
+                  className="font-mono text-2xs px-2 py-0.5 rounded-md bg-stone-100 dark:bg-stone-800 hover:bg-stone-200 dark:hover:bg-stone-700 text-ink dark:text-ink-dark inline-flex items-center gap-1 transition-colors cursor-pointer"
+                  title="Click to copy Ex Libris provenance handle"
+                  aria-label="Copy Ex Libris handle"
+                >
+                  {copiedHandle ? <Check size={11} className="text-emerald-600" /> : <Copy size={11} className="opacity-60" />}
+                  <span>{copiedHandle ? 'Copied' : 'Copy'}</span>
+                </button>
                 <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-2xs font-medium bg-accent-subtle dark:bg-accent-dark-subtle text-accent dark:text-accent-dark border border-accent/20">
                   <ShieldCheck size={11} />
                   {isOwner ? 'Head Curator & Owner' : 'Private Reader'}
@@ -261,15 +271,6 @@ export const ProfileScreen: React.FC = () => {
               </div>
 
               <div className="flex items-center gap-2.5 flex-wrap text-xs text-ink-secondary dark:text-ink-dark-secondary">
-                <button
-                  type="button"
-                  onClick={handleCopyHandle}
-                  className="font-mono text-2xs px-2.5 py-0.5 rounded-md bg-stone-100 dark:bg-stone-800 hover:bg-stone-200 dark:hover:bg-stone-700 text-ink dark:text-ink-dark inline-flex items-center gap-1.5 transition-colors cursor-pointer"
-                  title="Click to copy Ex Libris provenance handle"
-                >
-                  <span>ex/{username}</span>
-                  {copiedHandle ? <Check size={11} className="text-emerald-600" /> : <Copy size={11} className="opacity-60" />}
-                </button>
 
                 {displayEmail && (
                   <>
